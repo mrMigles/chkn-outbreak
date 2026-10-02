@@ -39,7 +39,7 @@ o('trigger', 'blogger', 37, 3, {}, [10, 9]);
 // ---- the market: stalls in rows, Тётя Валя and her «fresh» eggs
 for (const y of [7, 13, 19]) for (const x of [7, 15, 31]) prop('stall', x, y);
 prop('stall', 23, 7); prop('stall', 23, 19);
-prop('stall', 23, 13); o('npc', 'valya', 23, 11.2, { title: 'Тётя Валя · яйца', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90, lines: 'Яйца! Свежие! Почти не вылупляются!' });
+prop('stall', 23, 13); o('npc', 'valya', 23, 12.1, { reach: 150, title: 'Тётя Валя · яйца', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90, lines: 'Яйца! Свежие! Почти не вылупляются!' });
 for (const [x, y] of [[20.5, 14.4], [25.5, 14.4], [21.5, 15.6], [24.5, 15.6], [19.5, 12], [26.5, 12]]) o('pod', '', x, y, { tag: 'eggs', hatch: (x * 7 + y) % 3 < 1 ? 'fast' : 'normal' });
 for (const [x, y, t] of [[11, 10, 'normal'], [19, 10, 'fast'], [27, 10, 'normal'], [11, 16, 'spitter'], [27, 16, 'normal'], [15, 22.5, 'fast'], [31, 22.5, 'normal'], [7, 22.5, 'normal'], [34, 4.5, 'fast'], [5, 4.5, 'normal']] as const) enemy(t, x, y, 'market');
 for (const [x, y] of [[3.5, 3.5], [3.5, 26], [36, 26], [20, 3.5]]) o('spawner', 'market', x, y, { how: 'rise' });

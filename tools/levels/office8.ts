@@ -85,8 +85,8 @@ o('trigger', 'east', 44, 3, {}, [17, 25]);
 
 // ---- the den: Валера at his desk, the breaker on the north wall
 prop('server_rack', 26, 3.6); prop('server_rack', 27.2, 3.6); prop('server_rack', 35.8, 9.6);
-prop('desk', 30.5, 9); prop('office_chair', 30.5, 10.2); prop('desk_phone', 29.6, 8.8);
-o('npc', 'valera', 30.5, 10.3, { title: 'Валера · тимлид тёмной темы', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90 });
+prop('desk', 30.5, 9.4); prop('office_chair', 30.5, 7.9); prop('desk_phone', 29.6, 9.2);
+o('npc', 'valera', 30.5, 8.1, { reach: 130, title: 'Валера · тимлид тёмной темы', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90 });
 light(30.5, 8.7, 'lamp', '3d6bff', 150, { flicker: .1 });
 prop('breaker', 34.5, 3.1); o('use', 'breaker', 34.5, 4.1, { hint: 'включить рубильник' });
 o('trigger', 'den', 25, 11, {}, [12, 6]);

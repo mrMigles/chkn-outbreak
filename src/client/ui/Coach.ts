@@ -18,6 +18,7 @@ const HERO = {
   reload: ['Перезаряжаю, прикройте!', 'Минутку, патроны!'],
   surrounded: ['Их слишком много!', 'Окружают, как в пятницу у кофемашины!'],
   boss: ['Это и есть генеральный?', 'Ну что, обсудим KPI.'],
+  elite: ['Ну и начальство пошло.', 'Это не повышение. Это мутация.', 'Сейчас обсудим твой KPI.'],
 };
 const COMPANION = [
   'Я, между прочим, в отпуск собирался.',
@@ -93,7 +94,7 @@ export class Coach {
     }
     const w = me.weapons[me.cur], a = w ? me.ammo[w] : undefined;
     if (a && a.reserve === 0 && a.mag === 0 && w !== 'pistol') this.once('dry-' + w, 'ПАТРОНЫ КОНЧИЛИСЬ', this.touch ? 'Нажмите на панель оружия — табельный пистолет бесконечен.' : 'Q или 1 — табельный пистолет бесконечен.', 'tip');
-    if (view.bossId >= 0) this.quip('boss', 0.02);
+    if (view.bossId >= 0) this.quip(view.bossName ? 'elite' : 'boss', 0.02);
     // companions talk in quiet moments
     this.quietT = near === 0 ? this.quietT + dt : 0;
     if (settings.banter && this.quietT > 12 && this.companionT <= 0) {

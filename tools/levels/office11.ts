@@ -43,7 +43,7 @@ note(36.5, 6, 'Табличка: «Посторонним и пернатым �
 
 // ---- reception: Жанна
 prop('reception', 32.5, 12.6);
-o('npc', 'zhanna', 32.5, 11.6, { title: 'Жанна Аркадьевна · приёмная', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90 });
+o('npc', 'zhanna', 32.5, 11.6, { reach: 150, title: 'Жанна Аркадьевна · приёмная', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90 });
 prop('sofa_dark', 27.5, 16.6); prop('coffee_table', 27.5, 15.3); prop('sofa_dark', 37.5, 16.6); prop('plant', 39.4, 10.6); prop('plant', 25.6, 10.6);
 prop('portrait_ceo', 32.5, 10.1);
 prop('vending', 39.2, 14, { incident: 'coffee', incidentId: 'incident_coffee11' });
@@ -53,7 +53,7 @@ o('trigger', 'reception', 25, 10, { npc: 'punktovich', once: false }, [16, 9]);
 o('pickup', 'ammo', 26, 12); o('pickup', 'health', 39, 17);
 
 // ---- corridor
-for (const x of [6, 22, 44, 60]) prop('plant', x, 20.4);
+for (const x of [7, 58]) prop('plant', x, 22.5);
 o('npc', 'intern11', 46, 21, { title: 'Стажёр Гоша · 40 слайдов', kind: 'manBrown', mode: 'idle', hp: 80, turn: 'fast', lines: 'Я сорок слайдов готовил! Где совещание?' });
 for (const [x, y] of [[4, 21], [61, 21], [24, 21.5], [41, 21.5]]) o('spawner', 'corridor', x, y, { how: 'rise', corridorOnly: true });
 

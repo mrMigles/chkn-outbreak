@@ -669,7 +669,7 @@ export class World implements WorldView {
     // NPC
     // companions always follow: they never take the action key, so doors/terminals next to them stay usable
     for (const n of this.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, p.x, p.y) > 80 || !this.map.lineOfSight(p.x, p.y, n.x, n.y, false)) continue;
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, p.x, p.y) > (n.props?.reach ?? 80) || !this.map.lineOfSight(p.x, p.y, n.x, n.y, false)) continue;
       this.interactCd.set(p.id, this.time);
       const r = this.script.onNpcUse?.(this, n, p);
       if (r === true) return;

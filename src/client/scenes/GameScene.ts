@@ -35,6 +35,9 @@ const SHOT_SOUND: Record<WeaponId, string> = { pistol: 'pistol', smg: 'smg', rif
 const SHAKE: Record<WeaponId, number> = { pistol: 0.13, smg: 0.055, rifle: 0.11, shotgun: 0.42, machinegun: 0.1, grenade: 0.3, flamethrower: 0.02 };
 const KICK: Record<WeaponId, number> = { pistol: 3, smg: 2, rifle: 3.5, shotgun: 10, machinegun: 3.5, grenade: 8, flamethrower: 0.5 };
 
+/** D69: story NPCs behind a counter/desk are talked to from across it (mirrors map prop `reach`). */
+const NPC_REACH: Record<string, number> = { zhanna: 150, chef: 150, valya: 150, ashot: 130, valera: 130 };
+
 interface Bubble { text: Phaser.GameObjects.Text; who: string; t: number; d: number }
 
 /** «держать: поднять Петя · …» → «поднять Петя» for the round action button. */
@@ -85,6 +88,7 @@ export class GameScene extends Phaser.Scene {
   hitMarker = 0;
   hitstop = 0;
   wallFaces: Phaser.GameObjects.Image[] = [];
+  private cineFocus: { x: number; y: number; until: number } | null = null;
   private fadeProps: { img: Phaser.GameObjects.Image; x: number; y: number; hw: number; h: number }[] = [];
   /** D69 floor 8: chickens' eyes glow above the darkness */
   redEyes = false;
@@ -572,7 +576,9 @@ export class GameScene extends Phaser.Scene {
       ? Math.min(220, dist(this.px, this.py, inp.aimWX, inp.aimWY) * 0.28)
       : inp.aimMode === 'stick' ? 110 : 40;
     const fx = watch ? watch.dispX : sp ? sp.x : this.px, fy = watch ? watch.dispY : sp ? sp.y : this.py;
-    const tx = fx + Math.cos(this.aim) * lead, ty = fy + Math.sin(this.aim) * lead;
+    let tx = fx + Math.cos(this.aim) * lead, ty = fy + Math.sin(this.aim) * lead;
+    // D69: a cutscene looks at its subject for a moment (the cafe helicopter)
+    if (this.cineFocus && this.time.now < this.cineFocus.until) { tx = this.cineFocus.x; ty = this.cineFocus.y; }
     const k = 1 - Math.exp(-dt * 7);
     this.camX = lerp(this.camX, tx, k); this.camY = lerp(this.camY, ty, k);
     const tr = this.fx.trauma * this.fx.trauma;
@@ -977,6 +983,7 @@ export class GameScene extends Phaser.Scene {
     const win = this.session.map.objects.find(o => o.type === 'zone' && o.name === 'windows');
     if (!win) return;
     const y0 = win.y + win.h * 0.45;
+    this.cineFocus = { x: Math.min(Math.max(this.px, win.x + 300), win.x + win.w - 300), y: win.y + win.h + 220, until: this.time.now + 9000 };
     const heli = this.add.image(win.x + win.w + 120, y0, 'office25', 'heli_side').setDepth(worldDepth(win.y + win.h) + 0.0001).setScale(-0.7, 0.7);
     const mask = this.make.graphics({}, false).fillRect(win.x, win.y, win.w, win.h);
     heli.setMask(mask.createGeometryMask());
@@ -1054,7 +1061,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (!ally && !hint) for (const n of v.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, this.px, this.py) > 80 || !this.session.map.lineOfSight(me.x, me.y, n.x, n.y, false)) continue;
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, this.px, this.py) > (NPC_REACH[n.id] ?? 80) || !this.session.map.lineOfSight(me.x, me.y, n.x, n.y, false)) continue;
       if (n.rescued || n.weapon) hint = `${key}${n.name}: за мной`;
       else hint = `${key}поговорить`;
       break;

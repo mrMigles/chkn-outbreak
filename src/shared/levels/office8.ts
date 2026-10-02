@@ -16,6 +16,7 @@ const valeraEnemy = (w: World) => w.enemies.find(e => e.appearance?.npcId === 'v
 
 function objective(w: World) {
   if (w.finished) return;
+  if (!w.flags.doorOpen && !w.flags.plan) { w.setObjective('Найти щиток этажа: послушать Нелю'); return; }
   if (!w.flags.doorOpen) {
     const left = ['lock_w', 'lock_e'].filter(id => !w.flags[id + '_t'] || w.time - w.flags[id + '_t'] > WINDOW);
     const solo = !!w.flags.nelyaHelps;
@@ -82,8 +83,9 @@ const office8: LevelScript = {
     w.flags.lastTeam = team(w);
     objective(w);
     w.after(1.5, () => w.say('nelya', 'Ой! Живые! Не светите сюда… шучу, светите. Я Неля из бухгалтерии.', 4));
-    w.after(5.5, () => w.say('nelya', 'Валера из IT выкрутил все лампы. Щиток в его серверной, а дверь — на двух размыкателях: запад и восток.', 6));
-    w.after(12, () => {
+    w.after(4.5, () => w.say('nelya', 'Валера из IT выкрутил все лампы. Щиток в его серверной, а дверь — на двух размыкателях: запад и восток.', 6));
+    w.after(8, () => {
+      w.flags.plan = true;
       if (team(w) < 2) nelyaGo(w);
       else { w.say('nelya', 'Вас много — разделитесь! Одни на запад, другие на восток. А я посторожу лифт… и свою психику.', 6); objective(w); }
     });
@@ -93,7 +95,7 @@ const office8: LevelScript = {
   onTick(w, dt) {
     const sec = Math.floor(w.time) !== Math.floor(w.time - dt);
     // a teammate dropped out before the releases: Неля takes the east one
-    if (sec && !w.flags.doorOpen && w.time > 12 && team(w) < 2) nelyaGo(w);
+    if (sec && !w.flags.doorOpen && w.flags.plan && team(w) < 2) nelyaGo(w);
     for (const id of ['lock_w', 'lock_e']) {
       const t = w.flags[id + '_t'];
       if (t && !w.flags.doorOpen && w.time - t > WINDOW) {

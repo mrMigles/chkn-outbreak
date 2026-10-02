@@ -46,7 +46,6 @@ export async function buildCity(root, { add, floors, props }) {
   const flowers = await lpc('objects/Objects/Decoration/Flowers.png');
   const cart = await lpc('source/Shopping Cart.png');
   const panel = await lpc('structure/Structure/Walls/Half-Wall Paneling A.png');
-  const carpetB = await lpc('structure/Structure/Floor/Geometric Carpet B.png');
   const diamondB = await lpc('structure/Structure/Floor/Diamond Tile B.png');
   const cup = await lpc('source/Coffee Cup.png');
 
@@ -156,7 +155,7 @@ export async function buildCity(root, { add, floors, props }) {
     rect(g, 11, 10, 4, 14, '#2a2328'); rect(g, 12, 8, 2, 8, '#a8b0bf'); rect(g, 9, 6, 8, 4, '#d8442f'); // lever (down)
     rect(g, 3, 29, 20, 3, '#e8b84a'); for (let x = 3; x < 23; x += 4) rect(g, x, 29, 2, 3, '#2a2328');
   }), 64, { wall: true });
-  add('desk_phone', cut(phones, 40, 17, 15, 13), 26);
+  add('desk_phone', cut(phones, 40, 17, 15, 13), 26 + 44, { foot: [30, 20] });
   add('bar_stool', cut(stools, 4, 0, 24, 32), 58);
   add('portrait_ceo', cut(paintings, 66, 8, 29, 49), 96, { wall: true });
   add('painting_wide', cut(paintings, 103, 69, 81, 25), 50, { wall: true });
@@ -166,8 +165,8 @@ export async function buildCity(root, { add, floors, props }) {
     rect(g, 5, 1, 12, 8, '#2a2328'); rect(g, 6, 2, 10, 6, '#c08a42'); rect(g, 7, 2, 5, 2, '#e8b84a'); // roast chicken
     rect(g, 3, 3, 3, 2, '#2a2328'); rect(g, 16, 3, 3, 2, '#2a2328'); rect(g, 3, 4, 2, 1, '#f3ecd6'); rect(g, 17, 4, 2, 1, '#f3ecd6'); // legs
     rect(g, 4, 9, 3, 2, '#4f8f45');
-  }), 26);
-  add('coffee_cup', cut(cup, 8, 8, 16, 16), 28);
+  }), 26 + 40, { foot: [44, 20] });
+  add('coffee_cup', cut(cup, 8, 8, 16, 16), 28 + 40, { foot: [24, 20] });
   // panoramic windows of the 12th-floor cafe: sky, distant towers (three variants), drawn on the wall facade
   for (let v = 0; v < 3; v++) add('pano_' + v, draw(64, 50, (g, w, h) => {
     for (let y = 0; y < h; y++) rect(g, 0, y, w, 1, `rgb(${120 + y * 1.6 | 0},${170 + y * 1.1 | 0},${215 + y * 0.5 | 0})`);
@@ -217,7 +216,10 @@ export async function buildCity(root, { add, floors, props }) {
   for (const [index, seed] of [[508, 21], [509, 23]]) tile(index, g => { rect(g, 0, 0, 32, 32, '#4f8f45'); const r = rng(seed); for (let i = 0; i < 70; i++) rect(g, r() * 32 | 0, r() * 32 | 0, 1, r() < 0.5 ? 2 : 1, r() < 0.5 ? '#3f7a38' : r() < 0.6 ? '#6aa857' : '#8fd16b'); });
   tile(510, g => g.drawImage(sidewalk, 40, 40, 32, 32, 0, 0, 32, 32)); // plaza cobbles
   tile(511, g => { rect(g, 0, 0, 32, 32, '#262a33'); const r = rng(31); for (let i = 0; i < 60; i++) rect(g, r() * 32 | 0, r() * 32 | 0, 1, 1, r() < 0.5 ? '#2d323d' : '#1f222a'); rect(g, 0, 0, 32, 1, '#20232b'); rect(g, 0, 0, 1, 32, '#20232b'); }); // dark carpet tiles
-  tile(512, g => g.drawImage(carpetB, 32, 96, 32, 32, 0, 0, 32, 32)); // executive carpet
+  tile(512, g => { // executive carpet: deep burgundy with a quiet diamond pattern
+    rect(g, 0, 0, 32, 32, '#5b2b2c'); const r = rng(51); for (let i = 0; i < 50; i++) rect(g, r() * 32 | 0, r() * 32 | 0, 1, 1, r() < 0.5 ? '#552729' : '#62302f');
+    for (const [cx, cy] of [[8, 8], [24, 24]]) { rect(g, cx - 1, cy - 3, 2, 6, '#6e3a35'); rect(g, cx - 3, cy - 1, 6, 2, '#6e3a35'); rect(g, cx, cy, 1, 1, '#8a5040'); }
+  });
   tile(513, g => g.drawImage(diamondB, 0, 0, 32, 32, 0, 0, 32, 32)); // cafe tiles
   tile(514, g => { rect(g, 0, 0, 32, 32, '#7a6a52'); const r = rng(41); for (let i = 0; i < 40; i++) rect(g, r() * 32 | 0, r() * 32 | 0, 2, 1, r() < 0.5 ? '#6a5a44' : '#8a7a60'); }); // park path
 }

@@ -19,6 +19,14 @@ function labObjective(w: World) {
   if (w.objective !== text) w.setObjective(text, target);
 }
 
+function lockBehind(w: World) {
+  for (const id of ['arrival', 'decon']) {
+    const d = w.doors.find(q => q.id === id);
+    if (!d || w.flags['locked_' + id]) continue;
+    if (w.players.every(p => p.state !== 'alive' || p.x > d.x + d.w + 40)) { w.flags['locked_' + id] = true; w.lockDoor(id); }
+  }
+}
+
 const lab: LevelScript = {
   id: 'lab',
   title: 'Уровень −3. Лаборатория проекта «ЯЙЦО»',
@@ -33,9 +41,10 @@ const lab: LevelScript = {
   onTrigger(w, id, by) {
     switch (id) {
       case 'decon':
-        // doors lock behind, lights die, vents open
-        w.lockDoor('decon');
-        w.lockDoor('arrival');
+        // doors lock behind, lights die, vents open. D69: a door only locks once every living teammate is past it
+        // (a lagging colleague used to be shut out in the lift lobby for good)
+        if (w.rules >= 5) { w.flags.deconLock = true; lockBehind(w); }
+        else { w.lockDoor('decon'); w.lockDoor('arrival'); }
         w.say(by.id, 'Двери заблокировались… Это ловушка?', 2.5);
         w.say('pa', 'Внимание. Обнаружено заражение. Запуск протокола «Курятник».', 4);
         w.spawnWave('decon', ['fast', 'normal', 'fast', 'normal', 'spitter'], 12, 0.3, true, 'decon');
@@ -69,6 +78,7 @@ const lab: LevelScript = {
   },
 
   onTick(w, dt) {
+    if (w.flags.deconLock) lockBehind(w);
     // self-heal once a second (e.g. the card was picked up by a teammate)
     if (Math.floor(w.time) !== Math.floor(w.time - dt)) labObjective(w);
   },

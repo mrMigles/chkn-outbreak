@@ -54,7 +54,7 @@ note(26, 13.3, 'Остановка: «Маршрутка 66 — до завод�
 
 // ---- Ашот's shawarma kiosk on the north sidewalk
 prop('kiosk', 55, 12.55); label('ШАУРМА «НЕ ИЗ КУРИЦЫ»', 55, 11.4, 16, '#8a2a20');
-o('npc', 'ashot', 57.8, 13.1, { title: 'Ашот · шаурма', mode: 'cower', hp: 200, story: true, essential: true, untargetable: true, weapon: 'shotgun', angle: 180, lines: 'Клянусь, шаурма из телятины!|Они не верят! Они клюют ларёк!' });
+o('npc', 'ashot', 57.8, 13.1, { reach: 130, title: 'Ашот · шаурма', mode: 'cower', hp: 200, story: true, essential: true, untargetable: true, weapon: 'shotgun', angle: 180, lines: 'Клянусь, шаурма из телятины!|Они не верят! Они клюют ларёк!' });
 for (const [x, y, t] of [[52, 14.5, 'normal'], [54, 15.2, 'fast'], [56, 14.8, 'normal'], [58.5, 15.5, 'spitter'], [53, 16.5, 'normal'], [60, 13.6, 'fast'], [50.5, 13.2, 'normal']] as const) enemy(t, x, y, 'shawarma', { dormant: true });
 o('trigger', 'shawarma', 47, 12, {}, [16, 8]);
 

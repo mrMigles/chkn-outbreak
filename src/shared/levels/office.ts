@@ -52,7 +52,9 @@ const office: LevelScript = {
   onKill(w, _e, tag) {
     if (tag === 'os' && w.countTag('os') === 0 && !w.flags.osClear) {
       w.flags.osClear = true;
-      w.setObjective('Найти выход. Лифты — в конце коридора', 'elevator');
+      // D69: only while the opening objective still stands: clearing the open space late must not send the
+      // arrow back to the locked lifts after the server/blue-pass chain has started
+      if (w.objective.startsWith('Выжить') || w.objective.startsWith('Что происходит')) w.setObjective('Найти выход. Лифты — в конце коридора', 'elevator');
       const p = w.anyPlayer;
       if (p) w.say(p.id, 'Так. Пятница отменяется.');
     }

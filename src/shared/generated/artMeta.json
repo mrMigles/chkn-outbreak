@@ -751,7 +751,7 @@
   ],
   "desk_phone": [
    30,
-   26
+   20
   ],
   "bar_stool": [
    48,
@@ -771,11 +771,11 @@
   ],
   "chicken_plate": [
    44,
-   28
+   20
   ],
   "coffee_cup": [
-   32,
-   32
+   24,
+   20
   ],
   "pano_0": [
    128,
@@ -1440,7 +1440,11 @@
   },
   "desk_phone": {
    "feetX": 15,
-   "feetY": 26
+   "feetY": 70,
+   "foot": [
+    30,
+    20
+   ]
   },
   "bar_stool": {
    "feetX": 24,
@@ -1463,11 +1467,19 @@
   },
   "chicken_plate": {
    "feetX": 22,
-   "feetY": 26
+   "feetY": 66,
+   "foot": [
+    44,
+    20
+   ]
   },
   "coffee_cup": {
    "feetX": 16,
-   "feetY": 28
+   "feetY": 68,
+   "foot": [
+    24,
+    20
+   ]
   },
   "pano_0": {
    "feetX": 64,

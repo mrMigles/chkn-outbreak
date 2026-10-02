@@ -135,7 +135,7 @@ function botStep(w: World, b: Bot, skill: number) {
   let wantE = false;
   for (const o of w.map.objects) if (o.type === 'use' && near(o.cx, o.cy, 80) && (w.objectiveTarget.includes(o.name) || o.props.incident)) wantE = true;
   for (const d of w.doors) if (!d.open && d.locked && p.keys.includes(d.locked) && near(d.x + d.w / 2, d.y + d.h / 2, 105)) wantE = true;
-  for (const n of w.npcs) if (n.mode !== 'follow' && n.mode !== 'dead' && n.mode !== 'gone' && !n.mutation && (n.rescued || n.weapon || w.objectiveTarget.includes(n.id)) && near(n.x, n.y, 75)) wantE = true;
+  for (const n of w.npcs) if (n.mode !== 'follow' && n.mode !== 'dead' && n.mode !== 'gone' && !n.mutation && (n.rescued || n.weapon || w.objectiveTarget.includes(n.id)) && near(n.x, n.y, (n.props?.reach ?? 85) - 10)) wantE = true;
   // self-heal is a hold of E (1.2 s); release and press again for the next medkit
   (b as any).healT = ((b as any).healT ?? 0) + DT;
   if (p.hp < 50 && p.supplies.medkit && (!best || bd > 260) && (b as any).healT % 1.6 < 1.35) { inp.interact = true; nx = p.x; ny = p.y; inp.fire = false; }
