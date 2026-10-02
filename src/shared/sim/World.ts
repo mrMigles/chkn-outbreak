@@ -1,20 +1,24 @@
 // Authoritative game simulation. Runs in the browser (solo) or in a Colyseus room (multiplayer).
+import { LOOK_PRESETS } from '../look';
+import { propDef } from '../props';
 import { GameMap, MapObject, Collider, rayCircle, TILE } from '../map';
 import { FlowField } from '../nav';
 import { ENEMIES, EnemyType, PLAYER } from '../enemies';
 import { WEAPONS, WeaponId, WEAPON_ORDER } from '../weapons';
 import { Rng, angleDiff, clamp, dist, dist2, TAU } from '../math';
+import { MUTATION, BUFFS, BUFF_SECONDS, type BuffKind } from './types';
 import type {
   Player, Enemy, Npc, Projectile, Pickup, Door, Barrel, Pod, SimEvent, PlayerInput, Team, WorldView, PickupKind, ProjKind,
 } from './types';
 import { updateEnemy } from './enemyAI';
+import { rayBody, enemyBox, HUMAN_BOX, type BodyBox } from './hitbox';
 import { updateNpc } from './npcAI';
 import { SupportController } from './support';
 import type { LevelScript } from '../levels/types';
 
-export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation'] }
+export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation']; props?: Npc['props'] }
 export interface Carry {
-  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number; supplies?: Player['supplies'] }>;
+  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number; supplies?: Player['supplies']; achievements?: string[] }>;
   npcs: CarryNpc[];
 }
 export interface WorldOptions {
@@ -25,9 +29,11 @@ export interface WorldOptions {
 }
 
 interface Timer { t: number; fn: () => void; every?: number }
-interface Wave { group: string; types: EnemyType[]; left: number; interval: number; t: number; aggro: boolean; tag: string }
+interface Wave { group: string; types: EnemyType[]; left: number; interval: number; t: number; aggro: boolean; tag: string; waited: number; corridorOnly?: boolean }
 
 const HUMAN_R = PLAYER.radius;
+const BARREL_BOX: BodyBox = { hw: 18, h: 50, head: 0 };
+const POD_BOX: BodyBox = { hw: 22, h: 64, head: 0 };
 
 export class World implements WorldView {
   map: GameMap;
@@ -43,7 +49,11 @@ export class World implements WorldView {
   doors: Door[] = [];
   barrels: Barrel[] = [];
   pods: Pod[] = [];
+  broken: number[] = [];
+  /** Destructible props still standing (map object id → state). */
+  dprops: { id: number; name: string; x: number; y: number; hp: number; mat: string; box: BodyBox; blocksBullets: boolean; drop?: string }[] = [];
   objective = '';
+  objectiveTarget: string[] = [];
   blackout = false;
   alarm = false;
   bossId = -1;
@@ -53,6 +63,8 @@ export class World implements WorldView {
   opts: WorldOptions;
   finished = false;
   over = false;
+  /** Developer mode (solo only): players take no damage. */
+  god = false;
 
   private nextId = 1;
   private timers: Timer[] = [];
@@ -77,6 +89,13 @@ export class World implements WorldView {
     this.opts = opts;
     this.rng = new Rng(opts.seed ?? Math.floor(Math.random() * 0xffffffff));
     for (const o of map.objects) this.loadObject(o);
+    for (const o of map.objects) {
+      if (o.type !== 'prop') continue;
+      const def = propDef(o.name);
+      if (!def.hp) continue;
+      const feetY = o.cy + o.h / 2 - (def.inset ?? 0);
+      this.dprops.push({ id: o.id, name: o.name, x: o.cx, y: feetY, hp: def.hp, mat: def.mat ?? 'wood', box: { hw: Math.max(12, o.w / 2 - (def.inset ?? 0)), h: def.h ?? 50, head: 0 }, blocksBullets: def.bullets, drop: def.drop });
+    }
     this.flow = new FlowField(map);
     this.spawnPoints = map.objects.filter((o) => o.type === 'spawn');
   }
@@ -90,7 +109,7 @@ export class World implements WorldView {
         break;
       case 'npc':
         this.npcs.push({
-          id: o.name || 'npc' + o.id, kind: o.props.kind || 'manBlue', name: o.props.title || o.name, x: cx, y: cy,
+          id: o.name || 'npc' + o.id, kind: o.props.look || (LOOK_PRESETS[o.name] ? o.name : o.props.kind) || 'manBlue', name: o.props.title || o.name, x: cx, y: cy,
           angle: (o.props.angle ?? 90) * Math.PI / 180, hp: o.props.hp ?? 80, maxHp: o.props.hp ?? 80,
           mode: o.props.mode || 'idle', weapon: o.props.weapon || null, fireCd: 0, follow: null, goal: null,
           lines: o.props.lines ? String(o.props.lines).split('|') : [], talkCd: 2 + Math.random() * 4, tag: o.props.tag || o.name,
@@ -120,19 +139,20 @@ export class World implements WorldView {
     }
   }
 
-  addPlayer(id: string, name: string, slot: number) {
+  addPlayer(id: string, name: string, slot: number, look = '') {
     const sp = this.spawnPoints.filter((s) => s.name === 'player');
     const s0 = sp[slot % Math.max(1, sp.length)];
     const s = s0 ? { x: s0.cx, y: s0.cy } : { x: 200, y: 200 };
     const carry = this.opts.carry?.players[id];
     const p: Player = {
-      id, slot, name, x: s.x + (sp.length ? 0 : slot * 40), y: s.y, aim: 0, vx: 0, vy: 0,
+      id, slot, name, look, x: s.x + (sp.length ? 0 : slot * 40), y: s.y, aim: 0, vx: 0, vy: 0,
       hp: carry?.hp ?? PLAYER.hp, maxHp: PLAYER.hp, armor: carry?.armor ?? 0, state: 'alive', downT: 0, reviveT: 0, respawnT: 0,
       weapons: carry?.weapons ? [...carry.weapons] : ['pistol'], cur: 0, ammo: carry?.ammo ? JSON.parse(JSON.stringify(carry.ammo)) : { pistol: { mag: 12, reserve: -1 } },
       reloadT: 0, fireCd: 0, bloom: 0, firing: false, shotSeq: 0,
       input: { seq: 0, x: s.x, y: s.y, aim: 0, fire: false, reload: false, interact: false, weapon: 0 },
       kills: 0, deaths: 0, score: 0, hurtT: 0, keys: [], combo: 0, comboT: 0, connected: true, tp: 0,
       supplies: { ...(carry?.supplies ?? { medkit: 1, ammo: 1 }) }, support: null, supportVersion: 0,
+      buffs: {}, achievements: [...(carry?.achievements ?? [])],
     };
     p.input.x = p.x; p.input.y = p.y;
     p.cur = Math.max(0, p.weapons.length - 1);
@@ -147,7 +167,9 @@ export class World implements WorldView {
     if (p) this.supportController.reset(p, this);
     this.players = this.players.filter((p) => p.id !== id);
     this.trails.delete(id);
-    for (const n of this.npcs) if (n.follow === id) n.follow = null;
+    // companions switch to another teammate
+    const next = this.players.find((q) => q.state === 'alive') ?? this.players[0];
+    for (const n of this.npcs) if (n.follow === id) n.follow = next?.id ?? null;
   }
 
   start() {
@@ -160,6 +182,7 @@ export class World implements WorldView {
         id: c.id, kind: c.kind, name: c.name, x: lead.x + Math.cos(a) * 60, y: lead.y + Math.sin(a) * 60, angle: 0, hp: c.hp, maxHp: c.maxHp,
         mode: 'follow', weapon: c.weapon, fireCd: 0, follow: lead.id, goal: null, lines: [], talkCd: 5, tag: c.id, rescued: true, vx: 0, vy: 0, hurtT: 0,
         betrayal: c.betrayal ? { ...c.betrayal } : undefined, mutation: c.mutation ? { ...c.mutation } : undefined,
+        props: c.props ? { ...c.props } : undefined,
       });
     });
     this.script.onStart?.(this);
@@ -170,16 +193,21 @@ export class World implements WorldView {
     const players: Carry['players'] = {};
     for (const p of this.players) {
       const src = p.state === 'alive' || !p.saved ? p : p.saved;
-      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor, supplies: { ...p.supplies } };
+      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor, supplies: { ...p.supplies }, achievements: [...(p.achievements ?? [])] };
     }
-    const npcs = this.npcs.filter((n) => n.mode === 'follow').map((n) => ({ id: n.id, kind: n.kind, name: n.name, weapon: n.weapon, hp: Math.max(n.hp, n.maxHp * 0.6), maxHp: n.maxHp, betrayal: n.betrayal ? { ...n.betrayal } : undefined, mutation: n.mutation ? { ...n.mutation } : undefined }));
+    const npcs = this.npcs.filter((n) => n.mode === 'follow').map((n) => ({ id: n.id, kind: n.kind, name: n.name, weapon: n.weapon, hp: Math.max(n.hp, n.maxHp * 0.6), maxHp: n.maxHp, betrayal: n.betrayal ? { ...n.betrayal } : undefined, mutation: n.mutation ? { ...n.mutation } : undefined, props: n.props }));
     return { players, npcs };
   }
 
   // ------------------------------------------------------------------ script API
   emit(ev: SimEvent) { this.events.push(ev); }
   say(who: string, text: string, d = 3.2) { this.emit({ e: 'say', who, text, d }); }
-  setObjective(text: string) { this.objective = text; this.emit({ e: 'obj', text }); }
+  /** target: map object / NPC name(s) or a point; empty = no direction (survive/defend). */
+  setObjective(text: string, target?: string | string[] | { x: number; y: number }) {
+    this.objective = text;
+    this.objectiveTarget = !target ? [] : typeof target === 'string' ? [target] : Array.isArray(target) ? target : [`@${Math.round(target.x)},${Math.round(target.y)}`];
+    this.emit({ e: 'obj', text });
+  }
   msg(text: string, sub?: string, d = 3) { this.emit({ e: 'msg', text, sub, d }); }
   after(t: number, fn: () => void) { this.timers.push({ t, fn }); }
   every(t: number, fn: () => void) { this.timers.push({ t, fn, every: t }); }
@@ -197,8 +225,8 @@ export class World implements WorldView {
   get humanPlayers() { return this.players.filter((p) => p.state === 'alive'); }
   get anyPlayer() { return this.humanPlayers[0] ?? this.players[0]; }
 
-  spawnWave(group: string, types: EnemyType[], count: number, interval = 0.5, aggro = true, tag = '') {
-    this.waves.push({ group, types, left: count, interval, t: 0, aggro, tag: tag || group });
+  spawnWave(group: string, types: EnemyType[], count: number, interval = 0.5, aggro = true, tag = '', corridorOnly = false) {
+    this.waves.push({ group, types, left: count, interval, t: 0, aggro, tag: tag || group, waited: 0, corridorOnly });
   }
   /** Enemies alive with tag (wave group or map tag) + pending wave spawns. */
   countTag(tag: string) {
@@ -247,7 +275,7 @@ export class World implements WorldView {
   spawnEnemy(type: EnemyType, x: number, y: number, o: { aggro?: boolean; how?: 'egg' | 'vent' | 'rise' | null; tag?: string; dormant?: boolean } = {}) {
     const def = ENEMIES[type];
     const diff = this.opts.difficulty ?? 1;
-    const hpMul = type === 'boss' ? 0.6 + 0.4 * Math.max(1, this.players.length) : 1;
+    const hpMul = (type === 'boss' ? 0.6 + 0.4 * Math.max(1, this.players.length) : 1) * (this.script.enemyHp ?? 1);
     const e: Enemy = {
       id: this.nextId++, type, variant: this.rng.int(0, def.sprite.length - 1), x, y, angle: this.rng.range(0, TAU), vx: 0, vy: 0,
       hp: def.hp * hpMul * diff, maxHp: def.hp * hpMul * diff, state: o.how ? 'rise' : 'idle', t: o.how ? 0.55 : 0, cd: this.rng.range(0, 0.6),
@@ -309,6 +337,7 @@ export class World implements WorldView {
       else updateNpc(this, n, dt);
     }
     this.separate();
+    this.separateNpcs();
     for (const e of [...this.enemies]) updateEnemy(this, e, dt);
     this.updateProjectiles(dt);
     this.updatePickups(dt);
@@ -324,11 +353,11 @@ export class World implements WorldView {
   private updateMutation(n: Npc, dt: number) {
     const m = n.mutation!;
     m.elapsed += dt;
-    const stage = m.elapsed < 0.7 ? 'twitch' : m.elapsed < 1.5 ? 'feathers' : 'silhouette';
+    const stage = m.elapsed < MUTATION.feathers ? 'twitch' : m.elapsed < MUTATION.silhouette ? 'feathers' : 'silhouette';
     if (stage !== m.stage) {
       m.stage = stage; this.emit({ e: 'mutation', id: n.id, x: n.x, y: n.y, stage });
     }
-    if (m.elapsed < 2.2) return;
+    if (m.elapsed < MUTATION.done) return;
     n.mode = 'gone';
     if (n.weapon) this.addPickup('weapon', n.x + 18, n.y, { weapon: n.weapon });
     this.script.onNpcLost?.(this, n);
@@ -338,13 +367,14 @@ export class World implements WorldView {
   }
 
   private updateBetrayal(n: Npc, dt: number) {
+    if (n.props?.story || ['marat', 'petrovich', 'galina', 'omletov', 'mihalych'].includes(n.id)) return;
     if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || (n.mode !== 'follow' && !n.rescued)) return;
-    if (!n.betrayal) n.betrayal = { checked: true, remaining: this.rng.chance(0.25) ? this.rng.range(35, 90) : -1, helped: 0 };
+    if (!n.betrayal) n.betrayal = { checked: true, remaining: this.rng.chance(0.65) ? this.rng.range(18, 45) : -1, helped: 0 };
     const plan = n.betrayal;
     plan.helped += dt;
     if (plan.remaining < 0) return;
     plan.remaining = Math.max(0, plan.remaining - dt);
-    if (plan.remaining > 0 || plan.helped < 20 || this.betrayals >= 2 || this.time - this.lastBetrayal < 30 ||
+    if (plan.remaining > 0 || plan.helped < 12 || this.time - this.lastBetrayal < 12 ||
       this.npcs.some(q => q.mutation && q.mode !== 'gone' && q.mode !== 'dead')) return;
     this.betrayals++; this.lastBetrayal = this.time;
     this.say(n.id, 'Я прикрою… ко… ЧТО СО МНОЙ?!', 2.2);
@@ -371,17 +401,46 @@ export class World implements WorldView {
       if (w.t > 0) continue;
       w.t = w.interval;
       const pts = this.objects('spawner', w.group);
-      const pt = pts.length ? this.rng.pick(pts) : null;
-      if (!pt) { w.left = 0; }
-      else {
-        const type = this.rng.pick(w.types);
-        const ang = this.rng.range(0, TAU), r = this.rng.range(0, 18);
-        this.spawnEnemy(type, pt.cx + Math.cos(ang) * r, pt.cy + Math.sin(ang) * r, { aggro: w.aggro, how: (pt.props.how as any) || 'vent', tag: w.tag });
-        w.left--;
-      }
+      if (!pts.length) { w.left = 0; this.waves.splice(this.waves.indexOf(w), 1); continue; }
+      const pt = this.pickSpawner(pts, w);
+      if (!pt) { w.t = 0.25; continue; } // every spawner is on someone's screen: wait a moment
+      const type = this.rng.pick(w.types);
+      const ang = this.rng.range(0, TAU), r = this.rng.range(0, 18);
+      this.spawnEnemy(type, pt.cx + Math.cos(ang) * r, pt.cy + Math.sin(ang) * r, { aggro: w.aggro, how: (pt.props.how as any) || 'vent', tag: w.tag });
+      w.left--;
       if (w.left <= 0) this.waves.splice(this.waves.indexOf(w), 1);
     }
   }
+
+  /** Is a point (a body standing there) on any player's screen? Generous: desktop ≈ 15×10 tiles + camera lead, phones wider. */
+  onScreen(x: number, y: number) {
+    for (const p of this.players) {
+      if (!p.connected || p.state === 'dead') continue;
+      const dx = Math.abs(x - p.x), dy = y - p.y;
+      if (dx < 820 && dy > -560 && dy < 480) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Enemies never pop out of thin air in view: use a spawner of the group nobody can see; otherwise the closest
+   * hidden spawner of any group that still has a path to the players; after ~3 s of waiting, the group's own one.
+   */
+  private pickSpawner(pts: MapObject[], w: Wave): MapObject | null {
+    const hidden = pts.filter((o) => !this.onScreen(o.cx, o.cy));
+    if (hidden.length) { w.waited = 0; return this.rng.pick(hidden); }
+    let best: MapObject | null = null, bestD = 2600;
+    for (const o of this.spawnersAll) {
+      if (w.corridorOnly && !o.props.corridorOnly) continue;
+      if (this.onScreen(o.cx, o.cy)) continue;
+      const d = this.flow.distAt(o.cx, o.cy);
+      if (d >= 900 && d < bestD) { bestD = d; best = o; }
+    }
+    if (best) return best;
+    w.waited += 0.25;
+    return w.waited >= 3 ? this.rng.pick(pts) : null;
+  }
+  private get spawnersAll() { return this.map.objects.filter((o) => o.type === 'spawner' && o.name !== 'boss_spawn'); }
 
   private updateTrails(dt: number) {
     this.trailT -= dt;
@@ -424,6 +483,10 @@ export class World implements WorldView {
   }
 
   private updatePlayer(p: Player, dt: number) {
+    for (const kind of Object.keys(p.buffs ?? {}) as BuffKind[]) {
+      p.buffs![kind] = Math.max(0, (p.buffs![kind] ?? 0) - dt);
+      if (!p.buffs![kind]) delete p.buffs![kind];
+    }
     p.hurtT = Math.max(0, p.hurtT - dt);
     p.comboT -= dt;
     if (p.comboT <= 0) p.combo = 0;
@@ -444,7 +507,7 @@ export class World implements WorldView {
     }
 
     const def0 = WEAPONS[p.weapons[p.cur]];
-    const speed = (p.state === 'chicken' ? PLAYER.chickenSpeed : PLAYER.speed) * def0.speedMul;
+    const speed = (p.state === 'chicken' ? PLAYER.chickenSpeed : PLAYER.speed) * def0.speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1);
     this.acceptMove(p, inp.x, inp.y, dt, speed);
     p.aim = inp.aim;
     const helping = this.supportController.update(this, p, dt, () => this.interact(p));
@@ -458,6 +521,8 @@ export class World implements WorldView {
     const ammo = p.ammo[w] ?? (p.ammo[w] = { mag: def.mag, reserve: def.reserveMax });
     p.fireCd -= dt;
     p.bloom = Math.max(0, p.bloom - dt * 0.35);
+    const infinite = (p.buffs?.infinite ?? 0) > 0;
+    if (infinite) p.reloadT = 0;
 
     // reload
     if (p.reloadT > 0) {
@@ -468,18 +533,18 @@ export class World implements WorldView {
         ammo.mag += take;
         if (ammo.reserve >= 0) ammo.reserve -= take;
       }
-    } else if ((inp.reload && ammo.mag < def.mag && ammo.reserve !== 0) || (ammo.mag === 0 && ammo.reserve !== 0)) {
+    } else if (!infinite && ((inp.reload && ammo.mag < def.mag && ammo.reserve !== 0) || (ammo.mag === 0 && ammo.reserve !== 0))) {
       p.reloadT = def.reload;
       this.emit({ e: 'reload', id: p.id, w });
     }
     inp.reload = false;
 
     // fire
-    if (!helping && inp.fire && p.reloadT <= 0 && ammo.mag > 0) {
+    if (!helping && inp.fire && p.reloadT <= 0 && (ammo.mag > 0 || infinite)) {
       let guard = 0;
-      while (p.fireCd <= 0 && ammo.mag > 0 && guard++ < 4) {
+      while (p.fireCd <= 0 && (ammo.mag > 0 || infinite) && guard++ < 4) {
         this.fire(p, w);
-        if (def.fuel) ammo.mag = Math.max(0, ammo.mag - 1); else ammo.mag--;
+        if (!infinite) ammo.mag = Math.max(0, ammo.mag - 1);
         p.fireCd += 1 / def.rof;
         p.firing = true;
       }
@@ -510,15 +575,13 @@ export class World implements WorldView {
     const last = this.interactCd.get(p.id) ?? -1;
     if (this.time - last < 0.4) return;
     // NPC
+    // companions always follow: they never take the action key, so doors/terminals next to them stay usable
     for (const n of this.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || dist(n.x, n.y, p.x, p.y) > 80 || !this.map.lineOfSight(p.x, p.y, n.x, n.y, false)) continue;
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, p.x, p.y) > 80 || !this.map.lineOfSight(p.x, p.y, n.x, n.y, false)) continue;
       this.interactCd.set(p.id, this.time);
       const r = this.script.onNpcUse?.(this, n, p);
       if (r === true) return;
-      if (n.mode === 'follow' && n.follow === p.id) {
-        n.mode = 'guard'; n.follow = null;
-        this.say(n.id, n.weapon ? 'Держу позицию!' : 'Подожду здесь. Только недолго!');
-      } else if (n.rescued || n.weapon) {
+      if (n.rescued || n.weapon) {
         n.mode = 'follow'; n.follow = p.id;
         this.say(n.id, n.weapon ? this.rng.pick(['Я с тобой! Прикрою.', 'Веди, я стреляю.', 'Пошли, покажем им KPI.']) : this.rng.pick(['Иду за тобой!', 'Только не бросай меня!']));
       } else if (n.lines.length) {
@@ -555,6 +618,7 @@ export class World implements WorldView {
 
   damagePlayer(p: Player, dmg: number, fx: number, fy: number) {
     if (p.state !== 'alive' && p.state !== 'chicken') return;
+    if (this.god || (p.buffs?.invincible ?? 0) > 0) return;
     if (p.state === 'alive' && p.armor > 0) {
       const absorb = Math.min(p.armor, dmg * 0.6);
       p.armor -= absorb; dmg -= absorb;
@@ -591,20 +655,21 @@ export class World implements WorldView {
   // ------------------------------------------------------------------ shooting
   /** Entities that `team` can hit. */
   private victims(team: Team) {
-    const list: { kind: 'enemy' | 'player' | 'npc' | 'barrel' | 'pod'; ref: any; x: number; y: number; r: number }[] = [];
+    const list: { kind: 'enemy' | 'player' | 'npc' | 'barrel' | 'pod' | 'dprop'; ref: any; x: number; y: number; r: number; box: BodyBox }[] = [];
     if (team === 'human') {
-      for (const e of this.enemies) if (e.state !== 'rise') list.push({ kind: 'enemy', ref: e, x: e.x, y: e.y, r: ENEMIES[e.type].radius + 3 });
-      for (const p of this.players) if (p.state === 'chicken') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 4 });
+      for (const e of this.enemies) if (e.state !== 'rise') list.push({ kind: 'enemy', ref: e, x: e.x, y: e.y, r: ENEMIES[e.type].radius + 3, box: enemyBox(e.type) });
+      for (const p of this.players) if (p.state === 'chicken') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 4, box: HUMAN_BOX });
     } else {
-      for (const p of this.players) if (p.state === 'alive') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 2 });
-      for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone') list.push({ kind: 'npc', ref: n, x: n.x, y: n.y, r: HUMAN_R + 2 });
+      for (const p of this.players) if (p.state === 'alive') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 2, box: HUMAN_BOX });
+      for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone') list.push({ kind: 'npc', ref: n, x: n.x, y: n.y, r: HUMAN_R + 2, box: HUMAN_BOX });
     }
-    for (const b of this.barrels) list.push({ kind: 'barrel', ref: b, x: b.x, y: b.y, r: 18 });
-    if (team === 'human') for (const p of this.pods) if (!p.broken) list.push({ kind: 'pod', ref: p, x: p.x, y: p.y, r: 22 });
+    for (const b of this.barrels) list.push({ kind: 'barrel', ref: b, x: b.x, y: b.y, r: 18, box: BARREL_BOX });
+    if (team === 'human') for (const p of this.pods) if (!p.broken) list.push({ kind: 'pod', ref: p, x: p.x, y: p.y, r: 22, box: POD_BOX });
+    for (const d of this.dprops) if (!d.blocksBullets) list.push({ kind: 'dprop', ref: d, x: d.x, y: d.y, r: d.box.hw, box: d.box });
     return list;
   }
 
-  fire(p: Player, w: WeaponId) { this.fireFrom(p.id, p.state === 'chicken' ? 'chicken' : 'human', w, p.x, p.y, p.aim, p, 1); }
+  fire(p: Player, w: WeaponId) { this.fireFrom(p.id, p.state === 'chicken' ? 'chicken' : 'human', w, p.x, p.y, p.aim, p, (p.buffs?.damage ?? 0) > 0 ? 3 : 1); }
 
   /** Shared by players and armed NPCs. */
   fireFrom(owner: string, team: Team, w: WeaponId, x: number, y: number, aim: number, p: Player | null, dmgMul: number) {
@@ -633,25 +698,28 @@ export class World implements WorldView {
       const range = def.range * (def.pellets > 1 ? this.rng.range(0.85, 1) : 1);
       const wall = this.map.raycast(x, y, a, range, true);
       const dx = Math.cos(a), dy = Math.sin(a);
-      const hits: { t: number; v: (typeof victims)[number] }[] = [];
+      const hits: { t: number; v: (typeof victims)[number]; head: boolean }[] = [];
       for (const v of victims) {
         // quick reject
         const px = v.x - x, py = v.y - y;
-        const along = px * dx + py * dy;
-        if (along < -v.r || along > wall.d + v.r) continue;
-        const t = rayCircle(x, y, dx, dy, v.x, v.y, v.r);
-        if (t >= 0 && t <= wall.d) hits.push({ t, v });
+        if (Math.abs(px) > wall.d + v.box.h + 40 || Math.abs(py) > wall.d + v.box.h + 40) continue;
+        const h = rayBody(x, y, dx, dy, v.x, v.y, v.box, wall.d);
+        if (h) hits.push({ t: h.t, v, head: h.head });
       }
       hits.sort((a1, b1) => a1.t - b1.t);
       let endT = wall.d;
       let pierce = def.pierce;
       let dmg = def.damage * dmgMul;
       for (const h of hits) {
-        this.applyHit(h.v, dmg, a, def.knockback, owner, x + dx * h.t, y + dy * h.t);
-        if (h.v.kind === 'barrel' || h.v.kind === 'pod') { endT = h.t; break; }
+        // headshots: double damage (boss ×1.4)
+        const head = h.head && (h.v.kind === 'enemy' || h.v.kind === 'player');
+        const hm = head ? (h.v.kind === 'enemy' && h.v.ref.type === 'boss' ? 1.4 : 2) : 1;
+        this.applyHit(h.v, dmg * hm, a, def.knockback, owner, x + dx * h.t, y + dy * h.t, head);
+        if (h.v.kind === 'barrel' || h.v.kind === 'pod' || h.v.kind === 'dprop') { endT = h.t; break; }
         if (pierce-- <= 0) { endT = h.t; break; }
         dmg *= 0.7;
       }
+      if (endT === wall.d && wall.what === 'prop') { const d = this.dprops.find((q) => q.id === wall.id); if (d) this.damageProp(d, dmg); }
       if (endT === wall.d && wall.what !== 'none') {
         this.emit({ e: 'hit', x: x + dx * wall.d, y: y + dy * wall.d, a: Math.atan2(wall.ny, wall.nx), k: wall.what === 'wall' ? 'wall' : 'prop', d: 0 });
       }
@@ -660,10 +728,11 @@ export class World implements WorldView {
     this.emit({ e: 'shot', o: owner, w, x: Math.round(x), y: Math.round(y), a: aim, ends, team });
   }
 
-  private applyHit(v: { kind: string; ref: any }, dmg: number, a: number, knock: number, owner: string, hx: number, hy: number) {
-    if (v.kind === 'enemy') this.damageEnemy(v.ref, dmg, a, knock, owner, 'bullet', hx, hy);
+  private applyHit(v: { kind: string; ref: any }, dmg: number, a: number, knock: number, owner: string, hx: number, hy: number, head = false) {
+    if (v.kind === 'enemy') this.damageEnemy(v.ref, dmg, a, knock, owner, 'bullet', hx, hy, head);
     else if (v.kind === 'barrel') this.damageBarrel(v.ref, dmg, owner);
     else if (v.kind === 'pod') { this.emit({ e: 'hit', x: hx, y: hy, a, k: 'prop', d: dmg }); this.damagePod(v.ref, dmg); }
+    else if (v.kind === 'dprop') { this.emit({ e: 'hit', x: hx, y: hy, a, k: 'prop', d: 0 }); this.damageProp(v.ref, dmg); }
     else if (v.kind === 'player') {
       this.emit({ e: 'hit', x: hx, y: hy, a, k: 'player', d: dmg, id: v.ref.id });
       this.damagePlayer(v.ref, dmg * (v.ref.state === 'chicken' ? 1 : 0.55), hx - Math.cos(a) * 50, hy - Math.sin(a) * 50);
@@ -691,7 +760,7 @@ export class World implements WorldView {
     }
   }
 
-  damageEnemy(e: Enemy, dmg: number, a: number, knock: number, by: string, kind: 'bullet' | 'explosion' | 'fire' | 'melee', hx = e.x, hy = e.y) {
+  damageEnemy(e: Enemy, dmg: number, a: number, knock: number, by: string, kind: 'bullet' | 'explosion' | 'fire' | 'melee', hx = e.x, hy = e.y, head = false) {
     if (e.hp <= 0) return;
     const def = ENEMIES[e.type];
     let armored = false;
@@ -709,18 +778,18 @@ export class World implements WorldView {
       e.stunT = Math.max(e.stunT, e.type === 'boss' ? 0 : 0.07);
       const k = knock / def.mass;
       e.vx += Math.cos(a) * k; e.vy += Math.sin(a) * k;
-      this.emit({ e: 'hit', x: Math.round(hx), y: Math.round(hy), a, k: armored ? 'armor' : 'flesh', d: Math.round(dmg), id: e.id, big: kind === 'explosion', o: by });
+      this.emit({ e: 'hit', x: Math.round(hx), y: Math.round(hy), a, k: armored ? 'armor' : 'flesh', d: Math.round(dmg), id: e.id, big: kind === 'explosion', o: by, ...(head ? { hs: true } : {}) });
     }
-    if (e.hp <= 0) this.killEnemy(e, a, by, kind === 'explosion' || dmg > 60, kind === 'fire');
+    if (e.hp <= 0) this.killEnemy(e, a, by, kind === 'explosion' || dmg > 60, kind === 'fire', head);
   }
 
-  killEnemy(e: Enemy, a: number, by: string, gib: boolean, burn: boolean) {
+  killEnemy(e: Enemy, a: number, by: string, gib: boolean, burn: boolean, head = false) {
     const idx = this.enemies.indexOf(e);
     if (idx < 0) return;
     this.enemies.splice(idx, 1);
     const tag = this.enemyTags.get(e.id);
     this.enemyTags.delete(e.id);
-    this.emit({ e: 'kill', id: e.id, x: Math.round(e.x), y: Math.round(e.y), a, t: e.type, v: e.variant, gib, by, burn });
+    this.emit({ e: 'kill', id: e.id, x: Math.round(e.x), y: Math.round(e.y), a, t: e.type, v: e.variant, gib, by, burn, ...(head ? { hs: true } : {}) });
     const p = this.players.find((q) => q.id === by);
     if (p) {
       p.kills++;
@@ -729,6 +798,9 @@ export class World implements WorldView {
     }
     // drops
     const r = this.rng.next();
+    if (['fat', 'armored', 'spitter', 'exploder'].includes(e.type) && this.rng.chance(.28)) {
+      this.addPickup(this.rng.pick(Object.keys(BUFFS) as BuffKind[]), e.x + 18, e.y, { ttl: 20 });
+    }
     if (e.type !== 'chick') {
       if (r < 0.07) this.addPickup('ammo', e.x, e.y);
       else if (r < 0.1) this.addPickup('health', e.x, e.y);
@@ -773,6 +845,7 @@ export class World implements WorldView {
   }
 
   damageNpc(n: Npc, dmg: number) {
+    if (n.props?.essential) { n.hp = Math.max(1, n.hp - dmg); n.hurtT = .2; return; }
     if (n.mode === 'dead' || n.mode === 'gone') return;
     n.hp -= dmg;
     n.hurtT = 0.2;
@@ -811,6 +884,22 @@ export class World implements WorldView {
     }
     for (const b of [...this.barrels]) if (dist(x, y, b.x, b.y) < r * 0.85) this.damageBarrel(b, 100, by);
     for (const p of this.pods) if (!p.broken && dist(x, y, p.x, p.y) < r * 0.8) this.damagePod(p, 100);
+    for (const d of [...this.dprops]) if (dist(x, y, d.x, d.y) < r * 0.9) this.damageProp(d, dmg * 1.5);
+  }
+
+  damageProp(d: World['dprops'][number], dmg: number) {
+    if (d.hp <= 0) return;
+    d.hp -= dmg;
+    if (d.hp > 0) return;
+    this.dprops.splice(this.dprops.indexOf(d), 1);
+    this.broken.push(d.id);
+    const c = this.map.colliders.find((q) => q.id === d.id);
+    if (c) { this.map.removeCollider(c); this.flow.rebuildBlocked(); }
+    this.emit({ e: 'propbreak', id: d.id, x: Math.round(d.x), y: Math.round(d.y), m: d.mat });
+    this.noise(d.x, d.y, 400);
+    const r = this.rng.next();
+    if (d.drop === 'crate') { if (r < 0.3) this.addPickup('ammo', d.x, d.y + 6); else if (r < 0.42) this.addPickup('health', d.x, d.y + 6); }
+    if (d.drop === 'vending' && r < 0.6) this.addPickup('health', d.x, d.y + 22);
   }
 
   /** Gunfire / explosions wake chickens up. */
@@ -864,11 +953,19 @@ export class World implements WorldView {
   }
 
   // ------------------------------------------------------------------ pickups, doors, triggers
+  private pickupReach = new WeakMap<Pickup, number>();
+  /** Items lying on furniture (a table, a counter) are picked up from its edge. */
+  reachOf(k: Pickup) {
+    let r = this.pickupReach.get(k);
+    if (r === undefined) { r = pickupReach(this.map, k.x, k.y); this.pickupReach.set(k, r); }
+    return r;
+  }
   private updatePickups(dt: number) {
     for (const k of [...this.pickups]) {
       if (k.ttl > 0) { k.ttl -= dt; if (k.ttl <= 0) { this.pickups.splice(this.pickups.indexOf(k), 1); continue; } }
+      const reach = this.reachOf(k);
       for (const p of this.players) {
-        if (p.state !== 'alive' || dist2(p.x, p.y, k.x, k.y) > 34 * 34) continue;
+        if (p.state !== 'alive' || dist2(p.x, p.y, k.x, k.y) > reach * reach) continue;
         if (this.tryPickup(p, k)) { this.pickups.splice(this.pickups.indexOf(k), 1); break; }
       }
     }
@@ -876,6 +973,11 @@ export class World implements WorldView {
 
   private tryPickup(p: Player, k: Pickup) {
     let text = '';
+    if (k.kind in BUFFS) {
+      const kind = k.kind as BuffKind;
+      (p.buffs ??= {})[kind] = BUFF_SECONDS;
+      text = BUFFS[kind].name + ' · 10 секунд';
+    }
     switch (k.kind) {
       case 'health':
         if (p.hp >= p.maxHp && p.supplies.medkit >= 1) return false;
@@ -917,6 +1019,11 @@ export class World implements WorldView {
         break;
       case 'antidote':
         text = 'Антидот';
+        break;
+      case 'achievement':
+        for (const q of this.players) if (!(q.achievements ??= []).includes(k.key || 'root_rooster')) q.achievements.push(k.key || 'root_rooster');
+        text = '🏆 Ачивка: Рутовый петушок';
+        this.msg('РУТОВЫЙ ПЕТУШОК', 'Ачивка получена всей командой · sudo отпуск', 4);
         break;
     }
     this.emit({ e: 'pick', id: p.id, k: k.kind, w: k.weapon, text });
@@ -991,7 +1098,40 @@ export class World implements WorldView {
     }
   }
 
+  /** Companions keep personal space from each other and from players instead of stacking on one spot. */
+  private separateNpcs() {
+    const live = this.npcs.filter((n) => n.mode !== 'dead' && n.mode !== 'gone' && n.mode !== 'cower' && !n.mutation);
+    for (const n of live) {
+      if (n.mode !== 'follow' && n.mode !== 'goto') continue;
+      let px = 0, py = 0;
+      const push = (ox: number, oy: number, min: number, k: number) => {
+        const dx = n.x - ox, dy = n.y - oy, d2 = dx * dx + dy * dy;
+        if (d2 >= min * min) return;
+        const d = Math.sqrt(d2) || 0.01, f = (min - d) * k;
+        px += d2 < 1e-4 ? (n.id.length % 2 ? f : -f) : (dx / d) * f; py += d2 < 1e-4 ? 0 : (dy / d) * f;
+      };
+      for (const o of live) if (o !== n) push(o.x, o.y, 46, 0.25);
+      for (const p of this.players) if (p.state === 'alive' || p.state === 'downed') push(p.x, p.y, 40, 0.3);
+      if (px || py) [n.x, n.y] = this.map.move(n.x, n.y, 14, px, py);
+    }
+  }
+
+  /** Developer helpers (solo): every weapon with full reserve, kill every enemy. */
+  devArsenal(p: Player) {
+    for (const w of WEAPON_ORDER) { this.giveWeapon(p, w, false); const a = p.ammo[w]!, def = WEAPONS[w]; a.mag = def.mag; if (a.reserve >= 0) a.reserve = def.reserveMax; }
+    p.supplies = { medkit: 1, ammo: 1 }; p.hp = p.maxHp; p.armor = 100;
+  }
+  devKillAll(by: string) {
+    this.waves.length = 0;
+    for (const e of [...this.enemies]) this.killEnemy(e, 0, by, false, false);
+  }
+
   view(): WorldView { return this; }
+}
+
+/** Pickup radius from the feet: 34 on open floor, up to 84 when the item lies on a solid prop. */
+export function pickupReach(map: GameMap, x: number, y: number) {
+  return map.blockedAt(x, y, 14) ? 84 : 34;
 }
 
 function inRect(x: number, y: number, o: MapObject) { return x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h; }

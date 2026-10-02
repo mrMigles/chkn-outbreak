@@ -2,9 +2,27 @@
 
 Дата проверки страниц источников: 2026-10-02. Требования: [PLAN-2.5D.md](PLAN-2.5D.md), задачи A: [TASKS-2.5D.md](TASKS-2.5D.md).
 
-**Статус:** S01/S02/S03/S07/S08 скачаны и частично импортированы в офисный образец. Фактические кадры перечислены ниже; остальные строки каталога — план. S04/S05/S09–S12 ещё не импортированы. Нет AI-генерации. P02–P04 остаются частично выполненными до полного офисного комплекта и окончательных оснований.
+**Статус:** итерация 2 перевела все уровни на 2.5D (раздел ниже). Таблица первой итерации сохранена как история.
 
-## Фактически импортировано в первой итерации
+## Итерация 2 (2026-10-02): весь комплект 2.5D
+
+Источники и их фактическое использование. Сборка: `npm run art:fetch` (слои ULPC) и `npm run assets`; проверка: `npm run check:art`.
+
+| Что | Источник / файлы | Лицензия | Как используется |
+|---|---|---|---|
+| 46 слоёв персонажей (тела М/Ж/крупное, 5 голов, 14 причёсок, 11 верхов, 5 низов, обувь, очки/борода/усы, перьевые крылья) | S07 Universal LPC, ревизия `4963a69`; анимации `walk`, `hurt` и `thrust` (кадр 3 — поза «оружие двумя руками»); список — `tools/art/lpc-layers.mjs`, файлы/SHA/лицензия каждого — `vendor/lpc-characters/manifest.json`, авторы — `SELECTED-CREDITS.csv` | CC BY-SA 3.0, где доступно (99 листов); OGA-BY 3.0 (27), CC BY 4.0 (3), CC0 (9) | Атлас `lpc` (полосы 576×384: ходьба, падение, вооружённая поза); персонажи собираются в рантайме (`compose.ts`) с перекраской |
+| Люди-куры | Те же слои + собственная «хирургия» в коде: перья, гребень, клюв, бородка, глаза, хвост, лапы | Производное, CC BY-SA 3.0 | Текстура `mut:<look>` для каждой внешности |
+| Цыплята / куры | S08 Chicken Rework `chicken.png` (3 кадра × 4 направления) | CC BY 3.0 | `chick_*` (перекраска в жёлтый), `hen_*` |
+| Мебель офиса | S02/S03: Desk, Laptop, Water Cooler, Copy Machine, Bins, Sink, TV Widescreen; Chairs Dining (дерево, 4 ракурса), Tables, Sofas Casual, Countertops, Cabinets, Planters | OGA-BY 3.0 / CC BY-SA 3.0 | `office25`: desk, chair_0–3 (+_90/_180/_270), table_*, sofa_*, counter_*, stove/hob (столешница + собственная плита), sink, reception, tv, cabinet, shelf, plant(_small) |
+| Полы | S01 Floor: Wood Floor A, Tile A/B/C, Diamond Tile A, Herringbone A, Gritty Dirt, Geometric Carpet A | CC BY-SA 3.0 | `tiles25.png`: все индексы Kenney, встречающиеся в картах, заменены |
+| Лаборатория/завод | S09 Skorpio: Objects.png (автоматы Coffee/Crack, бочка, плакаты, терминал), Interior-Furniture.png (лабораторный стол, стойки/пульты, двери лифта), Interior-Walls-Blue.png, Pipes-RustyWalls.png; архив и SHA — `vendor/skorpio` | CC BY-SA 3.0 | vending(_b), barrel(s), hazard_barrel (перекраска), poster(_b), terminal, server_rack, lab_console, lab_bench, elevator, pipe_h, стена лаборатории |
+| Собственная пиксель-графика | `tools/art/lpc.mjs` (палитра LPC, ×2) | Проект | 7 видов оружия, egg_pod(_broken), ящики, паллеты, forklift → штабель, machine, generator, conveyor, aquarium, whiteboard, sign_exit, emergency/ceiling light, lamp, двери (3 темы + заперта), стальная стена завода |
+| Музыка | Juhani Junkala, Chiptune Adventures (OGG): Stage Select → calm, Stage 1 → tense, Boss Fight → wave, Stage 2 → boss; `public/assets/music`, SHA — `vendor/music/SHA256SUMS` | CC0 | `audio/Music.ts` |
+
+Старый арт остаётся только для эффектов (`fx`), иконок подбираемых предметов и плоских деталей пола (oil, note, blood_trail, feather_pile, plates). Атлас `people25` и `officeTiles.png` удалены. Скачаны, но не использованы (плотность пикселей не совпадает с LPC): Warped Tech Lab 2 и Factory Tileset.
+
+
+## Фактически импортировано в первой итерации (история)
 
 Адаптация: `tools/art/lpc.mjs`; сборка: `npm run assets`. Результат: `public/assets/gen/people25.{png,json}` (648 кадров, 2048×2048), `office25.{png,json}` (14 кадров, 2048×256), `officeTiles.png`. Проверка: `npm run check:art`. Указанные ниже области имеют формат `[x,y,w,h]` исходного PNG; кроме стены масштаб ×2 без сглаживания.
 

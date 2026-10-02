@@ -520,66 +520,372 @@
  "office25": {
   "desk": {
    "feetX": 64,
-   "feetY": 83,
-   "facing": [
-    "s"
-   ]
+   "feetY": 83
   },
   "desk_b": {
    "feetX": 64,
-   "feetY": 83,
-   "facing": [
-    "s"
-   ]
+   "feetY": 83
+  },
+  "desk_light": {
+   "feetX": 64,
+   "feetY": 83
+  },
+  "table_tennis": {
+   "feetX": 80,
+   "feetY": 100
   },
   "water_cooler": {
    "feetX": 32,
-   "feetY": 120,
-   "facing": [
-    "s"
-   ]
+   "feetY": 120
   },
   "printer": {
    "feetX": 64,
-   "feetY": 120,
-   "facing": [
-    "s"
-   ]
+   "feetY": 120
   },
   "plant": {
    "feetX": 32,
-   "feetY": 100,
-   "facing": [
-    "s"
-   ]
+   "feetY": 100
   },
   "plant_small": {
    "feetX": 32,
-   "feetY": 100,
-   "facing": [
-    "s"
-   ]
+   "feetY": 100
   },
   "cabinet": {
    "feetX": 32,
-   "feetY": 184,
-   "facing": [
-    "s"
-   ]
+   "feetY": 184
+  },
+  "shelf": {
+   "feetX": 32,
+   "feetY": 120
   },
   "office_chair": {
    "feetX": 32,
-   "feetY": 56,
-   "facing": [
-    "s"
-   ]
+   "feetY": 56
   },
   "bin": {
    "feetX": 32,
+   "feetY": 56
+  },
+  "chair_0": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_0_180": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_0_90": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_0_270": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_1": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_1_180": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_1_90": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_1_270": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_2": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_2_180": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_2_90": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_2_270": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_3": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_3_180": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_3_90": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_3_270": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "chair_blue": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "table_round": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "coffee_table": {
+   "feetX": 32,
+   "feetY": 40
+  },
+  "table_long": {
+   "feetX": 72,
+   "feetY": 48
+  },
+  "table_big": {
+   "feetX": 80,
+   "feetY": 208
+  },
+  "table_small": {
+   "feetX": 80,
+   "feetY": 88
+  },
+  "sofa_orange": {
+   "feetX": 64,
+   "feetY": 56
+  },
+  "sofa_green": {
+   "feetX": 64,
+   "feetY": 56
+  },
+  "sofa_dark": {
+   "feetX": 64,
+   "feetY": 56
+  },
+  "counter_a": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "counter_b": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "counter_c": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "counter_d": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "stove": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "hob": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "hob_dark": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "sink": {
+   "feetX": 32,
+   "feetY": 80
+  },
+  "reception": {
+   "feetX": 96,
+   "feetY": 76
+  },
+  "tv": {
+   "feetX": 88,
+   "feetY": 104
+  },
+  "vending": {
+   "feetX": 46,
+   "feetY": 124
+  },
+  "vending_b": {
+   "feetX": 46,
+   "feetY": 124
+  },
+  "poster": {
+   "feetX": 22,
    "feetY": 56,
-   "facing": [
-    "s"
-   ]
+   "wall": true
+  },
+  "poster_b": {
+   "feetX": 22,
+   "feetY": 56,
+   "wall": true
+  },
+  "barrel": {
+   "feetX": 26,
+   "feetY": 60
+  },
+  "barrel_grey": {
+   "feetX": 26,
+   "feetY": 60
+  },
+  "barrel_open": {
+   "feetX": 26,
+   "feetY": 60
+  },
+  "hazard_barrel": {
+   "feetX": 26,
+   "feetY": 60
+  },
+  "pipe_h": {
+   "feetX": 96,
+   "feetY": 50
+  },
+  "lab_bench": {
+   "feetX": 68,
+   "feetY": 152
+  },
+  "server_rack": {
+   "feetX": 32,
+   "feetY": 120
+  },
+  "lab_console": {
+   "feetX": 32,
+   "feetY": 120
+  },
+  "terminal": {
+   "feetX": 32,
+   "feetY": 120
+  },
+  "elevator": {
+   "feetX": 64,
+   "feetY": 120,
+   "wall": true
+  },
+  "whiteboard": {
+   "feetX": 32,
+   "feetY": 22,
+   "wall": true
+  },
+  "sign_exit": {
+   "feetX": 12,
+   "feetY": 18,
+   "wall": true
+  },
+  "emergency_light": {
+   "feetX": 8,
+   "feetY": 8,
+   "wall": true
+  },
+  "ceiling_light": {
+   "feetX": 10,
+   "feetY": 6
+  },
+  "aquarium": {
+   "feetX": 48,
+   "feetY": 76
+  },
+  "crate": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "crate_rot": {
+   "feetX": 32,
+   "feetY": 56
+  },
+  "crate_small": {
+   "feetX": 22,
+   "feetY": 36
+  },
+  "crate_small_rot": {
+   "feetX": 22,
+   "feetY": 36
+  },
+  "pallet": {
+   "feetX": 32,
+   "feetY": 44
+  },
+  "forklift": {
+   "feetX": 48,
+   "feetY": 88
+  },
+  "egg_pod": {
+   "feetX": 28,
+   "feetY": 88
+  },
+  "egg_pod_broken": {
+   "feetX": 28,
+   "feetY": 88
+  },
+  "machine": {
+   "feetX": 48,
+   "feetY": 104
+  },
+  "generator": {
+   "feetX": 56,
+   "feetY": 80
+  },
+  "conveyor": {
+   "feetX": 64,
+   "feetY": 40
+  },
+  "lamp": {
+   "feetX": 8,
+   "feetY": 18
+  }
+ },
+ "guns": {
+  "pistol": {
+   "gripX": 6,
+   "gripY": 8,
+   "muzzle": 16,
+   "w": 24,
+   "h": 12
+  },
+  "smg": {
+   "gripX": 10,
+   "gripY": 10,
+   "muzzle": 24,
+   "w": 36,
+   "h": 14
+  },
+  "shotgun": {
+   "gripX": 12,
+   "gripY": 8,
+   "muzzle": 32,
+   "w": 48,
+   "h": 12
+  },
+  "rifle": {
+   "gripX": 16,
+   "gripY": 10,
+   "muzzle": 36,
+   "w": 56,
+   "h": 14
+  },
+  "machinegun": {
+   "gripX": 20,
+   "gripY": 12,
+   "muzzle": 42,
+   "w": 64,
+   "h": 16
+  },
+  "grenade": {
+   "gripX": 14,
+   "gripY": 10,
+   "muzzle": 30,
+   "w": 46,
+   "h": 14
+  },
+  "flamethrower": {
+   "gripX": 18,
+   "gripY": 12,
+   "muzzle": 34,
+   "w": 54,
+   "h": 16
   }
  }
 }

@@ -7,6 +7,8 @@ import { GameMap, TiledMap } from '../src/shared/map';
 import { LEVELS, FIRST_LEVEL } from '../src/shared/levels';
 import { encodeSnapshot, MAX_PLAYERS, SNAP_HZ, TICK_HZ } from '../src/shared/protocol';
 import type { PlayerInput } from '../src/shared/sim/types';
+import { decodeLook } from '../src/shared/look';
+import { isChatCode } from './telegram';
 
 const MAPS_DIR = path.resolve(process.cwd(), 'public/assets/maps');
 const mapCache = new Map<string, TiledMap>();
@@ -37,11 +39,15 @@ export class GameRoom extends Room<RoomState> {
   private carry: Carry | undefined;
   private levelCarry: Carry | undefined;
 
-  override onCreate(options: { level?: string }) {
-    const code = makeCode();
+  override onCreate(options: { level?: string; code?: string; chat?: string }) {
+    // Telegram chat rooms get their chat's fixed code (server/telegram.ts); ordinary rooms a random one
+    const fixed = isChatCode(options?.code) && !usedCodes.has(options.code) ? options.code : '';
+    if (fixed) usedCodes.add(fixed);
+    const code = fixed || makeCode();
     this.roomId = code;
     this.setState(new RoomState());
     this.state.code = code;
+    if (fixed) this.state.chat = String(options.chat ?? 'Чат').slice(0, 40) || 'Чат';
     this.state.level = options?.level && LEVELS[options.level] ? options.level : FIRST_LEVEL;
     this.setPatchRate(100);
 
@@ -78,7 +84,7 @@ export class GameRoom extends Room<RoomState> {
     this.setSimulationInterval((dt) => this.tick(dt), 1000 / TICK_HZ);
   }
 
-  override onJoin(client: Client, options: { name?: string }) {
+  override onJoin(client: Client, options: { name?: string; look?: string }) {
     const taken = new Set([...this.state.players.values()].map((p) => p.slot));
     let slot = 0;
     while (taken.has(slot)) slot++;
@@ -86,11 +92,12 @@ export class GameRoom extends Room<RoomState> {
     p.id = client.sessionId;
     p.name = String(options?.name ?? 'Игрок').trim().slice(0, 14) || 'Игрок';
     p.slot = slot;
+    p.look = typeof options?.look === 'string' && decodeLook(options.look) ? options.look : '';
     p.host = this.state.players.size === 0;
     this.state.players.set(client.sessionId, p);
     // joining a running game: drop in as a fresh employee
     if (this.world && this.state.phase === 'playing') {
-      this.world.addPlayer(client.sessionId, p.name, slot);
+      this.world.addPlayer(client.sessionId, p.name, slot, p.look);
       client.send('start', { level: this.world.mapId });
     }
   }
@@ -129,7 +136,7 @@ export class GameRoom extends Room<RoomState> {
     this.levelCarry = this.carry;
     const world = new World(map, LEVELS[id], { solo: false, carry: this.carry });
     const players = [...this.state.players.values()].sort((a, b) => a.slot - b.slot);
-    for (const p of players) world.addPlayer(p.id, p.name, p.slot).connected = p.connected;
+    for (const p of players) world.addPlayer(p.id, p.name, p.slot, p.look).connected = p.connected;
     world.start();
     this.world = world;
     this.state.level = id;

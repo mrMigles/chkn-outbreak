@@ -11,15 +11,10 @@ export interface Light { x: number; y: number; r: number; color: number; a: numb
 interface Tracer { img: Phaser.GameObjects.Image; x1: number; y1: number; x2: number; y2: number; len: number; d: number; head: number; speed: number; L: number; w: number; tail: number; alive: boolean }
 
 const FEATHER_TINT: Record<string, number> = { fast: 0xffe27a, chick: 0xffe27a, spitter: 0xe3f5c8, exploder: 0xffd2bd, boss: 0xe8a24a, player: 0xf0c060 };
-export const DEAD_FRAME: Record<string, string[]> = {
-  normal: ['ck_normal_a_dead', 'ck_normal_b_dead', 'ck_normal_c_dead'], fast: ['ck_fast_dead'], chick: ['ck_fast_dead'], fat: ['ck_fat_dead'],
-  spitter: ['ck_spitter_dead'], armored: ['ck_armored_dead'], exploder: ['ck_exploder_dead'], boss: ['boss_dead'],
-};
 
 export class Fx {
   low: Particles;     // under characters (blood drops, casings)
-  corpses: Particles; // sliding corpses & gibs (chars atlas)
-  pixelCorpses?: Particles;
+  private falling: { spr: Phaser.GameObjects.Sprite; t: number; frames: string[]; vx: number; vy: number; tint: number }[] = [];
   high: Particles;    // above characters (sparks, flashes, fire, smoke, flying feathers)
   decals: DecalLayer;
   lights: Light[] = [];
@@ -32,18 +27,13 @@ export class Fx {
 
   constructor(private scene: Phaser.Scene, w: number, h: number) {
     this.decals = new DecalLayer(scene, 3, w, h);
+    this.decals.prewarm();
     this.low = new Particles(scene, 'fx', 6, 1500);
-    this.corpses = new Particles(scene, 'chars', 5, 200);
     this.high = new Particles(scene, 'fx', 20, 3000);
     const land = (tex: string) => (frame: string, x: number, y: number, rot: number, scale: number, tint: number, alpha: number) =>
       this.decals.draw(tex, frame, x, y, rot, scale, tint, alpha);
     this.low.onLand = land('fx');
     this.high.onLand = land('fx');
-    this.corpses.onLand = land('chars');
-    if ((scene as Phaser.Scene & {session?: {levelId:string}}).session?.levelId === 'office') {
-      this.pixelCorpses = new Particles(scene, 'people25', 5, 120);
-      this.pixelCorpses.onLand = land('people25');
-    }
   }
 
   shake(t: number) { this.trauma = Math.min(1, this.trauma + t * this.shakeScale); }
@@ -146,6 +136,32 @@ export class Fx {
     } else sfx.play('hurt', { x, y, vol: 0.6, max: 3 });
   }
 
+  /** A destructible prop breaks: debris by material, dust, a thud. */
+  propBreak(x: number, y: number, mat: string) {
+    const top = y - 30;
+    const pal: Record<string, { frame: string; tint: number; n: number; snd: string }> = {
+      wood: { frame: 'chunk', tint: 0xa8743f, n: 14, snd: 'wallhit' },
+      plant: { frame: 'chunk', tint: 0x4f8a3a, n: 14, snd: 'splat' },
+      glass: { frame: 'shard', tint: 0xcfefff, n: 16, snd: 'armor' },
+      tech: { frame: 'shard', tint: 0x9aa3ad, n: 12, snd: 'armor' },
+      metal: { frame: 'chunk', tint: 0x8d949b, n: 10, snd: 'armor' },
+    };
+    const p = pal[mat] ?? pal.wood;
+    for (let i = 0; i < p.n; i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(80, 320);
+      this.low.emit({ frame: i % 3 === 0 ? 'paper' : p.frame, x: x + rand(-10, 10), y: top + rand(-14, 10), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 60, life: rand(0.35, 0.7), drag: 4, s0: rand(0.7, 1.3), s1: rand(0.6, 1), rot: rand(0, 6), vr: rand(-14, 14), tint: p.tint, land: true, landAlpha: 0.85 });
+    }
+    if (mat === 'tech') for (let i = 0; i < 12; i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(200, 600);
+      this.high.emit({ frame: 'spark', x, y: top, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.1, 0.3), drag: 5, s0: 0.8, s1: 0.1, sx: 1.6, a0: 1, a1: 0, alignVel: true, add: true, tint: 0xbfe3ff });
+    }
+    if (mat === 'glass') for (let i = 0; i < 6; i++) this.low.emit({ frame: 'goo_0', x: x + rand(-14, 14), y: y + rand(-6, 6), vx: rand(-40, 40), vy: rand(-20, 20), life: 0.4, drag: 6, s0: 0.6, s1: 1.4, a0: 0.6, a1: 0.5, tint: 0x8fd0ff, land: true, landAlpha: 0.45 });
+    for (let i = 0; i < 4; i++) this.high.emit({ frame: 'smoke', x: x + rand(-16, 16), y: top + rand(-10, 10), vx: rand(-40, 40), vy: rand(-50, -10), life: rand(0.5, 0.9), drag: 2, s0: 0.3, s1: 0.9, a0: 0.45, a1: 0, rot: rand(0, 6), tint: 0xc9bca8 });
+    this.shake(0.05);
+    sfx.play(p.snd as any, { x, y, vol: 0.8 });
+    sfx.play('wallhit', { x, y, vol: 0.6 });
+  }
+
   feather(x: number, y: number, a: number, sp: number, tint = 0xffffff) {
     this.high.emit({
       frame: Math.random() < 0.5 ? 'feather_0' : 'feather_1', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
@@ -153,7 +169,7 @@ export class Fx {
     });
   }
 
-  kill(t: EnemyType | 'player', variant: number, x: number, y: number, a: number, gib: boolean, burn: boolean, scale = 1, pixelFrame?: string) {
+  kill(t: EnemyType | 'player', x: number, y: number, a: number, gib: boolean, burn: boolean, body?: { tex: string; frame: string; frames: string[]; scale: number }, elev = 0) {
     const big = t === 'fat' || t === 'boss';
     const ft = FEATHER_TINT[t] ?? 0xffffff;
     const sc = t === 'boss' ? 2.4 : big ? 1.6 : t === 'chick' ? 0.6 : 1;
@@ -164,29 +180,39 @@ export class Fx {
       const aa = Math.random() < 0.6 ? a + rand(-0.8, 0.8) : rand(0, 6.28), sp = rand(80, gib ? 700 : 480);
       this.low.emit({ frame: 'blood_drop', x, y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: rand(0.2, 0.5), drag: 6, s0: rand(0.7, 1.6), s1: rand(0.6, 1.3), land: true, landAlpha: 0.9 });
     }
-    this.high.emit({ frame: 'soft', x, y, vx: 0, vy: 0, life: 0.3, s0: 1, s1: 2.6 * sc, a0: 0.5, a1: 0, tint: 0xb3161b });
+    this.high.emit({ frame: 'soft', x, y: y - elev, vx: 0, vy: 0, life: 0.3, s0: 1, s1: 2.6 * sc, a0: 0.5, a1: 0, tint: 0xb3161b });
     // feather explosion
     const nf = Math.round((gib ? 22 : 12) * Math.min(sc, 1.8));
-    for (let i = 0; i < nf; i++) this.feather(x + rand(-8, 8), y + rand(-8, 8), rand(0, 6.28), rand(60, gib ? 420 : 300), ft);
+    for (let i = 0; i < nf; i++) this.feather(x + rand(-8, 8), y - elev * rand(0.3, 1) + rand(-8, 8), rand(0, 6.28), rand(60, gib ? 420 : 300), ft);
     // white puff
-    this.high.emit({ frame: 'smoke', x, y, vx: 0, vy: 0, life: 0.5, s0: 0.4, s1: 1.4 * sc, a0: 0.6, a1: 0, rot: rand(0, 6), tint: burn ? 0x444444 : 0xffffff });
+    this.high.emit({ frame: 'smoke', x, y: y - elev * 0.7, vx: 0, vy: 0, life: 0.5, s0: 0.4, s1: 1.4 * sc, a0: 0.6, a1: 0, rot: rand(0, 6), tint: burn ? 0x444444 : 0xffffff });
     if (gib) {
       for (const g of ['gib_leg', 'gib_leg', 'gib_badge']) {
         const aa = a + rand(-1, 1), sp = rand(200, 520);
         this.low.emit({ frame: g, x, y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: rand(0.5, 0.8), drag: 4, s0: 1.2, s1: 1, rot: rand(0, 6), vr: rand(-18, 18), land: true, landAlpha: 1 });
       }
       this.decals.draw('fx', 'splat_3', x, y, rand(0, 6), sc * 1.2, 0xffffff, 0.9);
-    } else {
-      const frames = DEAD_FRAME[t] ?? DEAD_FRAME.normal;
-      const frame = t === 'player' ? 'ck_player_dead' : frames[variant % frames.length];
-      const sp = big ? 120 : 260;
-      const corpses = pixelFrame && this.pixelCorpses ? this.pixelCorpses : this.corpses;
-      const corpseScale = pixelFrame ? scale * 1.25 : scale;
-      corpses.emit({ frame: pixelFrame ?? frame, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.35, drag: 9, s0: corpseScale, s1: corpseScale, rot: a + rand(-0.4, 0.4), vr: rand(-4, 4), tint: burn ? 0x4a3a30 : 0xffffff, land: true, landAlpha: 1 });
-    }
+    } else if (body) this.corpse(body, x, y, a, burn);
     if (burn) for (let i = 0; i < 5; i++) this.high.emit({ frame: 'smoke', x, y, vx: rand(-40, 40), vy: rand(-40, 40), life: rand(0.8, 1.6), drag: 1.5, s0: 0.3, s1: 1.4, a0: 0.5, a1: 0, rot: rand(0, 6), tint: 0x333333 });
     sfx.play('death', { x, y, vol: 0.7, max: 5, rate: t === 'fat' || t === 'boss' ? 0.6 : t === 'fast' || t === 'chick' ? 1.35 : 1 });
     sfx.play('splat', { x, y, vol: 0.5, max: 4 });
+  }
+
+  /** Plays the LPC collapse (hurt) frames sliding along the hit, then stamps the body into the floor decals. */
+  corpse(body: { tex: string; frame: string; frames: string[]; scale: number }, x: number, y: number, a: number, burn: boolean) {
+    const tint = burn ? 0x4a3a30 : 0xffffff;
+    if (!body.frames.length) { this.decals.draw(body.tex, body.frame, x, y - 6, rand(-0.3, 0.3) + Math.PI / 2, body.scale, tint, 0.95); return; }
+    const spr = this.scene.add.sprite(x, y, body.tex, body.frames[0]).setOrigin(0.5, 62 / 64).setScale(body.scale).setDepth(8 + y / 100000).setTint(tint);
+    const sp = 90;
+    this.falling.push({ spr, t: 0, frames: body.frames, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, tint });
+    if (this.falling.length > 24) this.finishFall(this.falling.shift()!);
+  }
+
+  private finishFall(f: { spr: Phaser.GameObjects.Sprite; frames: string[]; tint: number }) {
+    const s = f.spr;
+    // stamp centred on the sprite's visible body (origin at the feet)
+    this.decals.draw(s.texture.key, f.frames[f.frames.length - 1], s.x, s.y - 30 * s.scaleY, 0, s.scaleX, f.tint, 1);
+    s.destroy();
   }
 
   boom(x: number, y: number, r: number, kind: string) {
@@ -270,8 +296,18 @@ export class Fx {
 
   update(dt: number) {
     this.low.update(dt);
-    this.corpses.update(dt);
-    this.pixelCorpses?.update(dt);
+    let fw = 0;
+    for (const f of this.falling) {
+      f.t += dt;
+      const k = Math.min(1, f.t / 0.42);
+      f.spr.setFrame(f.frames[Math.min(f.frames.length - 1, Math.floor(k * f.frames.length))]);
+      const drag = Math.exp(-dt * 7); f.vx *= drag; f.vy *= drag;
+      f.spr.x += f.vx * dt; f.spr.y += f.vy * dt;
+      if (f.t > 0.6) { this.finishFall(f); continue; }
+      this.falling[fw++] = f;
+    }
+    this.falling.length = fw;
+    this.decals.flush();
     this.high.update(dt);
     // tracers: a bright streak travelling from muzzle to impact
     let w = 0;

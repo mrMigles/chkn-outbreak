@@ -113,7 +113,7 @@ light(11, 31, 'alarm', 'ff3b1f', 420); light(3, 35, 'alarm', 'ff3b1f', 360); lig
 light(11, 30.5, 'lamp', 'ffb347', 200, { flicker: 0.7 });
 objs.push({ type: 'barrel', at: at(3, 26) }, { type: 'barrel', at: at(19, 26) }, { type: 'barrel', at: at(3, 35.5) });
 label(11, 35.6, 'ГЕНЕРАТОРНАЯ', 22);
-spawner('gen', 2.5, 30); spawner('gen', 19.3, 33); spawner('gen', 25, 28); spawner('gen', 30.5, 24);
+spawner('gen', 2.5, 30); spawner('gen', 19.3, 33); spawner('gen', 25, 28); spawner('gen', 31, 24);
 trigger('gen_room', 2, 25, 19, 12);
 
 // ---------------------------------------------------------------- freight lift

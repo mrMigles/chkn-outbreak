@@ -22,11 +22,14 @@ function bind(r: Room) {
 function player(room: Room, id = room.sessionId) { return snapshots.get(room.sessionId)?.p.find(p => p.id === id); }
 try {
   const host = bind(await client.create('game', { name:'QA ведущий', level:'office' }));
-  const peer = bind(await client.joinById(host.roomId, { name:'QA друг' }));
+  const LOOK = 'f.1.bob.c2452d.blouse.6d8b4e.skirt.3b4f7a.glasses';
+  const peer = bind(await client.joinById(host.roomId, { name:'QA друг', look: LOOK }));
   await until(()=>host.state.players?.size===2,'two-player lobby'); host.send('start'); await pause(250);
   assert.equal(host.state.phase,'lobby'); peer.send('ready',{ready:true}); await pause(200); host.send('start');
   await until(()=>player(host) && player(peer),'snapshots');
   console.log('PASS ready gate and two client snapshots');
+  assert.equal(player(host, peer.sessionId)?.look, LOOK); assert.equal(player(peer, host.sessionId)?.look, '');
+  console.log('PASS chosen appearance travels to every client (default slot look when unset)');
   const h=player(host)!, p=player(peer)!;
   const input={seq:1,x:h.x!+60,y:h.y!,aim:0,fire:false,reload:false,interact:false,weapon:0};
   peer.send('input',input); await pause(200); host.send('debug',{cmd:'down'});

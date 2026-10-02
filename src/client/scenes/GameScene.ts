@@ -1,7 +1,12 @@
 import Phaser from 'phaser';
 import { Fx } from '../render/Fx';
 import { Lighting } from '../render/Lighting';
-import { EnemyView, NpcView, PlayerView, muzzleOf, ejectOf, BODY_HEIGHT, worldDepth } from '../render/Actors';
+import { Guide } from '../render/Guide';
+import { haptic, telegramBack } from '../telegram';
+import { EnemyView, NpcView, PlayerView, muzzleOf, ejectOf, HAND_H, worldDepth, enemyHeight, enemyLookKey, LOOK_POOL } from '../render/Actors';
+import { lookTexture } from '../render/Looks';
+import { music } from '../audio/Music';
+import { Tutorial } from '../ui/Tutorial';
 import { Input } from '../input/Input';
 import { Hud } from '../ui/Hud';
 import { sfx } from '../audio/Sfx';
@@ -11,9 +16,11 @@ import { ENEMIES, PLAYER } from '../../shared/enemies';
 import { propDef } from '../../shared/props';
 import { angleDiff, clamp, dist, lerp } from '../../shared/math';
 import type { Player, SimEvent } from '../../shared/sim/types';
+import { BUFFS, type BuffKind } from '../../shared/sim/types';
 import { TILE } from '../../shared/map';
 import { supportTarget } from '../../shared/sim/support';
-import { settings, TEXT_RES } from '../settings';
+import { rayBody, enemyBox } from '../../shared/sim/hitbox';
+import { settings, saveSettings, TEXT_RES } from '../settings';
 import artMeta from '../../shared/generated/artMeta.json';
 
 export interface GameSceneData { session: Session; onEnd: (ev: { kind: 'level' | 'gameover' | 'quit'; next?: string; win?: boolean; reason?: string }) => void }
@@ -29,6 +36,10 @@ export class GameScene extends Phaser.Scene {
   onEnd!: GameSceneData['onEnd'];
   fx!: Fx;
   lighting!: Lighting;
+  guide!: Guide;
+  /** Destructible prop images by map object id; broken ids already applied. */
+  private propImgs = new Map<number, Phaser.GameObjects.Image>();
+  private brokenSeen = new Set<number>();
   input2!: Input;
   hud!: Hud;
   players = new Map<string, PlayerView>();
@@ -37,7 +48,7 @@ export class GameScene extends Phaser.Scene {
   pickups = new Map<number, Phaser.GameObjects.Image>();
   pickupGlows = new Map<number, Phaser.GameObjects.Image>();
   projs = new Map<number, Phaser.GameObjects.Image>();
-  doors = new Map<string, Phaser.GameObjects.Image>();
+  doors = new Map<string, Phaser.GameObjects.Image[]>();
   barrels = new Map<number, Phaser.GameObjects.Image>();
   pods = new Map<number, { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; broken: boolean }>();
   bubbles: Bubble[] = [];
@@ -57,7 +68,10 @@ export class GameScene extends Phaser.Scene {
   hitMarker = 0;
   hitstop = 0;
   wallFaces: Phaser.GameObjects.Image[] = [];
-  get elevation() { return this.session.levelId === 'office' ? BODY_HEIGHT : 0; }
+  get elevation() { return HAND_H; }
+  tutorial!: Tutorial;
+  private warmup: Phaser.GameObjects.Image[] = [];
+  private warmFrames = 0;
 
   constructor() { super('game'); }
 
@@ -76,7 +90,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#17191d').setBounds(-96, -96, map.pw + 192, map.ph + 192);
     // ---- tilemap
     const tm = this.make.tilemap({ key: 'map_' + s.levelId });
-    const kt = tm.addTilesetImage('kenney', this.elevation ? 'officeTiles' : 'tiles', TILE, TILE, 0, 0)!;
+    const kt = tm.addTilesetImage('kenney', 'tiles25', TILE, TILE, 0, 0)!;
     const wt = tm.addTilesetImage('walls', 'walls', TILE, TILE, 0, 0)!;
     tm.createLayer('floor', [kt], 0, 0)!.setDepth(0);
     tm.createLayer('decor', [kt], 0, 0)!.setDepth(1);
@@ -84,7 +98,8 @@ export class GameScene extends Phaser.Scene {
     // soft drop shadow of the walls onto the floor
     const shadow = tm.createBlankLayer('wall_shadow', [wt], 7, 9)!.setDepth(3.5).setAlpha(0.3);
     walls.forEachTile((t) => { if (t.index > 0) shadow.putTileAt(t.index, t.x, t.y).tint = 0x000000; });
-    if (this.elevation) {
+    const theme = String(map.props.theme ?? 'office');
+    {
       walls.setDepth(2);
       walls.forEachTile(t => {
         if (t.index <= 0) return;
@@ -93,7 +108,7 @@ export class GameScene extends Phaser.Scene {
         if ((walls.getTileAt(t.x, t.y + 1)?.index ?? -1) > 0) return;
         // The facade grows upwards; the collision grid and feet stay where they were.
         const x = t.x * TILE + TILE / 2, y = (t.y + 1) * TILE;
-        const img = this.add.image(x, y, 'office25', 'wall_face').setOrigin(0.5, 1).setDepth(worldDepth(y));
+        const img = this.add.image(x, y, 'office25', 'wall_face_' + (map.props.wallFace || theme)).setOrigin(0.5, 1).setDepth(worldDepth(y));
         this.wallFaces.push(img);
       });
     }
@@ -102,11 +117,23 @@ export class GameScene extends Phaser.Scene {
     for (const o of map.objects) {
       if (o.type === 'prop') {
         const def = propDef(o.name);
-        const visual = this.elevation ? (artMeta.office25 as Record<string, { feetX: number; feetY: number }>)[o.name] : null;
+        const metas = artMeta.office25 as Record<string, { feetX: number; feetY: number; wall?: boolean }>;
+        const rot = ((Math.round(o.rot / 90) * 90) % 360 + 360) % 360;
+        const frameName = metas[o.name + '_' + rot] ? o.name + '_' + rot : o.name;
+        const visual = metas[frameName];
         const feetY = o.cy + o.h / 2;
-        const img = visual ? this.add.image(o.cx, feetY, 'office25', o.name).setOrigin(0.5, visual.feetY / this.textures.getFrame('office25', o.name).height).setDepth(worldDepth(feetY)) :
-          this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
+        let img: Phaser.GameObjects.Image;
+        if (visual?.wall) {
+          // mounted on the wall facade behind it
+          img = this.add.image(o.cx, feetY - 14, 'office25', frameName).setOrigin(0.5, 1).setDepth(worldDepth(feetY) + 0.00001);
+        } else if (visual) {
+          img = this.add.image(o.cx, feetY, 'office25', frameName).setOrigin(0.5, visual.feetY / this.textures.getFrame('office25', frameName).height).setDepth(worldDepth(feetY));
+        } else {
+          // flat floor details (oil, notes, blood trails) keep the old art on the floor layer
+          img = this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
+        }
         if (o.props.tint) img.setTint(parseInt(String(o.props.tint), 16));
+        if (def.hp) this.propImgs.set(o.id, img);
         if (o.props.text) this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text) });
       } else if (o.type === 'label') {
         this.add.text(o.cx, o.cy, String(o.props.text ?? o.name), {
@@ -121,9 +148,12 @@ export class GameScene extends Phaser.Scene {
     this.fx.map = map;
     this.fx.shakeScale = settings.shake;
     this.lighting = new Lighting(this, map);
+    this.guide = new Guide(this, map);
     this.input2 = new Input(this);
     this.hud = new Hud();
-    for (const k of Object.keys(this.textures.get('chars').frames)) if (k.startsWith('w_')) this.hud.icons[k] = this.textures.getBase64('chars', k);
+    for (const k of Object.keys(this.textures.get('office25').frames)) if (k.startsWith('gun_')) this.hud.icons['w_' + k.slice(4)] = this.textures.getBase64('office25', k);
+    this.tutorial = new Tutorial(this.input2.touch);
+    this.prewarmLooks();
     this.hud.objective(s.view.objective);
     if (!this.input2.touch) {
       this.crosshair = this.add.image(0, 0, 'fx', 'crosshair').setDepth(45);
@@ -135,8 +165,35 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.onResize, this);
     this.onResize();
     this.events.once('shutdown', () => this.cleanup());
+    if (settings.dev) this.setupDev();
+    // Telegram header «Назад» pauses the game (the pause menu has «В меню»)
+    telegramBack(() => this.togglePause());
+    this.events.once('shutdown', () => telegramBack(null));
     this.time0 = this.time.now;
     sfx.resume();
+  }
+
+  /** Composite every look this level can show up front, so spawns never stall a frame. */
+  private prewarmLooks() {
+    const v = this.session.view;
+    for (const n of v.npcs) { lookTexture(this, n.kind); lookTexture(this, n.kind, true); }
+    for (const p of v.players) lookTexture(this, p.look || 'p' + (p.slot % 4));
+    const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder'] as const;
+    for (const type of types) for (let i = 0; i < LOOK_POOL; i++) lookTexture(this, enemyLookKey({ type, id: i, appearance: undefined }), true);
+    if (this.session.levelId === 'boss') lookTexture(this, enemyLookKey({ type: 'boss', id: 0, appearance: undefined }), true);
+    // draw every composed texture once (nearly invisible) so the driver uploads it now, not during the first fight
+    const warm = Object.keys(this.textures.list).filter((k) => k.startsWith('look:') || k.startsWith('mut:') || ['office25', 'fx', 'chars', 'props'].includes(k))
+      .map((k) => this.add.image(0, 0, k, k.includes(':') ? 's_0' : undefined).setAlpha(0.02).setDepth(100).setScrollFactor(0));
+    // first use of a blend mode / tint-fill / gradient program triggers a driver shader compile (100–800 ms on iGPUs)
+    warm.push(this.add.image(4, 4, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.02).setScrollFactor(0).setDepth(100));
+    warm.push(this.add.image(8, 4, 'office25', 'crate').setTintFill(0xffffff).setAlpha(0.02).setScrollFactor(0).setDepth(100));
+    warm.push(this.add.image(12, 4, 'office25', 'crate').setTint(0xff8080).setAlpha(0.02).setScrollFactor(0).setDepth(100));
+    const gg = this.add.graphics().setScrollFactor(0).setDepth(100);
+    gg.fillGradientStyle(0, 0, 0, 0, 0.01, 0.02, 0.01, 0.02); gg.fillRect(0, 0, 8, 8);
+    warm.push(gg as unknown as Phaser.GameObjects.Image);
+    warm.push(this.add.text(0, 0, 'Ко!', { fontFamily: 'Rubik, sans-serif', fontSize: '12px', backgroundColor: '#fffdf6e6' }).setAlpha(0.02).setScrollFactor(0) as unknown as Phaser.GameObjects.Image);
+    warm.push(this.add.ellipse(16, 8, 10, 4, 0, 0.02).setScrollFactor(0) as unknown as Phaser.GameObjects.Image);
+    this.warmup = warm;
   }
 
   private onResize() {
@@ -152,6 +209,7 @@ export class GameScene extends Phaser.Scene {
 
   private cleanup() {
     this.input2?.destroy();
+    this.tutorial?.destroy();
     document.getElementById('game')!.classList.remove('ingame');
     this.crosshair = null;
     this.hud?.destroy();
@@ -164,6 +222,7 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ main loop
   override update(_t: number, dms: number) {
     const dt = Math.min(dms / 1000, 0.05);
+    if (this.warmup.length && ++this.warmFrames > 3) { this.warmup.forEach((w) => w.destroy()); this.warmup = []; }
     const s = this.session;
     const inp = this.input2.poll();
     if (inp.pause && !this.ended) this.togglePause();
@@ -179,7 +238,7 @@ export class GameScene extends Phaser.Scene {
       const w = me.weapons[me.cur] as WeaponId | undefined;
       const wdef = w ? WEAPONS[w] : WEAPONS.pistol;
       let speed = 0;
-      if (me.state === 'alive') speed = PLAYER.speed * wdef.speedMul;
+      if (me.state === 'alive') speed = PLAYER.speed * wdef.speedMul * ((me.buffs?.sprint ?? 0) > 0 ? 1.6 : 1);
       else if (me.state === 'chicken') speed = PLAYER.chickenSpeed * wdef.speedMul;
       else if (me.state === 'downed') speed = 45;
       if (speed > 0) [this.px, this.py] = s.map.move(this.px, this.py, PLAYER.radius, inp.mx * speed * dt, inp.my * speed * dt);
@@ -187,10 +246,8 @@ export class GameScene extends Phaser.Scene {
       if (dist(this.px, this.py, me.x, me.y) > 160) { this.px = me.x; this.py = me.y; }
 
       let fire = inp.fire;
-      if (inp.aimMode === 'mouse') {
-        const hit = this.elevation ? this.enemyUnderPointer(inp.aimWX, inp.aimWY) : null;
-        this.aim = hit ? Math.atan2(hit.y - this.py, hit.x - this.px) : Math.atan2(inp.aimWY - (this.py - this.elevation), inp.aimWX - this.px);
-      }
+      // the shot leaves the hand and flies through the pointer; bodies are hit where they are drawn (shared/sim/hitbox)
+      if (inp.aimMode === 'mouse') this.aim = Math.atan2(inp.aimWY - (this.py - this.elevation), inp.aimWX - this.px);
       else {
         // touch: right stick aims, auto-fire when a chicken is under the aim cone
         const target = this.findAutoTarget(inp.aimMode === 'stick' ? inp.stickA : this.aim, inp.aimMode === 'stick' ? 0.32 : Math.PI, me);
@@ -236,13 +293,81 @@ export class GameScene extends Phaser.Scene {
     }
     this.lighting.update(this.cameras.main, dt, this.fx.lights, flashlights);
 
+    // ---- music intensity
+    this.updateMusic(dt);
+    this.updateTutorial(dt);
+
     // ---- hud
     const me2 = s.view.players.find((p) => p.id === s.myId);
     this.hud.update(dt, s.view, me2, s.solo);
     this.updateHints(me2);
     this.updateCrosshair(dt, inp, me2);
     this.updateBubbles(dt);
+    if (me2 && me2.state === 'alive') this.guide.update(dt, s.view, this.px, this.py, this.time.now / 1000, this.cameras.main);
+    else this.guide.update(dt, { ...s.view, objectiveTarget: [] } as any, this.px, this.py, this.time.now / 1000, this.cameras.main);
+    this.hud.guide(this.guide.hud?.angle ?? null, this.guide.hud?.metres);
     this.input2.consume();
+  }
+
+  /** Developer hotkeys (solo only, settings.dev). */
+  private setupDev() {
+    const s = this.session as any;
+    const kb = this.input.keyboard!;
+    const label = document.createElement('div');
+    label.className = 'dev-hud';
+    document.getElementById('ui')!.appendChild(label);
+    this.events.once('shutdown', () => label.remove());
+    const refresh = () => {
+      const w = s.world;
+      label.textContent = `DEV ${this.session.levelId}${w ? (w.god ? ' · GOD' : '') + ' · F6 бессмертие · F7 оружие · F8 убить всех · F9 пройти' : ' · сеть: горячие клавиши только в соло'}`;
+    };
+    refresh();
+    this.time.addEvent({ delay: 250, loop: true, callback: refresh });
+    if (!s.world) return;
+    const me = () => s.world.players.find((p: Player) => p.id === s.myId);
+    for (const k of ['F6', 'F7', 'F8', 'F9']) kb.addCapture(k);
+    kb.on('keydown-F6', () => { s.world.god = !s.world.god; settings.devGod = s.world.god; saveSettings(); this.hud.message(s.world.god ? 'БЕССМЕРТИЕ' : 'СМЕРТНЫЙ', '', 1); });
+    kb.on('keydown-F7', () => { const p = me(); if (p) { s.world.devArsenal(p); this.hud.message('ВСЁ ОРУЖИЕ', '', 1); } });
+    kb.on('keydown-F8', () => s.world.devKillAll(s.myId));
+    kb.on('keydown-F9', () => s.world.completeLevel());
+  }
+
+  private tipT = 0;
+  private updateTutorial(dt: number) {
+    const tut = this.tutorial;
+    tut.update(dt);
+    this.tipT -= dt;
+    if (this.tipT > 0) return;
+    this.tipT = 0.25;
+    const s = this.session, v = s.view;
+    const me = v.players.find((p) => p.id === s.myId);
+    if (!me) return;
+    const t = (this.time.now - this.time0) / 1000;
+    if (t > 1) tut.show('move');
+    if (t > 9) tut.show('objective');
+    const near = (x: number, y: number, r: number) => Math.abs(x - this.px) < r && Math.abs(y - this.py) < r * 0.8;
+    for (const e of v.enemies) {
+      if (e.state === 'rise' || !near(e.x, e.y, 620)) continue;
+      tut.show('enemy');
+      if (e.type === 'fat' || e.type === 'spitter' || e.type === 'armored' || e.type === 'exploder' || e.type === 'chick') tut.show(e.type);
+    }
+    const w = me.weapons[me.cur];
+    if (w && me.ammo[w]?.mag === 0) tut.show('reload');
+    if (me.weapons.length > 1) tut.show('weapon');
+    if (me.hp < 60 && me.supplies.medkit && me.state === 'alive') tut.show('medkit');
+    for (const n of v.npcs) if (n.mode !== 'dead' && n.mode !== 'gone' && !n.mutation && near(n.x, n.y, 170)) { tut.show('npc'); break; }
+    for (const d of v.doors) if (!d.open && d.locked && near(d.x + d.w / 2, d.y + d.h / 2, 220)) { tut.show('locked'); break; }
+    for (const b of v.barrels) if (near(b.x, b.y, 450)) { tut.show('barrel'); break; }
+    if (this.lighting.ambient > 0.5) tut.show('dark');
+    if (v.players.some((p) => p.id !== me.id && p.state === 'downed')) tut.show('downed');
+  }
+
+  private updateMusic(dt: number) {
+    const v = this.session.view;
+    let near = 0;
+    for (const e of v.enemies) if (e.aggro && e.state !== 'rise' && Math.abs(e.x - this.px) < 1000 && Math.abs(e.y - this.py) < 800) near++;
+    const boss = v.enemies.some((e) => e.type === 'boss');
+    music.want(this.ended ? 'calm' : boss ? 'boss' : near >= 7 || v.alarm ? 'wave' : near >= 1 ? 'tense' : 'calm', dt);
   }
 
   // ------------------------------------------------------------------ multiplayer: instant local shots
@@ -268,11 +393,9 @@ export class GameScene extends Phaser.Scene {
           let d = wall.d;
           const dx = Math.cos(a), dy = Math.sin(a);
           for (const e of this.session.view.enemies) {
-            const r = ENEMIES[e.type].radius + 3;
-            const ex = e.x - this.px, ey = e.y - this.py;
-            const along = ex * dx + ey * dy;
-            if (along < 0 || along > d) continue;
-            if (Math.abs(ex * dy - ey * dx) < r) d = Math.max(0, along - r * 0.5);
+            if (e.state === 'rise') continue;
+            const h = rayBody(this.px, this.py, dx, dy, e.x, e.y, enemyBox(e.type), d);
+            if (h) d = h.t;
           }
           ends.push(this.px + dx * d, this.py + dy * d);
         }
@@ -321,15 +444,15 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  /** Clicking a visible torso/head maps back to the feet collision plane. */
-  private enemyUnderPointer(x: number, y: number) {
-    return this.session.view.enemies.filter(e => {
-      const view = this.enemies.get(e.id);
-      if (!view?.pixel || e.state === 'rise') return false;
-      const halfWidth = view.spr.scaleX * 14, height = view.spr.scaleY * 58;
-      return Math.abs(x - view.dispX) <= halfWidth && y <= view.dispY && y >= view.dispY - height &&
-        this.session.map.lineOfSight(this.px, this.py, e.x, e.y, true);
-    }).sort((a, b) => b.y - a.y)[0];
+  private hsT = 0;
+  /** "В ГОЛОВУ!" pop over the enemy's head for the local shooter (rate-limited). */
+  private headshotPop(x: number, y: number) {
+    if (this.time.now - this.hsT < 250) return;
+    this.hsT = this.time.now;
+    const t = this.add.text(x, y - 14, 'В ГОЛОВУ!', { fontFamily: 'Rubik, sans-serif', fontSize: '13px', fontStyle: '700', color: '#ffd84a', stroke: '#2a0b0b', strokeThickness: 4 })
+      .setOrigin(0.5, 1).setDepth(45).setResolution(TEXT_RES());
+    this.tweens.add({ targets: t, y: y - 44, alpha: 0, scale: 1.25, duration: 650, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    sfx.play('headshot', { vol: 0.6 });
   }
 
   private updateCamera(dt: number, inp: ReturnType<Input['poll']>) {
@@ -354,6 +477,19 @@ export class GameScene extends Phaser.Scene {
   private syncWorld(dt: number) {
     const s = this.session, v = s.view;
     const time = (this.time.now - this.time0) / 1000;
+    // destroyed props (events give the FX; the list also covers late joiners and the client's own collision map)
+    for (const id of v.broken) {
+      if (this.brokenSeen.has(id)) continue;
+      this.brokenSeen.add(id);
+      const c = s.map.colliders.find((q) => q.id === id);
+      if (c) s.map.removeCollider(c);
+      const img = this.propImgs.get(id);
+      if (img) {
+        // leave a wreck on the floor: the same sprite, flattened and darkened
+        this.fx.decals.draw(img.texture.key, img.frame.name, img.x, img.y - img.displayHeight * 0.18, (Math.random() - 0.5) * 0.5, 0.8, 0x6a625a, 0.85, 1.1);
+        img.destroy(); this.propImgs.delete(id);
+      }
+    }
     // players
     const seenP = new Set<string>();
     for (const p of v.players) {
@@ -396,9 +532,9 @@ export class GameScene extends Phaser.Scene {
       seenK.add(k.id);
       let img = this.pickups.get(k.id);
       if (!img) {
-        const frame = k.kind === 'weapon' ? 'w_' + k.weapon : 'pk_' + k.kind;
-        img = this.add.image(k.x, k.y, 'chars', frame).setDepth(7).setScale(k.kind === 'weapon' ? 1.25 : 1.1);
-        const tint = k.kind === 'health' ? 0xff5a5a : k.kind === 'armor' ? 0x5ab0ff : k.kind === 'weapon' ? 0xffd27a : k.kind === 'keycard' ? 0xffe14a : 0x9cff7a;
+        const special = k.kind in BUFFS || k.kind === 'achievement';
+        img = k.kind === 'weapon' ? this.add.image(k.x, k.y, 'office25', 'gun_' + k.weapon).setDepth(7).setScale(1.2) : this.add.image(k.x, k.y, special ? 'office25' : 'chars', 'pk_' + k.kind).setDepth(7).setScale(special ? .65 : 1.1);
+        const tint = k.kind in BUFFS ? BUFFS[k.kind as BuffKind].color : k.kind === 'achievement' ? 0xffd65c : k.kind === 'health' ? 0xff5a5a : k.kind === 'armor' ? 0x5ab0ff : k.kind === 'weapon' ? 0xffd27a : k.kind === 'keycard' ? 0xffe14a : 0x9cff7a;
         const glow = this.add.image(k.x, k.y, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setDepth(6).setScale(0.8).setAlpha(0.5);
         this.pickups.set(k.id, img); this.pickupGlows.set(k.id, glow);
       }
@@ -431,30 +567,38 @@ export class GameScene extends Phaser.Scene {
     }
     for (const [id, img] of this.projs) if (!seenR.has(id)) { img.destroy(); this.projs.delete(id); }
 
-    // doors
+    // doors: 2.5D facades in horizontal walls, side jambs in vertical walls; open doors roll up
     for (const d of v.doors) {
-      let img = this.doors.get(d.id);
+      let parts = this.doors.get(d.id);
       const horiz = d.w >= d.h;
-      if (!img) {
-        const frame = d.locked && d.locked !== '' ? 'door_locked' : 'door_' + d.theme;
-        img = this.add.image(horiz ? d.x : d.x + d.w / 2, horiz ? d.y + d.h / 2 : d.y, 'props', frame).setOrigin(0, 0.5).setDepth(13);
-        img.setRotation(horiz ? 0 : Math.PI / 2);
-        img.setDisplaySize(horiz ? d.w : d.h, 16);
-        (img as any).full = img.scaleX;
-        this.doors.set(d.id, img);
+      const locked = !!d.locked && d.locked !== '';
+      const frame = (locked ? 'door_locked' : 'door_' + d.theme) + (horiz ? '' : '_side');
+      if (!parts) {
+        parts = [];
+        const n = Math.max(1, Math.round((horiz ? d.w : d.h) / TILE));
+        for (let i = 0; i < n; i++) {
+          const x = horiz ? d.x + (i + 0.5) * (d.w / n) : d.x + d.w / 2;
+          const y = horiz ? d.y + d.h : d.y + (i + 1) * (d.h / n);
+          const img = this.add.image(x, y, 'office25', frame).setOrigin(0.5, 1).setDepth(worldDepth(y));
+          if (horiz) img.setDisplaySize(d.w / n, 104); else img.setScale(2, 1.8);
+          (img as any).full = img.scaleY;
+          parts.push(img);
+        }
+        this.doors.set(d.id, parts);
       }
-      const full = (img as any).full as number;
-      const target = d.open ? full * 0.08 : full;
-      img.scaleX = lerp(img.scaleX, target, Math.min(1, dt * 12));
-      const frame = d.locked && d.locked !== '' ? 'door_locked' : 'door_' + d.theme;
-      if (img.frame.name !== frame) { img.setFrame(frame); }
+      for (const img of parts) {
+        const full = (img as any).full as number;
+        img.scaleY = lerp(img.scaleY, d.open ? full * 0.1 : full, Math.min(1, dt * 12));
+        img.setAlpha(d.open ? 0.55 : 1);
+        if (img.frame.name !== frame) img.setFrame(frame);
+      }
     }
 
     // barrels
     const seenB = new Set<number>();
     for (const b of v.barrels) {
       seenB.add(b.id);
-      if (!this.barrels.has(b.id)) this.barrels.set(b.id, this.add.image(b.x, b.y, 'props', 'barrel').setDepth(8).setTint(0xff7a5a));
+      if (!this.barrels.has(b.id)) this.barrels.set(b.id, this.add.image(b.x, b.y + 16, 'office25', 'hazard_barrel').setOrigin(0.5, 1).setDepth(worldDepth(b.y + 16)));
     }
     for (const [id, img] of this.barrels) if (!seenB.has(id)) { img.destroy(); this.barrels.delete(id); }
 
@@ -462,8 +606,8 @@ export class GameScene extends Phaser.Scene {
     for (const p of v.pods) {
       let pv = this.pods.get(p.id);
       if (!pv) {
-        const img = this.add.image(p.x, p.y, 'props', p.broken ? 'egg_pod_broken' : 'egg_pod').setDepth(8);
-        const glow = this.add.image(p.x, p.y, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7dff8a).setDepth(19).setScale(1.3).setAlpha(0.4);
+        const img = this.add.image(p.x, p.y + 20, 'office25', p.broken ? 'egg_pod_broken' : 'egg_pod').setOrigin(0.5, 1).setDepth(worldDepth(p.y + 20));
+        const glow = this.add.image(p.x, p.y - 30, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7dff8a).setDepth(19).setScale(1.3).setAlpha(0.4);
         pv = { img, glow, broken: p.broken };
         this.pods.set(p.id, pv);
       }
@@ -523,18 +667,21 @@ export class GameScene extends Phaser.Scene {
           const e = this.session.view.enemies.find((q) => q.id === ev.id);
           if (e) tint = e.type === 'fast' || e.type === 'chick' ? 0xffe27a : e.type === 'spitter' ? 0xe3f5c8 : e.type === 'boss' ? 0xe8a24a : 0xffffff;
         }
-        if (ev.o === this.session.myId) this.hitMarker = 0.12;
+        if (ev.o === this.session.myId) {
+          this.hitMarker = 0.12;
+          if (ev.hs) this.headshotPop(ev.x, ev.y - this.elevation);
+        }
         if (ev.k === 'player' && ev.id === this.session.myId) break;
         fx.impact(ev.k, ev.x, ev.y - this.elevation, ev.a, tint, ev.big);
         break;
       }
       case 'kill': {
-        if (ev.id === -1) { fx.kill('player', 0, ev.x, ev.y, ev.a, true, false); break; }
+        if (ev.id === -1) { fx.kill('player', ev.x, ev.y, ev.a, true, false, undefined, HAND_H); break; }
         const view = this.enemies.get(ev.id);
         const x = view?.dispX ?? ev.x, y = view?.dispY ?? ev.y;
-        fx.kill(ev.t, ev.v, x, y, ev.a, ev.gib, ev.burn, ev.t === 'chick' ? 0.7 : 1, view?.pixel ? String(view.spr.frame.name) : undefined);
+        fx.kill(ev.t, x, y, ev.a, ev.gib, ev.burn, view ? { ...view.corpse(), scale: view.spr.scaleX } : undefined, ev.t === 'chick' ? 12 : enemyHeight(ev.t) * 0.55);
         if (dist(x, y, this.px, this.py) < 700) fx.shake(ev.t === 'boss' ? 0.8 : ev.gib ? 0.12 : 0.05);
-        if (ev.by === this.session.myId && (ev.gib || ev.t === 'fat' || ev.t === 'armored')) this.hitstop = Math.max(this.hitstop, ev.t === 'boss' ? 260 : 40);
+        if (ev.by === this.session.myId && ev.t === 'boss') this.hitstop = Math.max(this.hitstop, 160);
         if (ev.t === 'boss') { this.hud.message('ГЕНЕРАЛЬНЫЙ ПЕТУХ ПОВЕРЖЕН', 'Корпорация переходит на удалёнку', 5); }
         break;
       }
@@ -542,7 +689,6 @@ export class GameScene extends Phaser.Scene {
         fx.boom(ev.x, ev.y, ev.r, ev.k);
         const d = dist(ev.x, ev.y, this.px, this.py);
         fx.shake(clamp(0.75 - d / 1400, 0.05, 0.75));
-        if (d < 900) this.hitstop = Math.max(this.hitstop, 55);
         break;
       }
       case 'proj':
@@ -553,6 +699,7 @@ export class GameScene extends Phaser.Scene {
       case 'pdmg':
         if (ev.id === this.session.myId) {
           this.hud.damage(ev.d);
+          haptic('hurt');
           fx.shake(0.22);
           sfx.play('hurt', { vol: 0.8 });
           // physical push away from the hit
@@ -567,6 +714,7 @@ export class GameScene extends Phaser.Scene {
       case 'pick':
         if (ev.id === this.session.myId) {
           this.hud.toast(ev.text);
+          if (ev.k !== 'weapon' && ev.k !== 'keycard') this.tutorial.show('pickup');
           sfx.play(ev.k === 'weapon' ? 'weapon_pick' : 'pickup', { vol: 0.8 });
           if (ev.k === 'weapon' && ev.w) {
             const me = this.session.view.players.find((p) => p.id === this.session.myId);
@@ -578,6 +726,7 @@ export class GameScene extends Phaser.Scene {
         if (ev.id === this.session.myId) sfx.play('reload', { vol: 0.8, rate: ev.w === 'machinegun' ? 0.7 : 1 });
         break;
       case 'down':
+        if (ev.id === this.session.myId) haptic('down');
         if (ev.id === this.session.myId) this.hud.message(this.session.solo ? 'ВАС ЗАКЛЕВАЛИ' : 'ВЫ РАНЕНЫ', this.session.solo ? '' : 'Попросите друга поднять вас (E)', 3);
         break;
       case 'revived': this.hud.toast('Игрок поднят!'); break;
@@ -587,22 +736,37 @@ export class GameScene extends Phaser.Scene {
           sfx.play('pickup', { vol: 0.7 });
         }
         break;
-      case 'mutation':
-        if (ev.stage === 'feathers') {
-          for (let i = 0; i < 12; i++) fx.high.emit({ frame: 'feather_' + i % 2, x: ev.x, y: ev.y - this.elevation, vx: (Math.random() - 0.5) * 160, vy: -40 - Math.random() * 100, life: 0.65, s0: 0.8, s1: 0.3, a0: 1, a1: 0, rot: Math.random() * 6 });
+      case 'mutation': {
+        this.tutorial.show('mutation');
+        const who = this.session.view.npcs.find((q) => q.id === ev.id)?.name ?? 'Выживший';
+        const burst = (n: number, sp: number) => { for (let i = 0; i < n; i++) fx.high.emit({ frame: 'feather_' + i % 2, x: ev.x + (Math.random() - 0.5) * 20, y: ev.y - 50 - Math.random() * 40, vx: (Math.random() - 0.5) * sp, vy: -40 - Math.random() * sp * 0.7, life: 0.9, s0: 1, s1: 0.4, a0: 1, a1: 0, rot: Math.random() * 6 }); };
+        if (ev.stage === 'twitch') {
+          this.hud.toast(`⚠ ${who} превращается в курицу!`);
+          sfx.play('cluck', { x: ev.x, y: ev.y, vol: 0.9 });
         }
-        if (ev.stage === 'complete') { fx.spawnPuff(ev.x, ev.y, 'egg'); sfx.play('spawn', { x: ev.x, y: ev.y, vol: 0.7 }); }
+        if (ev.stage === 'feathers') { burst(14, 180); sfx.play('squawk', { x: ev.x, y: ev.y, vol: 0.8 }); }
+        if (ev.stage === 'silhouette') { burst(10, 140); fx.light(ev.x, ev.y - 40, 160, 0xff5030, 0.8, 0.5); }
+        if (ev.stage === 'complete') {
+          burst(34, 320);
+          fx.spawnPuff(ev.x, ev.y, 'egg');
+          fx.light(ev.x, ev.y - 40, 220, 0xffe0a0, 1, 0.35);
+          fx.shake(0.12);
+          sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1 }); sfx.play('spawn', { x: ev.x, y: ev.y, vol: 0.7 });
+          this.hud.toast(`${who} стал курицей!`);
+        }
         break;
+      }
       case 'chicken':
         if (ev.id === this.session.myId) this.hud.message('ВЫ ПРЕВРАТИЛИСЬ В КУРИЦУ', 'Новая задача: заклевать бывших коллег', 4);
         sfx.play('boss_roar', { vol: 0.5, rate: 1.6 });
         break;
       case 'cured': if (ev.id === this.session.myId) this.hud.message('АНТИДОТ!', 'Вы снова человек', 3); break;
       case 'npcdie':
-        fx.kill('normal', 0, ev.x, ev.y, 0, false, false, 1, this.elevation ? this.npcs.get(ev.id)?.rig.body.frame.name as string | undefined : undefined);
+        { const nv = this.npcs.get(ev.id); fx.kill('normal', ev.x, ev.y, 0, false, false, nv ? { ...nv.corpse(), scale: 2 } : undefined, HAND_H); }
         this.hud.toast('Выживший погиб');
         break;
-      case 'door': sfx.play('door', { x: this.doors.get(ev.id)?.x, y: this.doors.get(ev.id)?.y, vol: 0.5 }); break;
+      case 'propbreak': this.fx.propBreak(ev.x, ev.y, ev.m); break;
+      case 'door': sfx.play('door', { x: this.doors.get(ev.id)?.[0]?.x, y: this.doors.get(ev.id)?.[0]?.y, vol: 0.5 }); break;
       case 'msg': this.hud.message(ev.text, ev.sub ?? '', ev.d ?? 3); break;
       case 'obj': this.hud.objective(ev.text); sfx.play('ui', { vol: 0.6 }); break;
       case 'spawn':
@@ -646,8 +810,8 @@ export class GameScene extends Phaser.Scene {
     const old = this.bubbles.find((b) => b.who === who);
     if (old) { old.text.destroy(); this.bubbles.splice(this.bubbles.indexOf(old), 1); }
     const t = this.add.text(0, 0, text, {
-      fontFamily: 'Rubik, sans-serif', fontSize: '15px', fontStyle: '600', color: '#1d1f24',
-      backgroundColor: '#fffdf6', padding: { x: 8, y: 5 }, wordWrap: { width: 260 }, align: 'center',
+      fontFamily: 'Rubik, sans-serif', fontSize: '12px', fontStyle: '600', color: '#1d1f24',
+      backgroundColor: '#fffdf6e6', padding: { x: 6, y: 3 }, wordWrap: { width: 200 }, align: 'center',
     }).setOrigin(0.5, 1).setDepth(41).setResolution(TEXT_RES());
     this.bubbles.push({ text: t, who, t: 0, d });
   }
@@ -664,9 +828,12 @@ export class GameScene extends Phaser.Scene {
       const n = v.npcs.find((q) => q.id === b.who);
       if (n) { x = n.x; y = n.y; found = true; }
       const e = v.enemies.find((q) => String(q.id) === b.who);
-      if (e) { x = e.x; y = e.y - ENEMIES[e.type].radius; found = true; }
+      if (e) { x = e.x; y = e.y - enemyHeight(e.type) + 104; found = true; }
       if (!found) { b.text.destroy(); this.bubbles.splice(this.bubbles.indexOf(b), 1); continue; }
-      b.text.setPosition(x, y - 30 - b.t * 4);
+      // above the head and name label (name sits at feet − 104)
+      // keep bubbles readable when the camera zooms out (phones): never smaller than ~12 css px
+      const z = this.cameras.main.zoom / ((this.game as any).dprScale ?? 1);
+      b.text.setPosition(x, y - 120 - Math.min(6, b.t * 4)).setScale(Math.max(1, 1 / z));
     }
   }
 
@@ -687,9 +854,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (!ally && !hint) for (const n of v.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || dist(n.x, n.y, this.px, this.py) > 80 || !this.session.map.lineOfSight(me.x, me.y, n.x, n.y, false)) continue;
-      if (n.mode === 'follow' && n.follow === me.id) hint = `${key}${n.name}: ждать здесь`;
-      else if (n.rescued || n.weapon) hint = `${key}${n.name}: за мной`;
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mode === 'follow' || n.mutation || dist(n.x, n.y, this.px, this.py) > 80 || !this.session.map.lineOfSight(me.x, me.y, n.x, n.y, false)) continue;
+      if (n.rescued || n.weapon) hint = `${key}${n.name}: за мной`;
       else hint = `${key}поговорить`;
       break;
     }

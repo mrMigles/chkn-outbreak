@@ -28,6 +28,8 @@ export interface Mutation {
   stage: 'twitch' | 'feathers' | 'silhouette'; elapsed: number;
   type: EnemyType; tag: string;
 }
+/** Mutation timeline (s): twitch → feathers → silhouette → hostile. Readable on purpose (D34). */
+export const MUTATION = { feathers: 1.0, silhouette: 2.0, done: 3.0 };
 export interface BetrayalPlan { checked: boolean; remaining: number; helped: number }
 /** Feet remain in the existing collision plane; artwork grows upwards from them. */
 export interface VisualAnchor { feetX: number; feetY: number; weaponY: number }
@@ -36,6 +38,7 @@ export interface Player {
   id: string;
   slot: number;
   name: string;
+  look: string;            // encoded appearance (shared/look.ts); '' = slot default
   x: number; y: number; aim: number;
   vx: number; vy: number;
   hp: number; maxHp: number; armor: number;
@@ -55,6 +58,8 @@ export interface Player {
   kills: number; deaths: number; score: number;
   hurtT: number;
   keys: string[];
+  buffs?: Partial<Record<BuffKind, number>>;
+  achievements?: string[];
   combo: number; comboT: number;
   connected: boolean;
   supplies: Supplies;
@@ -128,7 +133,15 @@ export interface Projectile {
   r: number;
 }
 
-export type PickupKind = 'ammo' | 'health' | 'armor' | 'weapon' | 'keycard' | 'antidote';
+export const BUFFS = {
+  invincible: { name: 'Непробиваемый сотрудник', icon: '✦', color: 0xffd65c },
+  damage: { name: 'Ультраурон ×3', icon: '×3', color: 0xff7568 },
+  infinite: { name: 'Бесконечные патроны', icon: '∞', color: 0x78baff },
+  sprint: { name: 'Бег ×1.6', icon: '»', color: 0x8dffbd },
+} as const;
+export type BuffKind = keyof typeof BUFFS;
+export const BUFF_SECONDS = 10;
+export type PickupKind = 'ammo' | 'health' | 'armor' | 'weapon' | 'keycard' | 'antidote' | BuffKind | 'achievement';
 export interface Pickup { id: number; kind: PickupKind; weapon?: WeaponId; key?: string; x: number; y: number; ttl: number }
 
 export interface Door { id: string; x: number; y: number; w: number; h: number; open: boolean; locked: string; theme: string }
@@ -139,8 +152,8 @@ export type HitKind = 'flesh' | 'wall' | 'armor' | 'prop' | 'player' | 'npc';
 
 export type SimEvent =
   | { e: 'shot'; o: string; w: WeaponId; x: number; y: number; a: number; ends: number[]; team: Team }
-  | { e: 'hit'; x: number; y: number; a: number; k: HitKind; d: number; id?: number | string; big?: boolean; o?: string }
-  | { e: 'kill'; id: number; x: number; y: number; a: number; t: EnemyType; v: number; gib: boolean; by: string; burn: boolean }
+  | { e: 'hit'; x: number; y: number; a: number; k: HitKind; d: number; id?: number | string; big?: boolean; o?: string; hs?: boolean }
+  | { e: 'kill'; id: number; x: number; y: number; a: number; t: EnemyType; v: number; gib: boolean; by: string; burn: boolean; hs?: boolean }
   | { e: 'boom'; x: number; y: number; r: number; k: 'gl' | 'barrel' | 'exploder' | 'boss' }
   | { e: 'proj'; id: number; k: ProjKind; x: number; y: number; vx: number; vy: number }
   | { e: 'splat'; x: number; y: number; k: ProjKind }
@@ -165,7 +178,8 @@ export type SimEvent =
   | { e: 'swing'; id: number; x: number; y: number; a: number }
   | { e: 'level'; next: string; win?: boolean }
   | { e: 'gameover'; reason: string }
-  | { e: 'fuse'; id: number };
+  | { e: 'fuse'; id: number }
+  | { e: 'propbreak'; id: number; x: number; y: number; m: string };
 
 /** Render-facing view of the world (identical for local sim and network snapshots). */
 export interface WorldView {
@@ -179,7 +193,11 @@ export interface WorldView {
   doors: Door[];
   barrels: Barrel[];
   pods: Pod[];
+  /** Map object ids of destroyed props (late joiners remove them too). */
+  broken: number[];
   objective: string;
+  /** Where the objective is: map object / NPC names or "@x,y" points; the guide arrow points at the nearest. */
+  objectiveTarget: string[];
   blackout: boolean;
   alarm: boolean;
   bossId: number;

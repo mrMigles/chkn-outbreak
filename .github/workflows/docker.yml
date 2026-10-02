@@ -1,0 +1,85 @@
+name: build and publish
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      # shared by the test server and check:telegram (signed game links)
+      SESSION_SECRET: ci-check
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # headless simulation checks (no browser, no server)
+      - run: npm run check:combat
+      - run: npm run check:coop
+      - run: npm run check:levels
+      - run: npm run check:art
+      - run: npm run build
+      # real Colyseus clients against the production server
+      - name: network checks
+        run: |
+          npx tsx server/index.ts --debug > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:2580/healthz && break; sleep 1; done
+          npm run check:network
+          npm run check:telegram
+      - if: failure()
+        run: cat server.log || true
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/chkn-outbreak2d
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=ref,event=tag
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_ID=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # smoke-test the image: it starts and answers the health check
+      - name: run image
+        if: github.event_name == 'pull_request'
+        run: |
+          docker buildx build --load -t chkn:test --build-arg BUILD_ID=${{ github.sha }} .
+          docker run -d --name chkn -p 2580:2580 chkn:test
+          for i in $(seq 1 30); do curl -sf http://localhost:2580/healthz && exit 0; sleep 1; done
+          docker logs chkn; exit 1

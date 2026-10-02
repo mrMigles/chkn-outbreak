@@ -1,0 +1,31 @@
+# docker compose up -d  → http://localhost:2580
+# Uses the image published by CI; `docker compose up --build` builds it locally instead.
+# Secrets and options go into a .env file next to this one (see README → «Сервер и Docker»).
+services:
+  chkn:
+    image: ghcr.io/mrmigles/chkn-outbreak2d:latest
+    build:
+      context: .
+      args:
+        BUILD_ID: ${BUILD_ID:-local}
+    restart: unless-stopped
+    # a tiny init as PID 1: stop signals reach the server, which closes rooms before exiting
+    init: true
+    ports:
+      - "${CHKN_PORT:-2580}:2580"
+    environment:
+      NODE_ENV: production
+      PORT: 2580
+      # Telegram (optional): bot token from @BotFather — checks who opened the game and from which chat
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # the game's short name from @BotFather /newgame and the public https address players open
+      TELEGRAM_GAME: ${TELEGRAM_GAME:-chkn}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      # Mini App direct link from @BotFather /newapp (t.me/<bot>/<app>), enables the /app command
+      TELEGRAM_APP_URL: ${TELEGRAM_APP_URL:-}
+      # signs game links; keep it stable so links in chats survive restarts (defaults to the bot token)
+      SESSION_SECRET: ${SESSION_SECRET:-}
+    # Very old Docker (< 20.10.10) blocks the clone3 call of modern images; if the log shows
+    # "uv_thread_create" assertions, update Docker — or, as a stopgap, uncomment:
+    # security_opt:
+    #   - seccomp:unconfined

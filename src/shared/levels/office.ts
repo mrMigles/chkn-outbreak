@@ -10,6 +10,9 @@ const office: LevelScript = {
   title: 'Этаж 7. Офис «Курникс Групп»',
   subtitle: 'Пятница, 17:55. До выходных — пять минут',
   next: 'lab',
+  // the first level is a gentle introduction: softer chickens, smaller waves (D30)
+  enemyHp: 0.85,
+  enemyDamage: 0.65,
 
   onStart(w) {
     w.setObjective('Что происходит? Осмотреться');
@@ -32,7 +35,7 @@ const office: LevelScript = {
   onKill(w, _e, tag) {
     if (tag === 'os' && w.countTag('os') === 0 && !w.flags.osClear) {
       w.flags.osClear = true;
-      w.setObjective('Найти выход. Лифты — в конце коридора');
+      w.setObjective('Найти выход. Лифты — в конце коридора', 'elevator');
       const p = w.anyPlayer;
       if (p) w.say(p.id, 'Так. Пятница отменяется.');
     }
@@ -42,24 +45,26 @@ const office: LevelScript = {
   onTrigger(w, id, by) {
     switch (id) {
       case 'kitchen_enter':
-        w.spawnWave('kitchen', ['normal', 'fast', 'normal', 'normal'], 7, 0.35, true, 'kitchen');
+        w.spawnWave('kitchen', ['normal', 'normal', 'fast'], 4, 0.8, true, 'kitchen');
         w.after(0.3, () => w.say(by.id, 'Они в холодильнике!!'));
         break;
       case 'corridor':
         if (w.flags.power) break;
         w.say('pa', 'Внимание! Из-за перегрузки лифты обесточены. Перезагрузите сервер. Или не перезагружайте. Нам уже всё равно.', 5);
-        w.setObjective('Лифты обесточены. Перезагрузить сервер (серверная — у лифтов)');
+        w.setObjective('Лифты обесточены. Перезагрузить сервер (серверная — у лифтов)', 'reboot');
         break;
       case 'server_door':
         if (!hasKey(w, 'server')) {
-          w.say(by.id, 'Заперто. Ключ должен быть у охраны.');
-          if (!w.flags.petrovich) w.setObjective('Взять ключ от серверной у охраны (вниз по коридору)');
+          if (!w.flags.serverHint) { w.flags.serverHint = true; w.say(by.id, 'Заперто. Ключ должен быть у охраны.'); }
+          // never step back: once we know the guard room needs the blue pass, keep that objective
+          if (!w.flags.petrovich && !w.flags.needBlue) w.setObjective('Взять ключ от серверной у охраны (вниз по коридору)', 'security_door');
         }
         break;
       case 'security_door':
-        if (!hasKey(w, 'blue') && !w.flags.petrovich) {
+        if (!hasKey(w, 'blue') && !w.flags.petrovich && !w.flags.needBlue) {
+          w.flags.needBlue = true;
           w.say(by.id, 'Нужен синий пропуск. У айтишников всегда есть лишний.');
-          w.setObjective('Найти синий пропуск у айтишников (переговорные)');
+          w.setObjective('Найти синий пропуск у айтишников (переговорные)', 'marat');
         }
         break;
       case 'proryv':
@@ -73,7 +78,7 @@ const office: LevelScript = {
           giveKey(w, 'server');
           n.mode = 'follow'; n.follow = by.id;
           w.emit({ e: 'pick', id: by.id, k: 'keycard', text: 'Ключ от серверной' });
-          w.after(1, () => w.setObjective('Перезагрузить сервер (серверная — у лифтов)'));
+          w.after(1, () => w.setObjective('Перезагрузить сервер (серверная — у лифтов)', 'reboot'));
         }
         break;
       }
@@ -82,12 +87,12 @@ const office: LevelScript = {
         break;
       case 'cafeteria':
         w.msg('СТОЛОВАЯ «НАСЕСТ»', 'Обед начался раньше', 2.5);
-        w.spawnWave('caf', ['normal', 'normal', 'fast', 'fast', 'fat', 'spitter'], 20, 0.28, true, 'caf');
+        w.spawnWave('caf', ['normal', 'normal', 'normal', 'fast', 'spitter'], 10, 0.7, true, 'caf');
         break;
       case 'lobby':
         if (!w.flags.galina) {
           w.say('galina', 'Помогите!!! Они ломятся через главный вход!', 3);
-          w.spawnWave('entrance', ['normal', 'fast', 'normal', 'armored', 'normal'], 16, 0.45, true, 'lobby');
+          w.spawnWave('entrance', ['normal', 'fast', 'normal', 'normal'], 9, 0.7, true, 'lobby');
         }
         break;
       case 'elevator': {
@@ -107,14 +112,20 @@ const office: LevelScript = {
     if (n.id === 'marat') {
       w.flags.marat = true;
       w.say(n.id, 'Спасибо! Вот пропуск охраны. Не спрашивай, откуда он у меня.', 4);
-      w.addPickup('keycard', n.x + 20, n.y - 30, { key: 'blue', ttl: -1 });
-      w.setObjective('Синий пропуск получен. Охрана — по коридору');
+      const card = w.addPickup('keycard', n.x + 20, n.y - 30, { key: 'blue', ttl: -1 });
+      w.setObjective('Подобрать синий пропуск', { x: card.x, y: card.y });
     }
     if (n.id === 'galina') {
       w.flags.galina = true;
       w.say(n.id, 'Спасибо!!! Я с вами. Только не бегите — у меня каблуки!', 4);
       n.mode = 'follow'; n.follow = by.id;
     }
+  },
+
+  onPickup(w, k) {
+    if (k.kind !== 'keycard') return;
+    if (k.key === 'blue' && !w.flags.petrovich) w.setObjective('Синий пропуск получен. Охрана — по коридору', 'security_in');
+    if (k.key === 'server' && !w.flags.rebooted) w.setObjective('Перезагрузить сервер (серверная — у лифтов)', 'reboot');
   },
 
   onUse(w, id, by) {
@@ -129,12 +140,12 @@ const office: LevelScript = {
       w.setObjective('Продержаться, пока сервер перезагружается');
       let t = 0;
       const groups = ['near', 'srv', 'near', 'kitchen', 'srv', 'corridor'];
-      const pool: EnemyType[] = ['normal', 'normal', 'fast', 'fast', 'spitter', 'fat'];
-      w.every(4, () => {
+      const pool: EnemyType[] = ['normal', 'normal', 'normal', 'fast', 'spitter'];
+      w.every(7, () => {
         if (!w.blackout) return;
-        t += 4;
-        const g = groups[(t / 4) % groups.length];
-        w.spawnWave(g, pool, 3 + Math.floor(t / 10), 0.3, true, 'blackout');
+        t += 7;
+        const g = groups[Math.floor(t / 7) % groups.length];
+        w.spawnWave(g, pool, 2 + Math.floor(t / 20), 0.6, true, 'blackout');
       });
       w.after(40, () => {
         w.setBlackout(false);
@@ -142,7 +153,7 @@ const office: LevelScript = {
         w.flags.power = true;
         w.openDoor('elevator');
         w.say('pa', 'Сервер перезагружен. Лифты снова работают. Хороших выходных!', 4);
-        w.setObjective('К лифтам!');
+        w.setObjective('К лифтам!', 'elevator');
         if (!w.flags.galina) w.after(5, () => w.say('radio', 'Галина (ресепшн): Кто-нибудь! Я на ресепшене, их тут очень много!', 5));
       });
     });
@@ -163,7 +174,7 @@ const office: LevelScript = {
     if (!key || hasKey(w, key) || w.flags['lostKey:' + key]) return;
     w.flags['lostKey:' + key] = true;
     w.addPickup('keycard', n.x, n.y, { key, ttl: -1 });
-    w.setObjective('Подобрать пропуск: ' + (key === 'blue' ? 'охрана' : 'серверная'));
+    w.setObjective('Подобрать пропуск: ' + (key === 'blue' ? 'охрана' : 'серверная'), { x: n.x, y: n.y });
   },
 };
 

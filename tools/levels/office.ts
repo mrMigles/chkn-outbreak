@@ -62,7 +62,7 @@ const coworker = (name: string, kind: string, title: string, x: number, y: numbe
   objs.push({ type: 'npc', name, at: at(x, y), props: { kind, title, angle: -90, mode: 'idle', tag: 'coworker', turn, lines } });
 coworker('sveta', 'womanGreen', 'Света, маркетинг', 15.4, 3.5, 'normal', 'Кто-нибудь пробовал КУКАРЕКС? Бодрит!|У меня чешется шея…');
 coworker('dima', 'manBlue', 'Дима, стажёр', 19.6, 7.1, 'fast', 'Я выпил три банки! Я ВСЁ МОГУ!|Ко! Ко-ко! Ой.');
-coworker('arkady', 'hitman', 'Аркадий, менеджер', 7.4, 3.5, 'fat', 'Где квартальный отчёт?!|Я не толстый, я — синергичный.');
+coworker('arkady', 'hitman', 'Аркадий, менеджер', 7.4, 3.5, 'normal', 'Где квартальный отчёт?!|Я не толстый, я — синергичный.');
 coworker('olga', 'womanGreen', 'Ольга, HR', 19.0, 10.6, 'normal', 'Тимбилдинг в субботу обязателен!|Почему у всех перья?');
 coworker('kirill', 'manBrown', 'Кирилл, дизайнер', 15.6, 10.6, 'normal', 'Сделайте логотип покрупнее… и покурнее.|Мне нужен пиксель-перфект клюв.');
 
@@ -145,10 +145,10 @@ trigger('proryv', 32, 18, 9, 9);
 
 // ---------------------------------------------------------------- meeting room «Синергия»
 prop('table_long', 36, 32.4); prop('chair_0', 34.6, 31.4, 180); prop('chair_1', 36, 31.4, 180); prop('chair_2', 37.4, 31.4, 180); prop('chair_3', 34.6, 33.4); prop('chair_0', 36, 33.4); prop('chair_1', 37.4, 33.4);
-prop('tv', 36, 28.3);
-note(36, 28.9, 'Экран: «Синергия — это когда 1 + 1 = курица»');
+prop('tv', 38.7, 28.3);
+note(38.7, 28.9, 'Экран: «Синергия — это когда 1 + 1 = курица»');
 objs.push({ type: 'npc', name: 'marat', at: at(33.4, 37.4), props: { kind: 'manBlue', title: 'Марат, айтишник', mode: 'cower', angle: -45, lines: 'Вы пробовали выключить и включить?|У меня есть пропуск охраны. Не спрашивай откуда.' } });
-enemy('normal', 35, 36, 'syn'); enemy('normal', 37.5, 36.5, 'syn'); enemy('fast', 34, 34.8, 'syn'); enemy('normal', 38.5, 30, 'syn'); enemy('spitter', 39.3, 37.2, 'syn');
+enemy('normal', 35, 36, 'syn'); enemy('normal', 37.5, 36.5, 'syn'); enemy('fast', 34, 34.8, 'syn'); enemy('normal', 38.5, 30, 'syn');
 label(36, 29.8, 'ПЕРЕГОВОРНАЯ «СИНЕРГИЯ»', 16);
 
 // ---------------------------------------------------------------- cafeteria «Насест»

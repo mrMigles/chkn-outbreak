@@ -27,11 +27,11 @@ export class LocalSession implements Session {
   world: World;
   private acc = 0;
 
-  constructor(levelId: string, mapJson: TiledMap, name: string, carry?: Carry, difficulty = 1) {
+  constructor(levelId: string, mapJson: TiledMap, name: string, carry?: Carry, difficulty = 1, look = '') {
     this.levelId = levelId;
     this.map = new GameMap(levelId, mapJson);
     this.world = new World(this.map, LEVELS[levelId], { solo: true, carry, difficulty });
-    this.world.addPlayer(this.myId, name, 0);
+    this.world.addPlayer(this.myId, name, 0, look);
     this.world.start();
   }
 

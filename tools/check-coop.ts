@@ -92,8 +92,8 @@ scenario('NPC mutation stages survive snapshot; no early hostile or duplicate dr
   const w=setup(); const n={ id:'oleg',kind:'manBrown',name:'Олег',x:500,y:500,angle:0,hp:80,maxHp:80,mode:'follow' as const,
     weapon:'smg' as const,fireCd:0,follow:'p0',goal:null,lines:[],talkCd:0,tag:'coworker',rescued:true,vx:0,vy:0,hurtT:0 };
   w.npcs.push(n); w.infect(n,'normal','os'); w.infect(n,'fast','os'); assert.equal(w.countTag('os'),1);
-  step(w,1); const s=encodeSnapshot(w); assert.equal(s.n[0].mutation?.stage,'feathers'); assert.equal(w.enemies.length,0);
-  step(w,1.1); assert.equal(w.enemies.length,0); step(w,0.15); assert.equal(w.enemies.length,1);
+  step(w,1.3); const s=encodeSnapshot(w); assert.equal(s.n[0].mutation?.stage,'feathers'); assert.equal(w.enemies.length,0);
+  step(w,1.5); assert.equal(w.enemies.length,0); step(w,0.3); assert.equal(w.enemies.length,1);
   assert.equal(w.pickups.filter(p=>p.weapon==='smg').length,1); step(w,0.5);
   assert.equal(w.pickups.filter(p=>p.weapon==='smg').length,1);
   assert.equal(decodeEnemies(encodeSnapshot(w),new Map())[0].appearance?.name,'Олег');
@@ -113,16 +113,16 @@ scenario('random betrayal waits for twenty seconds of help and cannot overlap', 
     mode:'guard',weapon:null,fireCd:0,follow:'p0',goal:null,lines:[],talkCd:0,tag:'friend',rescued:true,vx:0,vy:0,hurtT:0,
     betrayal:{checked:true,remaining:0,helped:0}});
   step(w,19); assert.ok(w.npcs.every(n=>!n.mutation)); step(w,1.1);
-  assert.equal(w.npcs.filter(n=>n.mutation).length,1); step(w,2.3); w.enemies=[];
-  step(w,27); assert.equal(w.npcs.filter(n=>n.mutation).length,1);
-  step(w,1); assert.equal(w.npcs.filter(n=>n.mutation).length,2); step(w,2.3); w.enemies=[];
+  assert.equal(w.npcs.filter(n=>n.mutation).length,1); step(w,3.1); w.enemies=[];
+  step(w,26.2); assert.equal(w.npcs.filter(n=>n.mutation).length,1);
+  step(w,1); assert.equal(w.npcs.filter(n=>n.mutation).length,2); step(w,3.1); w.enemies=[];
   step(w,35); assert.equal(w.npcs.filter(n=>n.mutation).length,2);
 });
 scenario('office mandatory keys survive NPC mutation and death exactly once', () => {
   const map = new GameMap('office', JSON.parse(fs.readFileSync('public/assets/maps/office.tmj','utf8')));
   const w = new World(map, LEVELS.office, {solo:false,seed:1337}); w.addPlayer('me','QA',0);
   const marat=w.npc('marat')!, guard=w.npc('petrovich')!;
-  w.infect(marat); step(w,2.3); w.infect(marat); w.damageNpc(marat,999);
+  w.infect(marat); step(w,3.1); w.infect(marat); w.damageNpc(marat,999);
   assert.equal(w.pickups.filter(k=>k.key==='blue').length,1);
   w.damageNpc(guard,999); w.damageNpc(guard,999);
   assert.equal(w.pickups.filter(k=>k.key==='server').length,1);

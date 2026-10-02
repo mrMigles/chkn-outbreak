@@ -32,6 +32,7 @@ function los(w: World, e: Enemy, t: Target) {
 }
 
 function hurt(w: World, e: Enemy, t: Target, dmg: number) {
+  dmg *= w.script.enemyDamage ?? 1;
   if (t.isPlayer) w.damagePlayer(t.ref as Player, dmg, e.x, e.y);
   else w.damageNpc(t.ref as Npc, dmg);
 }
@@ -105,7 +106,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
       e.cd = def.attackCd;
       if (e.type === 'spitter') {
         const a = Math.atan2(t.y - e.y, t.x - e.x) + (Math.random() - 0.5) * 0.12;
-        w.addProjectile('spit', e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, Math.cos(a) * 400, Math.sin(a) * 400, String(e.id), 'chicken', def.damage, 1.3);
+        w.addProjectile('spit', e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, Math.cos(a) * 400, Math.sin(a) * 400, String(e.id), 'chicken', def.damage * (w.script.enemyDamage ?? 1), 1.3);
       } else if (td < def.attackRange + 22) {
         hurt(w, e, t, def.damage);
       }

@@ -12,6 +12,12 @@ import type { Snapshot } from '../../shared/protocol';
 import type { SimEvent } from '../../shared/sim/types';
 import { escapeHtml } from './Hud';
 import type { GameSceneData } from '../scenes/GameScene';
+import { openEditor, currentLook } from './Editor';
+import { lookPortrait } from '../render/Looks';
+import { encodeLook } from '../../shared/look';
+import { resetTips } from './Tutorial';
+import { telegramSession, telegramBack, type TgSession } from '../telegram';
+import { music } from '../audio/Music';
 
 /** Menus (HTML/CSS) + game flow (levels, retries, multiplayer lobby). */
 export class App {
@@ -30,16 +36,42 @@ export class App {
     window.addEventListener('keydown', unlock);
   }
 
-  ready() {
+  /** Telegram chat room of this session (opened from a chat), if any. */
+  tg: TgSession | null = null;
+
+  async ready() {
     this.booted = true;
     // ?level=<id> jumps straight into a level (testing)
     const lv = new URLSearchParams(location.search).get('level');
-    if (lv && LEVELS[lv]) this.startSolo(lv);
-    else this.mainMenu();
+    if (lv && LEVELS[lv]) { this.startSolo(lv); return; }
+    const tg = await telegramSession(this.httpBase());
+    if (tg && 'error' in tg) { this.mainMenu(); this.toastMenu('Telegram: ' + tg.error); return; }
+    if (tg) { this.tg = tg; settings.name = tg.name; saveSettings(); this.chatRoom(); return; }
+    this.mainMenu();
+  }
+
+  /** HTTP origin of the game server (Telegram API calls). */
+  httpBase() { return this.serverUrl().replace(/^ws/, 'http'); }
+
+  /** Opened from a Telegram chat: go straight into the chat's room. */
+  async chatRoom(retry = true) {
+    const tg = this.tg;
+    if (!tg) return;
+    const d = this.show(`<div class="panel center"><h2>КОМНАТА ЧАТА</h2><p class="flavor">${escapeHtml(tg.chatTitle || (tg.personal ? 'Личная комната' : 'Чат'))} · входим как ${escapeHtml(tg.name)}…</p><div class="err"></div>
+      <button class="btn ghost" data-a="menu">В меню</button></div>`);
+    d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'menu') this.leaveRoom(); });
+    const ok = await this.connect('join', tg.code, d.querySelector('.err')!);
+    if (!ok && retry && this.screen === d) {
+      // the room may have closed between the session and the join: ask the server to raise it again
+      const again = await telegramSession(this.httpBase());
+      if (again && !('error' in again)) { this.tg = again; this.chatRoom(false); }
+    }
   }
 
   show(html: string) {
     this.screen?.remove();
+    // a menu/result panel replaces the game view: no tutorial card may stay on top of it
+    this.ui.querySelectorAll('.tip-card').forEach((e) => e.remove());
     const d = document.createElement('div');
     d.className = 'overlay screen';
     d.innerHTML = html;
@@ -52,20 +84,45 @@ export class App {
 
   mainMenu() {
     this.stopGame();
+    telegramBack(null);
     const d = this.show(`
       <div class="menu">
-        <div class="logo big">CHKN<span>OUTBREAK</span></div>
+        <div class="logo big" data-a="logo">CHKN<span>OUTBREAK</span></div>
         <div class="tagline">ООО «Курятник» · пятница, 17:55 · эпидемия</div>
-        <label class="field"><span>Имя сотрудника</span><input class="name" maxlength="14" value="${escapeHtml(settings.name)}"></label>
-        <button class="btn primary" data-a="solo">Одиночная игра</button>
+        <div class="me-card">
+          <img class="me-portrait" src="${lookPortrait(encodeLook(currentLook()), false, 2)}" alt="">
+          <div class="me-fields">
+            <label class="field"><span>Имя сотрудника</span><input class="name" maxlength="14" value="${escapeHtml(settings.name)}"></label>
+            <button class="btn tiny" data-a="look">Изменить внешность</button>
+          </div>
+        </div>
+        ${this.tg ? `<button class="btn primary" data-a="chat">Играть с чатом · ${escapeHtml(this.tg.chatTitle || 'комната чата')}</button>` : ''}
+        <button class="btn ${this.tg ? '' : 'primary'}" data-a="solo">Одиночная игра</button>
         <div class="row">
           <button class="btn" data-a="host">Создать комнату</button>
           <button class="btn" data-a="join">Войти по коду</button>
         </div>
         <button class="btn ghost" data-a="arena">Полигон (тест оружия)</button>
+        ${settings.dev ? `<div class="dev-box">
+          <div class="dev-title">DEV-режим <button class="btn tiny ghost" data-a="devoff" title="Выключить">✕</button></div>
+          <div class="row small">
+            <select class="dev-level">${Object.values(LEVELS).map((l) => `<option value="${l.id}" ${l.id === settings.devLevel ? 'selected' : ''}>${escapeHtml(l.id + ' — ' + l.title)}</option>`).join('')}</select>
+            <button class="btn tiny primary" data-a="devplay">Играть</button>
+          </div>
+          <div class="row small">
+            <label class="field inline check"><input type="checkbox" class="dev-god" ${settings.devGod ? 'checked' : ''}><span>Бессмертие</span></label>
+            <label class="field inline check"><input type="checkbox" class="dev-arsenal" ${settings.devArsenal ? 'checked' : ''}><span>Всё оружие</span></label>
+          </div>
+          <div class="dev-help">«Создать комнату» стартует с выбранного уровня. В игре (соло): F6 — бессмертие, F7 — всё оружие, F8 — убить всех, F9 — пройти уровень.</div>
+        </div>` : ''}
         <div class="row small">
           <label class="field inline"><span>Громкость</span><input type="range" class="vol" min="0" max="1" step="0.05" value="${settings.volume}"></label>
           <label class="field inline"><span>Тряска</span><input type="range" class="shake" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
+        </div>
+        <div class="row small">
+          <label class="field inline"><span>Музыка</span><input type="range" class="mus" min="0" max="1" step="0.05" value="${settings.music}"></label>
+          <label class="field inline check"><input type="checkbox" class="tips" ${settings.tutorials ? 'checked' : ''}><span>Подсказки</span></label>
+          <button class="btn tiny ghost" data-a="tipsreset" title="Показать все подсказки заново">↺</button>
         </div>
         <div class="controls-help">
           <b>ПК:</b> WASD — движение · мышь — прицел · ЛКМ — огонь · R — перезарядка · E — действие · колесо/1–7 — оружие<br>
@@ -77,6 +134,14 @@ export class App {
     name.addEventListener('change', () => { settings.name = name.value.trim() || 'Сотрудник'; saveSettings(); });
     d.querySelector<HTMLInputElement>('.vol')!.addEventListener('input', (e) => { settings.volume = +(e.target as HTMLInputElement).value; sfx.setVolume(settings.volume); saveSettings(); });
     d.querySelector<HTMLInputElement>('.shake')!.addEventListener('input', (e) => { settings.shake = +(e.target as HTMLInputElement).value; saveSettings(); });
+    d.querySelector<HTMLInputElement>('.mus')!.addEventListener('input', (e) => { settings.music = +(e.target as HTMLInputElement).value; saveSettings(); });
+    d.querySelector<HTMLInputElement>('.tips')!.addEventListener('change', (e) => { settings.tutorials = (e.target as HTMLInputElement).checked; saveSettings(); });
+    const devLevel = d.querySelector<HTMLSelectElement>('.dev-level');
+    devLevel?.addEventListener('change', () => { settings.devLevel = devLevel.value; saveSettings(); });
+    d.querySelector<HTMLInputElement>('.dev-god')?.addEventListener('change', (e) => { settings.devGod = (e.target as HTMLInputElement).checked; saveSettings(); });
+    d.querySelector<HTMLInputElement>('.dev-arsenal')?.addEventListener('change', (e) => { settings.devArsenal = (e.target as HTMLInputElement).checked; saveSettings(); });
+    let logoTaps = 0, logoT = 0;
+    music.set('calm');
     sfx.setVolume(settings.volume);
     d.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).dataset.a;
@@ -84,6 +149,15 @@ export class App {
       if (a === 'solo') { this.levelStartCarry = undefined; this.startSolo(FIRST_LEVEL); }
       if (a === 'arena') { this.levelStartCarry = undefined; this.startSolo('arena'); }
       if (a === 'host' || a === 'join') this.multiplayer(a);
+      if (a === 'look') { const host = this.show(''); openEditor(host, () => this.mainMenu()); }
+      if (a === 'tipsreset') { resetTips(); this.toastMenu('Подсказки будут показаны снова'); }
+      if (a === 'chat') this.chatRoom();
+      if (a === 'devplay') { this.levelStartCarry = undefined; this.startSolo(settings.devLevel); }
+      if (a === 'devoff') { settings.dev = false; saveSettings(); this.mainMenu(); }
+      if ((e.target as HTMLElement).closest('[data-a="logo"]')) {
+        logoTaps = performance.now() - logoT < 600 ? logoTaps + 1 : 1; logoT = performance.now();
+        if (logoTaps >= 5) { settings.dev = !settings.dev; saveSettings(); this.mainMenu(); this.toastMenu(settings.dev ? 'DEV-режим включён' : 'DEV-режим выключен'); }
+      }
     });
   }
 
@@ -95,7 +169,11 @@ export class App {
     this.currentLevel = levelId;
     this.levelStartCarry = carry;
     const json = this.game.cache.tilemap.get('map_' + levelId).data as TiledMap;
-    const session = new LocalSession(levelId, json, settings.name, carry);
+    const session = new LocalSession(levelId, json, settings.name, carry, 1, settings.look);
+    if (settings.dev) {
+      session.world.god = settings.devGod;
+      if (settings.devArsenal) session.world.devArsenal(session.world.players[0]);
+    }
     this.runSession(session);
   }
 
@@ -188,17 +266,19 @@ export class App {
     this.connect('host', '', d.querySelector('.err')!);
   }
 
-  private async connect(mode: 'host' | 'join', code: string, err: Element) {
+  private async connect(mode: 'host' | 'join', code: string, err: Element): Promise<boolean> {
     try {
       const client = new Client(this.serverUrl());
       const room = mode === 'host'
-        ? await client.create('game', { name: settings.name })
-        : await client.joinById(code, { name: settings.name });
+        ? await client.create('game', { name: settings.name, look: settings.look, ...(settings.dev && LEVELS[settings.devLevel] ? { level: settings.devLevel } : {}) })
+        : await client.joinById(code, { name: settings.name, look: settings.look });
       this.bindRoom(room, client);
       if (room.state.phase === 'lobby') this.lobby();
+      return true;
     } catch (e) {
       err.textContent = mode === 'join' ? 'Комната не найдена или заполнена.' : 'Сервер недоступен (запустите npm run server).';
       console.warn(e);
+      return false;
     }
   }
 
@@ -276,6 +356,7 @@ export class App {
   lobby() {
     const room = this.room;
     if (!room) return;
+    telegramBack(() => this.leaveRoom());
     const st = room.state;
     const me = st.players.get(room.sessionId);
     const list: string[] = [];
@@ -289,9 +370,12 @@ export class App {
     const action = me?.host
       ? `<button class="btn primary" data-a="start" ${allReady ? '' : 'disabled'}>${allReady ? 'Старт' : 'Ждём готовности…'}</button>`
       : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>`;
+    const chat = (st as any).chat as string;
     const d = this.show(`<div class="panel center">
-      <h2>ЛОББИ</h2>
-      <div class="flavor">Код комнаты — продиктуйте коллегам:</div>
+      <h2>${chat ? 'КОМНАТА ЧАТА' : 'ЛОББИ'}</h2>
+      ${chat
+        ? `<div class="flavor">«${escapeHtml(chat)}» — все, кто откроет игру из этого чата, попадут сюда. Код для остальных:</div>`
+        : '<div class="flavor">Код комнаты — продиктуйте коллегам:</div>'}
       <div class="code">${escapeHtml(st.code)}</div>
       <div class="plist">${list.join('')}</div>
       <div class="flavor" style="font-size:13px">1–4 игрока против стаи. E: нажать — поделиться патронами, держать — лечить или поднять. После смерти вы вернётесь человеком в передышку. Берегитесь: даже союзные сотрудники могут превратиться!</div>

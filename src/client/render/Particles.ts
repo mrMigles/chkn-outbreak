@@ -106,43 +106,36 @@ export class Particles {
 }
 
 /**
- * Persistent decals (blood, feathers, casings, corpses, scorch marks) drawn into
- * chunked RenderTextures so the floor accumulates a battle history at zero per-frame cost.
+ * Persistent decals (blood, feathers, casings, corpses, scorch marks) under the characters.
+ * Pooled plain images in the normal sprite batch, capped and recycled oldest-first.
+ * (Stamping into WebGL RenderTextures stalled the GPU command buffer for 100–700 ms per frame on
+ * integrated GPUs — the "freeze on shots and explosions" — so the floor history is kept as sprites.)
  */
 export class DecalLayer {
-  private chunks = new Map<number, Phaser.GameObjects.RenderTexture>();
-  private stamp: Phaser.GameObjects.Image;
-  static CH = 1024;
+  private live: Phaser.GameObjects.Image[] = [];
+  private head = 0;
+  static MAX = 1400;
 
-  constructor(private scene: Phaser.Scene, private depth: number, private w: number, private h: number) {
-    this.stamp = scene.make.image({ x: 0, y: 0, key: 'fx', frame: 'dot' }, false);
-  }
+  constructor(private scene: Phaser.Scene, private depth: number, private w: number, private h: number) {}
 
-  private chunk(cx: number, cy: number) {
-    const k = cy * 1000 + cx;
-    let rt = this.chunks.get(k);
-    if (!rt) {
-      const C = DecalLayer.CH;
-      rt = this.scene.add.renderTexture(cx * C, cy * C, C, C).setOrigin(0, 0).setDepth(this.depth);
-      this.chunks.set(k, rt);
-    }
-    return rt;
-  }
+  prewarm() {}
 
   draw(texture: string, frame: string, x: number, y: number, rot = 0, scale = 1, tint = 0xffffff, alpha = 1, sx = 1) {
     if (x < -64 || y < -64 || x > this.w + 64 || y > this.h + 64) return;
-    const img = this.stamp;
-    img.setTexture(texture, frame).setRotation(rot).setScale(scale * sx, scale).setTint(tint).setAlpha(alpha).setOrigin(0.5);
-    const r = Math.max(img.width * scale * sx, img.height * scale) * 0.75;
-    const C = DecalLayer.CH;
-    const cx0 = Math.floor((x - r) / C), cx1 = Math.floor((x + r) / C);
-    const cy0 = Math.floor((y - r) / C), cy1 = Math.floor((y + r) / C);
-    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-      if (cx < 0 || cy < 0) continue;
-      const rt = this.chunk(cx, cy);
-      rt.draw(img, x - cx * C, y - cy * C);
+    let img: Phaser.GameObjects.Image;
+    if (this.live.length < DecalLayer.MAX) {
+      img = this.scene.add.image(x, y, texture, frame).setDepth(this.depth);
+      this.live.push(img);
+    } else {
+      img = this.live[this.head];
+      this.head = (this.head + 1) % DecalLayer.MAX;
+      img.setTexture(texture, frame).setPosition(x, y);
     }
+    // later decals draw above earlier ones within the layer
+    img.setRotation(rot).setScale(scale * sx, scale).setTint(tint).setAlpha(alpha).setDepth(this.depth + (this.live.length + this.head) * 1e-7);
   }
 
-  clear() { for (const rt of this.chunks.values()) rt.destroy(); this.chunks.clear(); }
+  flush() {}
+
+  clear() { for (const i of this.live) i.destroy(); this.live = []; this.head = 0; }
 }

@@ -1,6 +1,24 @@
 import type { LevelScript } from './types';
 import type { EnemyType } from '../enemies';
 
+import type { World } from '../sim/World';
+
+/**
+ * The lab's exploration objective is derived from the state (scientist found, armory card, armory visited,
+ * generator), so the order in which things happen can never leave a stale objective/arrow (D42).
+ */
+function labObjective(w: World) {
+  if (w.flags.generator) return;
+  const hasCard = w.players.some((p) => p.keys.includes('lab'));
+  const card = w.pickups.find((k) => k.kind === 'keycard' && k.key === 'lab');
+  let text: string, target: string | { x: number; y: number };
+  if (!w.flags.omletov) { text = 'Найти учёных. Идти на свет'; target = 'omletov'; }
+  else if (!hasCard && card) { text = 'Подобрать пропуск в оружейную'; target = { x: card.x, y: card.y }; }
+  else if (!w.flags.armory && hasCard) { text = 'Оружейная — западный коридор. Затем генераторная (юго-запад)'; target = 'armory'; }
+  else { text = 'Генераторная (юго-запад): запустить генератор'; target = 'generator'; }
+  if (w.objective !== text) w.setObjective(text, target);
+}
+
 const lab: LevelScript = {
   id: 'lab',
   title: 'Уровень −3. Лаборатория проекта «ЯЙЦО»',
@@ -8,7 +26,7 @@ const lab: LevelScript = {
   next: 'factory',
 
   onStart(w) {
-    w.setObjective('Найти учёных. Идти на свет');
+    labObjective(w);
     w.after(2, () => w.say('radio', 'Проф. Омлетов: Если вы это слышите — вы ещё не курица. Поздравляю. Я в лаборатории Б. Идите через атриум.', 6));
   },
 
@@ -35,10 +53,13 @@ const lab: LevelScript = {
         if (id === 'inc_c') w.spawnWave('inc', ['normal', 'fast', 'exploder'], 8, 0.5, true, 'inc');
         break;
       case 'armory':
-        if (!w.flags.armory) { w.flags.armory = true; w.say(by.id, 'Пулемёт. Вот это я понимаю — техника безопасности.', 3); }
+        if (!w.flags.armory) {
+          w.flags.armory = true; w.say(by.id, 'Пулемёт. Вот это я понимаю — техника безопасности.', 3);
+          labObjective(w);
+        }
         break;
       case 'gen_room':
-        if (!w.flags.generator) w.setObjective('Запустить генератор (пульт в центре)');
+        if (!w.flags.generator && w.flags.omletov) w.setObjective('Запустить генератор (пульт в центре)', 'generator');
         break;
       case 'freight':
         w.msg('ГРУЗОВОЙ ЛИФТ', 'Наверх, на завод «Курникс-Агро»', 2.5);
@@ -47,13 +68,23 @@ const lab: LevelScript = {
     }
   },
 
+  onTick(w, dt) {
+    // self-heal once a second (e.g. the card was picked up by a teammate)
+    if (Math.floor(w.time) !== Math.floor(w.time - dt)) labObjective(w);
+  },
+
   onRescue(w, n, by) {
     if (n.id !== 'omletov') return;
     w.flags.omletov = true;
     w.say(n.id, 'Спасены! КУКАРЕКС — это мы. Простите. Антидот можно сварить на заводе, в цехе розлива. Пропуск в оружейную — держите. И я иду с вами!', 6);
-    w.addPickup('keycard', n.x - 40, n.y, { key: 'lab', ttl: -1 });
+    const card = w.addPickup('keycard', n.x - 40, n.y, { key: 'lab', ttl: -1 });
     n.mode = 'follow'; n.follow = by.id;
-    w.setObjective('Оружейная — западный коридор. Затем генераторная (юго-запад)');
+    void card;
+    labObjective(w);
+  },
+
+  onPickup(w, k) {
+    if (k.kind === 'keycard') labObjective(w);
   },
 
   onUse(w, id, by) {
@@ -76,7 +107,7 @@ const lab: LevelScript = {
       w.flags.power = true;
       w.openDoor('freight');
       w.msg('ПИТАНИЕ ВОССТАНОВЛЕНО', 'Грузовой лифт работает', 3);
-      w.setObjective('К грузовому лифту (юг)');
+      w.setObjective('К грузовому лифту (юг)', 'freight');
     });
   },
 

@@ -20,8 +20,8 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(META_OUT, { recursive: true });
 
 const save = (name, canvas) => fs.writeFileSync(path.join(OUT, name), canvas.toBuffer('image/png'));
-const writeAtlas = (name, items) => {
-  const { canvas, json } = packAtlas(items, name + '.png');
+const writeAtlas = (name, items, maxW) => {
+  const { canvas, json } = packAtlas(items, name + '.png', maxW);
   save(name + '.png', canvas);
   fs.writeFileSync(path.join(OUT, name + '.json'), JSON.stringify(json));
   console.log(`atlas ${name}: ${items.length} frames, ${canvas.width}x${canvas.height}`);
@@ -81,14 +81,13 @@ for (const [k, fn] of Object.entries(NEW_PROPS)) props.push({ name: k, canvas: f
 for (const p of props) propSizes[p.name] = [p.canvas.width, p.canvas.height];
 writeAtlas('props', props);
 const lpc = await buildLpc(ROOT);
-writeAtlas('people25', lpc.people);
+writeAtlas('lpc', lpc.people, 4096);
 writeAtlas('office25', lpc.props);
-const officeTiles = createCanvas(sheet.width, sheet.height), og = officeTiles.getContext('2d');
+// tiles25: Kenney tile layout, every floor/rug index used by the maps replaced with LPC floors (×2)
+const tiles25 = createCanvas(sheet.width, sheet.height), og = tiles25.getContext('2d');
 og.imageSmoothingEnabled = false; og.drawImage(sheet, 0, 0);
-for (const [i, source] of [[41,0],[42,0],[68,1],[69,1],[95,2],[96,2],[11,3]]) {
-  og.drawImage(lpc.floors[source].canvas, (i % 27) * 64, Math.floor(i / 27) * 64);
-}
-save('officeTiles.png', officeTiles);
+for (const f of lpc.floors) { og.clearRect((f.index % 27) * 64, Math.floor(f.index / 27) * 64, 64, 64); og.drawImage(f.canvas, (f.index % 27) * 64, Math.floor(f.index / 27) * 64); }
+save('tiles25.png', tiles25);
 
 // 6) metadata for shared code
 const meta = {
@@ -96,6 +95,7 @@ const meta = {
   weapons: weaponMeta,
   props: propSizes,
   office25: lpc.meta,
+  guns: lpc.gunMeta,
 };
 fs.writeFileSync(path.join(META_OUT, 'artMeta.json'), JSON.stringify(meta, null, 1));
 console.log('done');

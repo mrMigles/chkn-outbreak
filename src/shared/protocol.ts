@@ -11,11 +11,11 @@ export const SNAP_HZ = 20;
 const ETYPES: EnemyType[] = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'chick', 'boss'];
 const ESTATES: EnemyState[] = ['idle', 'chase', 'windup', 'fuse', 'charge', 'rise'];
 const PKINDS: ProjKind[] = ['grenade', 'spit', 'egg'];
-const KKINDS: PickupKind[] = ['ammo', 'health', 'armor', 'weapon', 'keycard', 'antidote'];
+const KKINDS: PickupKind[] = ['ammo', 'health', 'armor', 'weapon', 'keycard', 'antidote', 'invincible', 'damage', 'infinite', 'sprint', 'achievement'];
 
 export interface Snapshot {
   t: number;
-  o: string; bo: number; al: number; b: number;
+  o: string; ot: string; bk: number[]; bo: number; al: number; b: number;
   p: Partial<Player>[];
   e: number[];          // flat enemies, E_STRIDE each
   bm: number;           // boss max hp
@@ -45,14 +45,14 @@ export function encodeSnapshot(w: WorldView): Snapshot {
   for (const pk of w.pickups) k.push(pk.id, KKINDS.indexOf(pk.kind), pk.weapon ? WEAPON_IDS.indexOf(pk.weapon) : -1, r1(pk.x), r1(pk.y), r1(pk.ttl * 10));
   return {
     t: Math.round(w.time * 1000) / 1000,
-    o: w.objective, bo: w.blackout ? 1 : 0, al: w.alarm ? 1 : 0, b: w.bossId,
+    o: w.objective, ot: w.objectiveTarget.join('|'), bk: w.broken, bo: w.blackout ? 1 : 0, al: w.alarm ? 1 : 0, b: w.bossId,
     p: w.players.map((p) => ({
-      id: p.id, slot: p.slot, name: p.name, x: r1(p.x), y: r1(p.y), aim: Math.round(p.aim * 100) / 100,
+      id: p.id, slot: p.slot, name: p.name, look: p.look, x: r1(p.x), y: r1(p.y), aim: Math.round(p.aim * 100) / 100,
       hp: Math.ceil(p.hp), maxHp: p.maxHp, armor: Math.ceil(p.armor), state: p.state,
       downT: Math.round(p.downT * 10) / 10, reviveT: Math.round(p.reviveT * 100) / 100, respawnT: Math.round(p.respawnT * 10) / 10,
       weapons: p.weapons, cur: p.cur, ammo: p.ammo, reloadT: Math.round(p.reloadT * 100) / 100, firing: p.firing,
       kills: p.kills, score: Math.floor(p.score), combo: p.combo, tp: p.tp, keys: p.keys, hurtT: Math.round(p.hurtT * 100) / 100, bloom: Math.round(p.bloom * 1000) / 1000,
-      supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected,
+      supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected, buffs: p.buffs, achievements: p.achievements,
     })),
     e, bm, appearances: Object.fromEntries(w.enemies.filter(x => x.appearance).map(x => [x.id, x.appearance!])),
     n: w.npcs.filter((x) => x.mode !== 'gone').map((x) => ({ id: x.id, kind: x.kind, name: x.name, x: r1(x.x), y: r1(x.y), angle: Math.round(x.angle * 100) / 100, hp: Math.ceil(x.hp), maxHp: x.maxHp, mode: x.mode, weapon: x.weapon, rescued: x.rescued, follow: x.follow, hurtT: x.hurtT > 0 ? 0.2 : 0, mutation: x.mutation })),

@@ -11,6 +11,9 @@ export interface LevelScript {
   subtitle: string;
   next?: string;
   startWeapons?: WeaponId[];
+  /** Per-level balance: multipliers for enemy HP and the damage enemies deal (default 1). */
+  enemyHp?: number;
+  enemyDamage?: number;
   music?: string;
   onStart?(w: World): void;
   onTick?(w: World, dt: number): void;

@@ -8,7 +8,7 @@ const factory: LevelScript = {
   next: 'boss',
 
   onStart(w) {
-    w.setObjective('Добраться до цеха розлива (юг)');
+    w.setObjective('Добраться до цеха розлива (юг)', 'hall');
     w.after(2, () => w.say('radio', 'Проф. Омлетов: В цехе розлива три вентиля синтеза. Откройте все — и линия начнёт выпускать антидот вместо КУКАРЕКСА.', 6));
   },
 
@@ -24,7 +24,7 @@ const factory: LevelScript = {
         w.spawnWave('wh', ['normal', 'fast', 'fat', 'normal'], 14, 0.35, true, 'wh');
         break;
       case 'hall':
-        w.setObjective('Открыть три вентиля синтеза (0/3)');
+        w.setObjective('Открыть три вентиля синтеза (0/3)', ['valve1', 'valve2', 'valve3']);
         w.msg('ЦЕХ РОЗЛИВА', 'Линия захвачена', 2.5);
         w.spawnWave('hall', ['normal', 'fast', 'spitter', 'normal'], 12, 0.4, true, 'hall');
         break;
@@ -53,7 +53,7 @@ const factory: LevelScript = {
     w.flags[id] = true;
     const n = ['valve1', 'valve2', 'valve3'].filter((v) => w.flags[v]).length;
     w.say(by.id, ['Первый пошёл!', 'Второй готов!', 'Третий! Запускаем!'][n - 1], 2);
-    w.setObjective(`Открыть три вентиля синтеза (${n}/3)`);
+    w.setObjective(`Открыть три вентиля синтеза (${n}/3)`, ['valve1', 'valve2', 'valve3'].filter((v) => !w.flags[v]));
     w.spawnWave('hall', ['normal', 'fast', 'exploder', 'armored'], 6 + n * 2, 0.3, true, 'hall');
     if (n < 3) return;
     w.setAlarm(true);
@@ -73,7 +73,7 @@ const factory: LevelScript = {
       // the antidote mist cures every chicken player
       for (const p of w.players) if (p.state === 'chicken' || p.state === 'dead' || p.state === 'downed') w.cure(p);
       w.msg('АНТИДОТ ГОТОВ', 'Курицы-игроки снова люди. Склад открыт', 3.5);
-      w.setObjective('Через склад — к ангару (юг)');
+      w.setObjective('Через склад — к ангару (юг)', 'exit');
     });
   },
 

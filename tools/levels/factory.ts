@@ -90,7 +90,7 @@ for (const [x, y] of [[25, 28.4], [45, 30.2], [35, 29.4]]) barrel(x, y);
 pickup('ammo', 22, 35.4); pickup('ammo', 48, 23); pickup('health', 35, 35.4);
 label(35, 28.8, 'ЦЕХ РОЗЛИВА «КУКАРЕКС»', 30);
 note(35, 31.2, 'Плакат: «Сто тысяч банок в день! Сто тысяч кур в неделю!»');
-spawner('hall', 13.6, 22.6); spawner('hall', 56.4, 22.6); spawner('hall', 13.6, 35.4); spawner('hall', 56.4, 35.4); spawner('hall', 35, 22.6);
+spawner('hall', 13.6, 22.6); spawner('hall', 56.4, 22.6); spawner('hall', 13.6, 35.4); spawner('hall', 56.4, 35.4); spawner('hall', 35, 22.1);
 trigger('hall', 13, 22, 44, 15);
 for (const x of [18, 30, 42, 52]) light(x, 29, 'lamp', 'ffe2a8', 300, { flicker: 0.1 });
 for (const x of [22, 48]) light(x, 29, 'alarm', 'ff3b1f', 380);

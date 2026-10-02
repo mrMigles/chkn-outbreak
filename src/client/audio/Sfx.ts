@@ -172,6 +172,7 @@ const RECIPES: Record<string, { dur: number; vars: number; fn: Recipe }> = {
   door: { dur: 0.6, vars: 1, fn: (c) => noise(c, { dur: 0.45, type: 'bandpass', f: 1200, f2: 500, q: 0.8, gain: 0.28, a: 0.05, seed: 15 }) },
   fuse: { dur: 0.6, vars: 1, fn: (c) => { for (let i = 0; i < 5; i++) tone(c, { t: i * 0.11, dur: 0.05, type: 'square', f: 1400 + i * 120, gain: 0.18 }); } },
   ui: { dur: 0.12, vars: 1, fn: (c) => tone(c, { dur: 0.06, type: 'triangle', f: 1200, gain: 0.25 }) },
+  headshot: { dur: 0.25, vars: 1, fn: (c) => { tone(c, { dur: 0.08, type: 'triangle', f: 1500, gain: 0.22 }); tone(c, { t: 0.06, dur: 0.12, type: 'triangle', f: 2300, gain: 0.2 }); } },
   alarm: { dur: 1.0, vars: 1, fn: (c) => { tone(c, { dur: 0.45, type: 'square', f: 700, f2: 500, gain: 0.16 }); tone(c, { t: 0.5, dur: 0.45, type: 'square', f: 700, f2: 500, gain: 0.16 }); } },
   spawn: { dur: 0.5, vars: 2, fn: (c, v) => { noise(c, { dur: 0.35, type: 'bandpass', f: 400, f2: 1200, q: 1, gain: 0.3, seed: v + 120 }); } },
   boss_roar: { dur: 1.6, vars: 1, fn: (c) => {

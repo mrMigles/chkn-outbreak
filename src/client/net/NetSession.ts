@@ -32,7 +32,7 @@ export class NetSession implements Session {
     this.map = new GameMap(levelId, mapJson);
     this.view = {
       mapId: levelId, time: 0, players: [], enemies: [], npcs: [], projectiles: [], pickups: [], doors: [], barrels: [], pods: [],
-      objective: '', blackout: false, alarm: false, bossId: -1,
+      objective: '', objectiveTarget: [], broken: [], blackout: false, alarm: false, bossId: -1,
     };
     // static colliders the simulation adds at runtime (doors, barrels, pods) — mirror them for prediction
     for (const o of this.map.objects) {
@@ -53,7 +53,8 @@ export class NetSession implements Session {
   onSnapshot(s: Snapshot) {
     const v = this.view;
     v.time = s.t;
-    v.objective = s.o; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b;
+    v.broken = s.bk ?? [];
+    v.objective = s.o; v.objectiveTarget = s.ot ? s.ot.split('|') : []; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b;
     // players
     const players: Player[] = [];
     for (const raw of s.p) {

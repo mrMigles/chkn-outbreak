@@ -1,102 +1,98 @@
 import Phaser from 'phaser';
 import { TEXT_RES } from '../settings';
 import artMeta from '../../shared/generated/artMeta.json';
-import { ENEMIES } from '../../shared/enemies';
 import type { WeaponId } from '../../shared/weapons';
-import type { Enemy, Npc, Player } from '../../shared/sim/types';
+import { MUTATION, type Enemy, type Npc, type Player } from '../../shared/sim/types';
+import type { EnemyType } from '../../shared/enemies';
+import { enemyLook, resolveLook, SKIN_TONES, LOOK_PRESETS } from '../../shared/look';
+import { lookTexture } from './Looks';
 
 export const PLAYER_COLORS = [0x4fc3f7, 0xff6b6b, 0xffd54f, 0x81c784];
-export const PLAYER_BODIES = ['survivor', 'soldier', 'womanGreen', 'hitman'];
-const WMETA = artMeta.weapons as Record<string, { gripX: number; muzzle: number; hands: number[][]; w: number; h: number }>;
+const GUNS = (artMeta as any).guns as Record<string, { gripX: number; gripY: number; muzzle: number; w: number; h: number }>;
 
-/** Where the weapon is held relative to the body centre (facing +X). */
-const ATTACH_X = 6, ATTACH_Y = 8;
-export const BODY_HEIGHT = 40;
+import { HAND_H, ENEMY_SCALE } from '../../shared/sim/hitbox';
+/** Height of the gun (hand) above the feet, world units. Bullets, tracers and impacts render at this height. */
+export { HAND_H };
+/** Kept for imports: everything is 2.5D now. */
+export const BODY_HEIGHT = HAND_H;
 export const worldDepth = (y: number) => 8 + y / 100000;
-const direction = (a: number) => ['e', 's', 'w', 'n'][((Math.round(a / (Math.PI / 2)) % 4) + 4) % 4];
-const isOffice = (scene: Phaser.Scene) => (scene as Phaser.Scene & { session?: { levelId: string } }).session?.levelId === 'office';
+export const direction = (a: number) => ['e', 's', 'w', 'n'][((Math.round(a / (Math.PI / 2)) % 4) + 4) % 4];
+const FEET = 62 / 64;
 
-export function muzzleOf(x: number, y: number, a: number, w: WeaponId, recoil = 0, elevation = 0) {
-  const m = WMETA[w];
-  const lx = ATTACH_X + m.muzzle - recoil, ly = ATTACH_Y;
-  const c = Math.cos(a), s = Math.sin(a);
-  return { x: x + lx * c - ly * s, y: y - elevation + lx * s + ly * c };
+/** Fists of the armed pose (LPC thrust frame 4, ×2) relative to the feet, per facing. */
+const GRIP: Record<string, [number, number]> = { e: [26, -36], w: [-26, -36], s: [0, -36], n: [0, -40] };
+/** Where the hands holding the gun are, relative to the feet. */
+function gripOf(x: number, y: number, a: number, recoil = 0) {
+  const c = Math.cos(a), s = Math.sin(a), [gx, gy] = GRIP[direction(a)];
+  return { x: x + gx + c * (2 - recoil), y: y + gy + s * (2 - recoil * 0.5) };
 }
-export function ejectOf(x: number, y: number, a: number, elevation = 0) {
-  const c = Math.cos(a), s = Math.sin(a);
-  return { x: x + 14 * c - 12 * s, y: y - elevation + 14 * s + 12 * c };
+export function muzzleOf(x: number, y: number, a: number, w: WeaponId, recoil = 0, _elevation = 0) {
+  const g = gripOf(x, y, a, recoil), m = GUNS[w]?.muzzle ?? 20;
+  return { x: g.x + Math.cos(a) * m, y: g.y + Math.sin(a) * m };
+}
+export function ejectOf(x: number, y: number, a: number, _elevation = 0) {
+  const g = gripOf(x, y, a);
+  return { x: g.x + Math.cos(a) * 6, y: g.y + Math.sin(a) * 6 - 4 };
 }
 
-/** Body + weapon + hands rig used by players and armed NPCs. */
+const skinTint = (look: string) => parseInt(SKIN_TONES[resolveLook(look).skin] ?? SKIN_TONES[0], 16);
+
+/** Directed LPC body + weapon held in the hand + shadow. Used by players and NPCs. */
 export class Rig {
   root: Phaser.GameObjects.Container;
-  body: Phaser.GameObjects.Image;
+  body: Phaser.GameObjects.Sprite;
   weapon: Phaser.GameObjects.Image;
-  hands: Phaser.GameObjects.Image[];
+  hand: Phaser.GameObjects.Rectangle;
+  shadow: Phaser.GameObjects.Ellipse;
   recoil = 0;
   bob = 0;
   w: WeaponId | null = null;
-  handFrame: string;
-  pixel: boolean;
-  kind: string;
+  tex: string;
+  mutTex: string;
 
-  constructor(scene: Phaser.Scene, bodyFrame: string, handFrame: string, depth = 10) {
-    this.handFrame = handFrame;
-    this.pixel = isOffice(scene);
-    this.kind = bodyFrame.split('_')[0];
-    this.weapon = scene.add.image(0, 0, 'chars', 'w_pistol');
-    this.hands = [scene.add.image(0, 0, 'chars', handFrame), scene.add.image(0, 0, 'chars', handFrame)];
-    this.body = scene.add.image(0, 0, 'chars', bodyFrame);
-    if (this.pixel) this.body.setTexture('people25', this.kind + '_s_0').setOrigin(0.5, 62 / 64).setScale(2);
-    this.root = scene.add.container(0, 0, [this.weapon, ...this.hands, this.body]).setDepth(depth);
-    // hands are drawn above the body for long guns (Kenney style)
-    this.root.bringToTop(this.weapon);
-    this.hands.forEach((h) => this.root.bringToTop(h));
-    if (this.pixel) {
-      const shadow = scene.add.image(0, 0, 'fx', 'ring_player').setTint(0x000000).setAlpha(0.3).setScale(0.7, 0.2);
-      this.root.addAt(shadow, 0);
-    }
+  constructor(private scene: Phaser.Scene, public look: string) {
+    this.tex = lookTexture(scene, look);
+    this.mutTex = '';
+    this.shadow = scene.add.ellipse(0, 0, 34, 11, 0x000000, 0.28);
+    this.body = scene.add.sprite(0, 0, this.tex, 's_0').setOrigin(0.5, FEET).setScale(2);
+    this.weapon = scene.add.image(0, 0, 'office25', 'gun_pistol').setVisible(false);
+    this.hand = scene.add.rectangle(0, 0, 5, 5, skinTint(look)).setStrokeStyle(1, 0x2a2328).setVisible(false);
+    this.root = scene.add.container(0, 0, [this.shadow, this.body, this.weapon, this.hand]);
   }
+
+  mutantTexture() { return this.mutTex ||= lookTexture(this.scene, this.look, true); }
 
   setWeapon(w: WeaponId | null) {
     if (w === this.w) return;
     this.w = w;
-    if (!w) { this.weapon.setVisible(false); this.hands.forEach((h) => h.setVisible(false)); return; }
-    const m = WMETA[w];
-    this.weapon.setVisible(true).setFrame('w_' + w).setOrigin(m.gripX / m.w, 0.5);
-    this.hands.forEach((h) => h.setVisible(true));
+    if (!w) { this.weapon.setVisible(false); this.hand.setVisible(false); return; }
+    const m = GUNS[w];
+    this.weapon.setVisible(true).setFrame('gun_' + w).setOrigin(m.gripX / m.w, m.gripY / m.h);
+    this.hand.setVisible(true);
   }
 
-  layout(x: number, y: number, a: number, moving: boolean, dt: number) {
+  /** dir/frame selection + gun placement. `frame` overrides the walking frame (e.g. hurt poses). */
+  layout(x: number, y: number, a: number, moving: boolean, dt: number, frame?: string) {
     this.recoil *= Math.exp(-dt * 18);
     if (moving) this.bob += dt * 11;
-    if (this.pixel) {
-      const dir = direction(a), f = moving ? 1 + Math.floor(this.bob) % 8 : 0;
-      this.root.setPosition(x, y).setRotation(0).setDepth(worldDepth(y));
-      this.body.setFrame(`${this.kind}_${dir}_${f}`).setPosition(-this.recoil * 0.3, 0).setRotation(0).setScale(2);
-      if (dir === 'n') this.root.sendToBack(this.weapon); else this.root.bringToTop(this.weapon);
-      if (this.w) {
-        const c = Math.cos(a), s = Math.sin(a), wx = (ATTACH_X - this.recoil) * c - ATTACH_Y * s;
-        const wy = -BODY_HEIGHT + (ATTACH_X - this.recoil) * s + ATTACH_Y * c;
-        this.weapon.setPosition(wx, wy).setRotation(a).setFlipY(c < 0);
-        WMETA[this.w].hands.forEach(([hx, hy0], i) => {
-          const hy = hy0 * (c < 0 ? -1 : 1);
-          this.hands[i].setPosition(wx + hx * c - hy * s, wy + hx * s + hy * c);
-        });
-      }
-      return;
-    }
-    this.root.setPosition(x, y).setRotation(a);
-    const sway = moving ? Math.sin(this.bob) * 0.035 : 0;
-    this.body.setRotation(sway);
-    this.body.setScale(1 + (moving ? Math.abs(Math.sin(this.bob)) * 0.03 : 0));
-    this.body.setPosition(-this.recoil * 0.3, 0);
-    if (this.w) {
-      const m = WMETA[this.w];
-      const wx = ATTACH_X - this.recoil, wy = ATTACH_Y;
-      this.weapon.setPosition(wx, wy);
-      m.hands.forEach(([hx, hy], i) => this.hands[i].setPosition(wx + hx, wy + hy));
-    }
+    const dir = direction(a);
+    const f = moving ? 1 + Math.floor(this.bob) % 8 : 0;
+    // Torso, fists and gun share the same integer gait offset. No independent weapon bob.
+    const gait = moving ? [0, -2, -2, 0, 0, -2, -2, 0][(f - 1) % 8] : 0;
+    this.root.setPosition(x, y).setDepth(worldDepth(y));
+    // armed: upper body in the two-handed pose (hands forward), legs keep walking
+    this.body.setFrame(frame ?? (this.w ? `a${dir}_${f}` : `${dir}_${f}`)).setPosition(0, this.w && !frame ? gait : 0).setRotation(0);
+    if (this.w && !frame) {
+      const g = gripOf(0, 0, a, this.recoil);
+      const c = Math.cos(a);
+      this.weapon.setPosition(g.x, g.y + gait).setRotation(a).setFlipY(c < 0).setVisible(true);
+      this.hand.setVisible(false); // the hands are part of the armed body frame
+      // side views: the gun sits behind the body so the fists (part of the body frame) close over the grip;
+      // facing away it is hidden behind the back; facing the camera it is held in front
+      const back = dir !== 's';
+      this.root.moveTo(this.weapon, back ? 1 : 2);
+      this.root.moveTo(this.hand, back ? 2 : 3);
+    } else if (this.w) { this.weapon.setVisible(false); this.hand.setVisible(false); }
   }
 
   destroy() { this.root.destroy(); }
@@ -106,7 +102,6 @@ export class PlayerView {
   rig: Rig;
   ring: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
-  chickenBody = false;
   lastState = '';
   dispX = 0; dispY = 0; dispA = 0;
   showName: boolean;
@@ -114,9 +109,9 @@ export class PlayerView {
   constructor(scene: Phaser.Scene, public p: Player, showName: boolean) {
     this.showName = showName;
     const color = PLAYER_COLORS[p.slot % 4];
-    this.ring = scene.add.image(0, 0, 'fx', 'ring_player').setTint(color).setAlpha(0.75).setDepth(8).setScale(0.75);
-    this.rig = new Rig(scene, PLAYER_BODIES[p.slot % 4] + '_stand', 'hand_glove');
-    this.label = scene.add.text(0, 0, p.name, { fontFamily: 'Rubik, sans-serif', fontSize: '13px', fontStyle: '600', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
+    this.ring = scene.add.image(0, 0, 'fx', 'ring_player').setTint(color).setAlpha(0.7).setDepth(7).setScale(0.7, 0.42);
+    this.rig = new Rig(scene, p.look || LOOK_PRESETS['p' + (p.slot % 4)]);
+    this.label = scene.add.text(0, 0, p.name, { fontFamily: 'Rubik, sans-serif', fontSize: '12px', fontStyle: '600', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5, 1).setDepth(40).setVisible(showName).setResolution(TEXT_RES());
     this.dispX = p.x; this.dispY = p.y;
   }
@@ -125,101 +120,102 @@ export class PlayerView {
     this.p = p;
     const moving = Math.hypot(x - this.dispX, y - this.dispY) > 0.5;
     this.dispX = x; this.dispY = y; this.dispA = a;
-    const chicken = p.state === 'chicken';
-    if (chicken !== this.chickenBody) {
-      this.chickenBody = chicken;
-      this.rig.body.setFrame(chicken ? 'ck_player_armed' : PLAYER_BODIES[p.slot % 4] + '_stand');
-      this.rig.hands.forEach((h) => h.setFrame(chicken ? 'hand_claw' : 'hand_glove'));
-    }
     const visible = p.state !== 'dead';
     this.rig.root.setVisible(visible);
     this.ring.setVisible(visible);
     this.label.setVisible(visible && this.showName);
-    this.rig.setWeapon(p.state === 'downed' ? null : p.weapons[p.cur] ?? null);
+    this.rig.setWeapon(p.state === 'downed' ? null : (p.weapons[p.cur] as WeaponId) ?? null);
     if (p.state === 'downed') {
-      this.rig.layout(x, y, a, false, dt);
-      if (this.rig.pixel) this.rig.body.setRotation(0.9); else this.rig.root.setRotation(a + 0.9);
-      this.rig.body.setTint(Math.sin(time * 8) > 0 ? 0xff7777 : 0xffffff);
+      this.rig.layout(x, y, a, false, dt, 'hurt_4');
+      this.rig.body.setTint(Math.sin(time * 8) > 0 ? 0xff9a9a : 0xffffff);
     } else {
       this.rig.layout(x, y, a, moving, dt);
       this.rig.body.setTint(p.hurtT > 0.15 ? 0xff8080 : 0xffffff);
     }
-    this.ring.setPosition(x, y).setTint(chicken ? 0xff3b30 : PLAYER_COLORS[p.slot % 4]);
-    this.label.setPosition(x, y - (this.rig.pixel ? 94 : 34)).setText(p.state === 'downed' ? `${p.name} ✚ ${Math.ceil(p.downT)}` : p.name);
-    this.label.setColor(chicken ? '#ff6b6b' : '#ffffff');
+    this.ring.setPosition(x, y + 2).setTint((p.buffs?.invincible ?? 0) > 0 ? 0xffd65c : PLAYER_COLORS[p.slot % 4]);
+    this.label.setPosition(x, y - 104).setText(p.state === 'downed' ? `${p.name} ✚ ${Math.ceil(p.downT)}` : p.name);
   }
 
   destroy() { this.rig.destroy(); this.ring.destroy(); this.label.destroy(); }
 }
 
-const ENEMY_SCALE: Record<string, number> = { chick: 0.7 };
+/** Visual height of the body (world units) for aiming at the torso and placing labels. */
+export const enemyHeight = (t: EnemyType) => t === 'chick' ? 26 : ENEMY_SCALE[t] * 48;
+/** How many distinct random looks per enemy type are used (keeps texture compositions bounded). */
+export const LOOK_POOL = 5;
+export const enemyLookKey = (e: Pick<Enemy, 'type' | 'id' | 'appearance'>) => e.appearance?.kind ?? enemyLook(e.type, (e.id % LOOK_POOL) * 97 + e.type.length * 13);
 
 export class EnemyView {
-  spr: Phaser.GameObjects.Image;
-  frameBase: string;
+  spr: Phaser.GameObjects.Sprite;
+  shadow: Phaser.GameObjects.Ellipse;
+  label?: Phaser.GameObjects.Text;
   anim = Math.random() * 4;
   flashT = 0;
   punch = 0;
   lastX: number; lastY: number;
   dispX: number; dispY: number;
   fuse = false;
-  pixel = false;
-  shadow?: Phaser.GameObjects.Image;
-  label?: Phaser.GameObjects.Text;
+  bird: boolean;
+  tex: string;
+  lookKey: string;
+  type: EnemyType;
+
   constructor(scene: Phaser.Scene, e: Enemy) {
-    const def = ENEMIES[e.type];
-    this.frameBase = def.sprite[e.variant % def.sprite.length];
-    this.spr = scene.add.image(e.x, e.y, 'chars', this.frameBase + '_walk0').setDepth(e.type === 'boss' ? 11 : 9);
-    this.pixel = isOffice(scene) && (['normal','fast','fat'].includes(e.type) || !!e.appearance);
-    if (this.pixel) {
-      this.spr.setTexture('people25', 'mut_manBlue_s_0').setOrigin(0.5, 62 / 64);
-      this.shadow = scene.add.image(e.x, e.y, 'fx', 'ring_player').setTint(0x000000).setAlpha(0.3).setDepth(6).setScale(0.6, 0.2);
-    }
-    if (e.appearance) this.label = scene.add.text(e.x, e.y - (this.pixel ? 128 : 38), e.appearance.name, {fontFamily:'Rubik, sans-serif',fontSize:'11px',color:'#ffad73',stroke:'#151515',strokeThickness:3}).setOrigin(0.5,1).setDepth(40).setResolution(TEXT_RES());
+    this.type = e.type;
+    this.bird = e.type === 'chick';
+    this.lookKey = enemyLookKey(e);
+    this.tex = this.bird ? 'office25' : lookTexture(scene, this.lookKey, true);
+    this.shadow = scene.add.ellipse(e.x, e.y, this.bird ? 22 : 30 * ENEMY_SCALE[e.type] / 2, this.bird ? 8 : 10 * ENEMY_SCALE[e.type] / 2, 0x000000, 0.28).setDepth(6);
+    this.spr = scene.add.sprite(e.x, e.y, this.tex, this.bird ? 'chick_s_0' : 's_0').setOrigin(0.5, this.bird ? 0.9 : FEET).setScale(ENEMY_SCALE[e.type]);
+    if (e.appearance) this.label = scene.add.text(e.x, e.y, e.appearance.name, { fontFamily: 'Rubik, sans-serif', fontSize: '11px', color: '#ffad73', stroke: '#151515', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(40).setResolution(TEXT_RES());
     this.lastX = this.dispX = e.x; this.lastY = this.dispY = e.y;
   }
-  get baseScale() { return ENEMY_SCALE[this.frameBase === 'ck_fast' ? '' : ''] ?? 1; }
 
   sync(e: Enemy, x: number, y: number, dt: number, time: number) {
     const moved = Math.hypot(x - this.lastX, y - this.lastY);
     this.lastX = x; this.lastY = y;
     this.dispX = x; this.dispY = y;
-    this.anim += moved * 0.09;
-    let frame = this.frameBase + '_walk' + (Math.floor(this.anim) % 4);
-    if (this.pixel) {
-      const kind = e.appearance?.kind ?? ['manBlue', 'manBrown', 'womanGreen'][e.variant % 3];
-      frame = `mut_${kind}_${direction(e.angle)}_${moved > 0.1 ? 1 + Math.floor(this.anim) % 8 : 0}`;
-    }
-    if (!this.pixel && (e.state === 'windup' || (e.state === 'charge' && e.ability === 'charge_wind'))) frame = this.frameBase + '_attack';
+    this.anim += moved * (this.bird ? 0.2 : 0.09);
+    const dir = direction(e.angle);
+    const walking = moved > 0.1;
+    let frame = this.bird ? `chick_${dir}_${walking ? Math.floor(this.anim) % 3 : 0}` : `${dir}_${walking ? 1 + Math.floor(this.anim) % 8 : 0}`;
+    // windup: lean in with the attack frame of the walk cycle
+    let lunge = 0;
+    if (e.state === 'windup' || (e.state === 'charge' && e.ability === 'charge_wind')) { lunge = 6; if (!this.bird) frame = `${dir}_${Math.floor(time * 18) % 2 ? 3 : 7}`; }
     this.spr.setFrame(frame);
-    const sc = (e.type === 'chick' ? 0.7 : 1);
     this.punch *= Math.exp(-dt * 14);
-    let s = sc * (1 + this.punch) * (this.pixel ? e.type === 'fat' ? 2.5 : e.type === 'fast' ? 1.8 : 2 : 1);
+    let s = ENEMY_SCALE[e.type] * (1 + this.punch);
     if (e.state === 'rise') s *= 0.5 + 0.5 * (1 - Math.max(0, e.t) / 0.55);
-    if (this.fuse || e.state === 'fuse') s *= 1 + Math.abs(Math.sin(time * 22)) * 0.15;
-    this.spr.setPosition(x, y).setRotation(this.pixel ? 0 : e.angle).setScale(s);
-    if (this.pixel) this.spr.setDepth(worldDepth(y));
-    this.shadow?.setPosition(x, y);
-    this.label?.setPosition(x, y - (this.pixel ? 128 : 38));
+    if (this.fuse || e.state === 'fuse') s *= 1 + Math.abs(Math.sin(time * 22)) * 0.12;
+    const lx = Math.cos(e.angle) * lunge, ly = Math.sin(e.angle) * lunge * 0.6;
+    this.spr.setPosition(x + lx, y + ly).setScale(s).setDepth(worldDepth(y));
+    this.shadow.setPosition(x, y);
+    this.label?.setPosition(x, y - enemyHeight(e.type) - 14);
     this.flashT -= dt;
     if (this.flashT > 0) this.spr.setTintFill(0xffffff);
     else if (e.state === 'fuse' || (e.type === 'boss' && e.state === 'charge')) this.spr.setTint(Math.sin(time * 30) > 0 ? 0xff4040 : 0xffffff);
+    else if (e.type === 'exploder') this.spr.setTint(Math.sin(time * 6) > 0.6 ? 0xc8ff8a : 0xffffff);
     else if (e.burnT > 0) this.spr.setTint(0xffb080);
     else this.spr.clearTint();
     this.spr.setAlpha(e.state === 'rise' ? 0.6 : 1);
   }
 
-  hit() { this.flashT = 0.06; this.punch = 0.16; }
-  destroy() { this.spr.destroy(); this.shadow?.destroy(); this.label?.destroy(); }
-}
+  /** Texture/frame used for the corpse decal. */
+  corpse(): { tex: string; frame: string; frames: string[] } {
+    if (this.bird) { const d = this.spr.frame.name.split('_')[1] ?? 's'; return { tex: 'office25', frame: `chick_${d}_0`, frames: [] }; }
+    return { tex: this.tex, frame: 'hurt_4', frames: ['hurt_0', 'hurt_1', 'hurt_2', 'hurt_3', 'hurt_4'] };
+  }
 
-const NPC_HAND: Record<string, string> = { soldier: 'hand_glove', hitman: 'hand_skin', robot: 'hand_glove', manBrown: 'hand_skin2', zombie: 'hand_skin3' };
+  hit() { this.flashT = 0.06; this.punch = 0.12; }
+  destroy() { this.spr.destroy(); this.shadow.destroy(); this.label?.destroy(); }
+}
 
 export class NpcView {
   rig: Rig;
   label: Phaser.GameObjects.Text;
-  constructor(scene: Phaser.Scene, n: Npc) {
-    this.rig = new Rig(scene, n.kind + (n.weapon ? '_stand' : '_hold'), NPC_HAND[n.kind] ?? 'hand_skin', 10);
+  warn?: Phaser.GameObjects.Graphics;
+  constructor(private scene: Phaser.Scene, n: Npc) {
+    this.rig = new Rig(scene, n.kind);
     this.rig.setWeapon(n.weapon);
     this.label = scene.add.text(0, 0, n.name, { fontFamily: 'Rubik, sans-serif', fontSize: '12px', color: '#d8f3ff', stroke: '#000', strokeThickness: 3 })
       .setOrigin(0.5, 1).setDepth(40).setResolution(TEXT_RES());
@@ -229,21 +225,36 @@ export class NpcView {
     this.rig.setWeapon(n.weapon);
     if (n.mode === 'dead' || n.mode === 'gone') { this.rig.root.setVisible(false); this.label.setVisible(false); return; }
     this.rig.root.setVisible(true);
-    let a = n.angle;
-    if (n.mode === 'cower') a += Math.sin(time * 30) * 0.06;
-    this.rig.layout(x, y, a, moving, dt);
+    const a = n.angle;
     if (n.mutation) {
+      // twitch → feathers (flicker between human and chicken-person) → dark silhouette → enemy
+      const st = n.mutation.stage;
       this.rig.setWeapon(null);
-      this.rig.root.x += Math.sin(time * 55) * (n.mutation.stage === 'twitch' ? 2 : 4);
-      this.rig.body.setTint(n.mutation.stage === 'silhouette' ? 0x222222 : Math.sin(time * 22) > 0 ? 0xffbd7a : 0xffffff);
-      if (this.rig.pixel && n.mutation.stage === 'silhouette') this.rig.body.setFrame(`mut_${n.kind}_${direction(a)}_0`).setTintFill(0x292633);
-      this.rig.body.setScale((this.rig.pixel ? 2 : 1) * (1 + Math.sin(time * 16) * 0.08));
-      this.label.setPosition(x, y - (this.rig.pixel ? 94 : 40)).setVisible(true).setText(n.name + ' · КО-КО?!').setColor('#ffbf74');
+      const flick = st === 'twitch' ? Math.sin(time * 9) > 0.85 : st === 'feathers' ? Math.sin(time * 20) > -0.2 : true;
+      this.rig.body.setTexture(flick ? this.rig.mutantTexture() : this.rig.tex);
+      this.rig.layout(x, y, a, false, dt, `${direction(a)}_${Math.floor(time * 14) % 2 ? 3 : 0}`);
+      this.rig.root.x += Math.sin(time * 55) * (st === 'twitch' ? 1.5 : 3);
+      if (st === 'silhouette') this.rig.body.setTintFill(0x2a2633); else this.rig.body.setTint(Math.sin(time * 22) > 0 ? 0xffbd7a : 0xffffff);
+      this.rig.body.setScale(2 * (1 + Math.sin(time * 16) * 0.05));
+      this.label.setPosition(x, y - 118).setVisible(true).setText('⚠ ' + n.name + ' ПРЕВРАЩАЕТСЯ!').setColor(Math.sin(time * 12) > 0 ? '#ff6a4a' : '#ffd36a');
+      // progress bar over the head + pulsing danger ring on the floor
+      const g = this.warn ??= this.scene.add.graphics().setDepth(39);
+      const k = Math.min(1, n.mutation.elapsed / MUTATION.done);
+      g.clear().setVisible(true);
+      g.fillStyle(0x000000, 0.6).fillRect(x - 26, y - 114, 52, 7);
+      g.fillStyle(k > 0.66 ? 0xff3b30 : k > 0.33 ? 0xff9a2e : 0xffd23a, 1).fillRect(x - 25, y - 113, 50 * k, 5);
+      const pulse = (time * 2.2) % 1;
+      g.lineStyle(3, 0xff4a2a, 0.8 * (1 - pulse)).strokeEllipse(x, y, 40 + pulse * 70, (40 + pulse * 70) * 0.42);
       return;
     }
-    if (n.mode === 'cower') this.rig.body.setScale(this.rig.pixel ? 1.8 : 0.9);
+    this.warn?.setVisible(false);
+    if (this.rig.body.texture.key !== this.rig.tex) this.rig.body.setTexture(this.rig.tex);
+    this.rig.body.setScale(2);
+    this.rig.layout(x, y, a, moving, dt, n.mode === 'cower' ? (Math.sin(time * 3) > 0 ? 'hurt_1' : 'hurt_2') : undefined);
+    if (n.mode === 'cower') this.rig.root.x += Math.sin(time * 30) * 0.8;
     this.rig.body.setTint(n.hurtT > 0 ? 0xff8080 : 0xffffff);
-    this.label.setPosition(x, y - (this.rig.pixel ? 94 : 30)).setVisible(near).setText(n.name).setColor('#d8f3ff');
+    this.label.setPosition(x, y - 104).setVisible(near).setText(n.name).setColor('#d8f3ff');
   }
-  destroy() { this.rig.destroy(); this.label.destroy(); }
+  corpse() { return { tex: this.rig.tex, frame: 'hurt_4', frames: ['hurt_0', 'hurt_1', 'hurt_2', 'hurt_3', 'hurt_4'] }; }
+  destroy() { this.rig.destroy(); this.label.destroy(); this.warn?.destroy(); }
 }
