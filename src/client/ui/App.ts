@@ -1,0 +1,292 @@
+import Phaser from 'phaser';
+import { sfx } from '../audio/Sfx';
+import { LocalSession, Session } from '../net/Session';
+import { LEVELS, FIRST_LEVEL } from '../../shared/levels';
+import type { Carry } from '../../shared/sim/World';
+import type { TiledMap } from '../../shared/map';
+import { settings, saveSettings } from '../settings';
+import { Client, Room } from 'colyseus.js';
+import { NetSession } from '../net/NetSession';
+import { PLAYER_COLORS } from '../render/Actors';
+import type { Snapshot } from '../../shared/protocol';
+import type { SimEvent } from '../../shared/sim/types';
+import { escapeHtml } from './Hud';
+import type { GameSceneData } from '../scenes/GameScene';
+
+/** Menus (HTML/CSS) + game flow (levels, retries, multiplayer lobby). */
+export class App {
+  ui = document.getElementById('ui')!;
+  screen: HTMLDivElement | null = null;
+  levelStartCarry: Carry | undefined;
+  currentLevel = FIRST_LEVEL;
+  booted = false;
+
+  constructor(public game: Phaser.Game) {
+    this.show(`<div class="boot"><div class="logo">CHKN<span>OUTBREAK</span></div><div class="boot-bar"><i></i></div></div>`);
+    sfx.init();
+    (window as any).__sfx = sfx;
+    const unlock = () => { sfx.resume(); };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+  }
+
+  ready() {
+    this.booted = true;
+    // ?level=<id> jumps straight into a level (testing)
+    const lv = new URLSearchParams(location.search).get('level');
+    if (lv && LEVELS[lv]) this.startSolo(lv);
+    else this.mainMenu();
+  }
+
+  show(html: string) {
+    this.screen?.remove();
+    const d = document.createElement('div');
+    d.className = 'overlay screen';
+    d.innerHTML = html;
+    this.ui.appendChild(d);
+    this.screen = d;
+    d.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => sfx.play('ui', { vol: 0.6 })));
+    return d;
+  }
+  hide() { this.screen?.remove(); this.screen = null; }
+
+  mainMenu() {
+    this.stopGame();
+    const d = this.show(`
+      <div class="menu">
+        <div class="logo big">CHKN<span>OUTBREAK</span></div>
+        <div class="tagline">ООО «Курятник» · пятница, 17:55 · эпидемия</div>
+        <label class="field"><span>Имя сотрудника</span><input class="name" maxlength="14" value="${escapeHtml(settings.name)}"></label>
+        <button class="btn primary" data-a="solo">Одиночная игра</button>
+        <div class="row">
+          <button class="btn" data-a="host">Создать комнату</button>
+          <button class="btn" data-a="join">Войти по коду</button>
+        </div>
+        <button class="btn ghost" data-a="arena">Полигон (тест оружия)</button>
+        <div class="row small">
+          <label class="field inline"><span>Громкость</span><input type="range" class="vol" min="0" max="1" step="0.05" value="${settings.volume}"></label>
+          <label class="field inline"><span>Тряска</span><input type="range" class="shake" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
+        </div>
+        <div class="controls-help">
+          <b>ПК:</b> WASD — движение · мышь — прицел · ЛКМ — огонь · R — перезарядка · E — действие · колесо/1–7 — оружие<br>
+          <b>Телефон:</b> левый стик — движение · правый стик — прицел и автоогонь
+        </div>
+      </div>`);
+    const name = d.querySelector<HTMLInputElement>('.name')!;
+    name.addEventListener('change', () => { settings.name = name.value.trim() || 'Сотрудник'; saveSettings(); });
+    d.querySelector<HTMLInputElement>('.vol')!.addEventListener('input', (e) => { settings.volume = +(e.target as HTMLInputElement).value; sfx.setVolume(settings.volume); saveSettings(); });
+    d.querySelector<HTMLInputElement>('.shake')!.addEventListener('input', (e) => { settings.shake = +(e.target as HTMLInputElement).value; saveSettings(); });
+    sfx.setVolume(settings.volume);
+    d.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.a;
+      settings.name = name.value.trim() || 'Сотрудник'; saveSettings();
+      if (a === 'solo') { this.levelStartCarry = undefined; this.startSolo(FIRST_LEVEL); }
+      if (a === 'arena') { this.levelStartCarry = undefined; this.startSolo('arena'); }
+      if (a === 'host' || a === 'join') this.multiplayer(a);
+    });
+  }
+
+  private stopGame() {
+    if (this.game.scene.isActive('game')) this.game.scene.stop('game');
+  }
+
+  startSolo(levelId: string, carry?: Carry) {
+    this.currentLevel = levelId;
+    this.levelStartCarry = carry;
+    const json = this.game.cache.tilemap.get('map_' + levelId).data as TiledMap;
+    const session = new LocalSession(levelId, json, settings.name, carry);
+    this.runSession(session);
+  }
+
+  runSession(session: Session) {
+    this.hide();
+    this.stopGame();
+    const lvl = LEVELS[session.levelId];
+    const data: GameSceneData = {
+      session,
+      onEnd: (ev) => {
+        if (ev.kind === 'quit') { if (session.solo) this.mainMenu(); else this.leaveRoom(); return; }
+        if (!session.solo) return; // multiplayer flow is driven by the server
+        if (ev.kind === 'level') this.levelComplete(session, ev.next, ev.win);
+        else this.gameOver(ev.reason ?? '');
+      },
+    };
+    this.game.scene.start('game', data);
+    this.titleCard(lvl?.title ?? '', lvl?.subtitle ?? '');
+  }
+
+  titleCard(title: string, sub: string) {
+    const d = document.createElement('div');
+    d.className = 'title-card';
+    d.innerHTML = `<div class="tc-title">${escapeHtml(title)}</div><div class="tc-sub">${escapeHtml(sub)}</div>`;
+    this.ui.appendChild(d);
+    setTimeout(() => d.remove(), 3600);
+  }
+
+  levelComplete(session: Session, next?: string, win?: boolean) {
+    const me = session.view.players.find((p) => p.id === session.myId);
+    const carry = session.carry();
+    const d = this.show(`<div class="panel center">
+      <h2>${win ? 'ПОБЕДА!' : 'ЭТАП ПРОЙДЕН'}</h2>
+      <div class="stats"><div><b>${me?.kills ?? 0}</b><span>куриц оптимизировано</span></div><div><b>${Math.floor(me?.score ?? 0)}</b><span>KPI</span></div></div>
+      ${win ? '<p class="flavor">Вы выбрались из «Курятника». Понедельник отменяется навсегда.</p>' : ''}
+      <button class="btn primary" data-a="${win || !next || !LEVELS[next] ? 'menu' : 'next'}">${win || !next || !LEVELS[next] ? 'В главное меню' : 'Дальше'}</button></div>`);
+    d.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.a;
+      if (a === 'next' && next) this.startSolo(next, carry);
+      if (a === 'menu') this.mainMenu();
+    });
+  }
+
+  gameOver(reason: string) {
+    const d = this.show(`<div class="panel center">
+      <h2 class="bad">КО-КО-КОНЕЦ</h2>
+      <p class="flavor">${escapeHtml(reason)}</p>
+      <button class="btn primary" data-a="retry">Заново с начала этапа</button>
+      <button class="btn" data-a="menu">В главное меню</button></div>`);
+    d.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.a;
+      if (a === 'retry') this.startSolo(this.currentLevel, this.levelStartCarry);
+      if (a === 'menu') this.mainMenu();
+    });
+  }
+
+  // ------------------------------------------------------------------ multiplayer (Colyseus)
+  room: Room | null = null;
+  net: NetSession | null = null;
+
+  serverUrl() {
+    if (settings.server) return settings.server;
+    const secure = location.protocol === 'https:';
+    // dev: Vite on 5280, Colyseus on 2580; prod: the game server also serves the client
+    return location.port === '5280' ? `ws://${location.hostname}:2580` : `${secure ? 'wss' : 'ws'}://${location.host}`;
+  }
+
+  multiplayer(mode: 'host' | 'join') {
+    if (mode === 'join') {
+      const d = this.show(`<div class="panel center"><h2>ВОЙТИ ПО КОДУ</h2>
+        <input class="code-input" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-align:center;letter-spacing:10px;text-transform:uppercase">
+        <div class="err"></div>
+        <button class="btn primary" data-a="go">Войти</button>
+        <button class="btn ghost" data-a="back">Назад</button></div>`);
+      const inp = d.querySelector<HTMLInputElement>('.code-input')!;
+      inp.focus();
+      const go = () => this.connect('join', inp.value.trim().toUpperCase(), d.querySelector('.err')!);
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+      d.addEventListener('click', (e) => {
+        const act = (e.target as HTMLElement).dataset.a;
+        if (act === 'go') go();
+        if (act === 'back') this.mainMenu();
+      });
+      return;
+    }
+    const d = this.show(`<div class="panel center"><h2>СОЗДАНИЕ КОМНАТЫ</h2><p class="flavor">Подключаемся к серверу…</p><div class="err"></div>
+      <button class="btn ghost" data-a="back">Назад</button></div>`);
+    d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'back') this.leaveRoom(); });
+    this.connect('host', '', d.querySelector('.err')!);
+  }
+
+  private async connect(mode: 'host' | 'join', code: string, err: Element) {
+    try {
+      const client = new Client(this.serverUrl());
+      const room = mode === 'host'
+        ? await client.create('game', { name: settings.name })
+        : await client.joinById(code, { name: settings.name });
+      this.room = room;
+      room.onStateChange(() => { if (room.state.phase === 'lobby' && !this.game.scene.isActive('game')) this.lobby(); });
+      room.onMessage('start', (m: { level: string }) => this.netStart(m.level));
+      room.onMessage('snap', (snap: Snapshot) => this.net?.onSnapshot(snap));
+      room.onMessage('ev', (ev: SimEvent[]) => this.net?.onEvents(ev));
+      room.onMessage('end', (m: NetEnd) => this.netEnd(m));
+      room.onMessage('lobby', () => { this.stopGame(); this.net = null; this.lobby(); });
+      room.onLeave((c) => {
+        if (this.room !== room) return;
+        this.room = null; this.net = null;
+        this.stopGame();
+        this.mainMenu();
+        if (c > 1000) this.toastMenu('Соединение с сервером потеряно');
+      });
+      this.lobby();
+    } catch (e) {
+      err.textContent = mode === 'join' ? 'Комната не найдена или заполнена.' : 'Сервер недоступен (запустите npm run server).';
+      console.warn(e);
+    }
+  }
+
+  private toastMenu(text: string) {
+    const el = this.screen?.querySelector('.tagline');
+    if (el) el.textContent = text;
+  }
+
+  leaveRoom() {
+    const r = this.room;
+    this.room = null; this.net = null;
+    r?.leave(true);
+    this.mainMenu();
+  }
+
+  lobby() {
+    const room = this.room;
+    if (!room) return;
+    const st = room.state;
+    const me = st.players.get(room.sessionId);
+    const list: string[] = [];
+    let allReady = true;
+    st.players.forEach((p: any) => {
+      if (!p.ready && !p.host) allReady = false;
+      const col = '#' + PLAYER_COLORS[p.slot % 4].toString(16).padStart(6, '0');
+      const status = (p.host ? 'ведущий' : p.ready ? 'готов' : 'не готов') + (p.connected ? '' : ' · переподключается');
+      list.push(`<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}${p.id === room.sessionId ? ' (вы)' : ''}</b><span class="st ${p.ready || p.host ? 'ok' : ''}">${status}</span></div>`);
+    });
+    const action = me?.host
+      ? `<button class="btn primary" data-a="start" ${allReady ? '' : 'disabled'}>${allReady ? 'Старт' : 'Ждём готовности…'}</button>`
+      : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>`;
+    const d = this.show(`<div class="panel center">
+      <h2>ЛОББИ</h2>
+      <div class="flavor">Код комнаты — продиктуйте коллегам:</div>
+      <div class="code">${escapeHtml(st.code)}</div>
+      <div class="plist">${list.join('')}</div>
+      <div class="flavor" style="font-size:13px">1–4 игрока. Если вас заклюют и не поднимут — вы станете вооружённой курицей и будете охотиться на бывших коллег.</div>
+      ${action}
+      <button class="btn ghost" data-a="leave">Выйти</button></div>`);
+    d.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).dataset.a;
+      if (act === 'ready') room.send('ready', { ready: !me?.ready });
+      if (act === 'start') room.send('start');
+      if (act === 'leave') this.leaveRoom();
+    });
+  }
+
+  private netStart(level: string) {
+    const room = this.room;
+    if (!room) return;
+    const json = this.game.cache.tilemap.get('map_' + level)?.data as TiledMap | undefined;
+    if (!json) return;
+    const net = new NetSession(room, level, json);
+    this.net = net;
+    this.runSession(net);
+  }
+
+  private netEnd(m: NetEnd) {
+    const rows = [...m.stats].sort((a, b) => b.score - a.score).map((p) => {
+      const col = '#' + PLAYER_COLORS[p.slot % 4].toString(16).padStart(6, '0');
+      return `<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}</b><span class="st">☠ ${p.kills} · ★ ${p.score}</span></div>`;
+    }).join('');
+    const isHost = !!this.room?.state.players.get(this.room.sessionId)?.host;
+    const title = m.kind === 'win' ? 'ПОБЕДА!' : m.kind === 'level' ? 'ЭТАП ПРОЙДЕН' : 'КО-КО-КОНЕЦ';
+    const sub = m.kind === 'win' ? 'Корпорация повержена. Понедельник отменён.'
+      : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Повтор этапа через 6 секунд…`;
+    this.stopGame();
+    const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
+      <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
+      ${m.kind === 'win' && isHost ? '<button class="btn primary" data-a="lobby">В лобби</button>' : ''}
+      <button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
+    d.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).dataset.a;
+      if (act === 'lobby') this.room?.send('lobby');
+      if (act === 'leave') this.leaveRoom();
+    });
+  }
+}
+
+interface NetEnd { kind: string; next?: string; reason?: string; stats: { name: string; kills: number; score: number; slot: number }[] }
