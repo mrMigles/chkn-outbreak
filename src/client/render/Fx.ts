@@ -19,6 +19,7 @@ export const DEAD_FRAME: Record<string, string[]> = {
 export class Fx {
   low: Particles;     // under characters (blood drops, casings)
   corpses: Particles; // sliding corpses & gibs (chars atlas)
+  pixelCorpses?: Particles;
   high: Particles;    // above characters (sparks, flashes, fire, smoke, flying feathers)
   decals: DecalLayer;
   lights: Light[] = [];
@@ -39,6 +40,10 @@ export class Fx {
     this.low.onLand = land('fx');
     this.high.onLand = land('fx');
     this.corpses.onLand = land('chars');
+    if ((scene as Phaser.Scene & {session?: {levelId:string}}).session?.levelId === 'office') {
+      this.pixelCorpses = new Particles(scene, 'people25', 5, 120);
+      this.pixelCorpses.onLand = land('people25');
+    }
   }
 
   shake(t: number) { this.trauma = Math.min(1, this.trauma + t * this.shakeScale); }
@@ -148,7 +153,7 @@ export class Fx {
     });
   }
 
-  kill(t: EnemyType | 'player', variant: number, x: number, y: number, a: number, gib: boolean, burn: boolean, scale = 1) {
+  kill(t: EnemyType | 'player', variant: number, x: number, y: number, a: number, gib: boolean, burn: boolean, scale = 1, pixelFrame?: string) {
     const big = t === 'fat' || t === 'boss';
     const ft = FEATHER_TINT[t] ?? 0xffffff;
     const sc = t === 'boss' ? 2.4 : big ? 1.6 : t === 'chick' ? 0.6 : 1;
@@ -175,7 +180,9 @@ export class Fx {
       const frames = DEAD_FRAME[t] ?? DEAD_FRAME.normal;
       const frame = t === 'player' ? 'ck_player_dead' : frames[variant % frames.length];
       const sp = big ? 120 : 260;
-      this.corpses.emit({ frame, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.35, drag: 9, s0: scale, s1: scale, rot: a + rand(-0.4, 0.4), vr: rand(-4, 4), tint: burn ? 0x4a3a30 : 0xffffff, land: true, landAlpha: 1 });
+      const corpses = pixelFrame && this.pixelCorpses ? this.pixelCorpses : this.corpses;
+      const corpseScale = pixelFrame ? scale * 1.25 : scale;
+      corpses.emit({ frame: pixelFrame ?? frame, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.35, drag: 9, s0: corpseScale, s1: corpseScale, rot: a + rand(-0.4, 0.4), vr: rand(-4, 4), tint: burn ? 0x4a3a30 : 0xffffff, land: true, landAlpha: 1 });
     }
     if (burn) for (let i = 0; i < 5; i++) this.high.emit({ frame: 'smoke', x, y, vx: rand(-40, 40), vy: rand(-40, 40), life: rand(0.8, 1.6), drag: 1.5, s0: 0.3, s1: 1.4, a0: 0.5, a1: 0, rot: rand(0, 6), tint: 0x333333 });
     sfx.play('death', { x, y, vol: 0.7, max: 5, rate: t === 'fat' || t === 'boss' ? 0.6 : t === 'fast' || t === 'chick' ? 1.35 : 1 });
@@ -264,6 +271,7 @@ export class Fx {
   update(dt: number) {
     this.low.update(dt);
     this.corpses.update(dt);
+    this.pixelCorpses?.update(dt);
     this.high.update(dt);
     // tracers: a bright streak travelling from muzzle to impact
     let w = 0;

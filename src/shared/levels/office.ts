@@ -157,6 +157,14 @@ const office: LevelScript = {
     };
     if (lines[n.id]) w.msg('ПОТЕРЯ', lines[n.id], 3);
   },
+
+  onNpcLost(w, n) {
+    const key = n.id === 'marat' ? 'blue' : n.id === 'petrovich' ? 'server' : '';
+    if (!key || hasKey(w, key) || w.flags['lostKey:' + key]) return;
+    w.flags['lostKey:' + key] = true;
+    w.addPickup('keycard', n.x, n.y, { key, ttl: -1 });
+    w.setObjective('Подобрать пропуск: ' + (key === 'blue' ? 'охрана' : 'серверная'));
+  },
 };
 
 export default office;

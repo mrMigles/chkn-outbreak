@@ -4,6 +4,8 @@ import type { WeaponId } from '../weapons';
 
 /** Level logic. Hooks run inside the authoritative simulation (browser solo or Colyseus room). */
 export interface LevelScript {
+  /** Called once when an NPC dies or finishes mutating; mandatory items must survive. */
+  onNpcLost?: (w: World, n: Npc) => void;
   id: string;            // also the map file name (public/assets/maps/<id>.tmj)
   title: string;
   subtitle: string;

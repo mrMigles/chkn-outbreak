@@ -1,0 +1,9 @@
+{
+  "renderer": "Chromium SwiftShader (software)",
+  "results": [
+    "two app menus → ready → playing",
+    "real E hold revives remote player to 45 HP and shows progress",
+    "App automatic reconnect resumes same ID, supplies and live snapshots"
+  ],
+  "errors": []
+}

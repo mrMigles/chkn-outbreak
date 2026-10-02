@@ -1,7 +1,16 @@
 # TASKS
 
-Status: `[x]` done · `[~]` in progress · `[ ]` todo. Work top-down, one task at a time.
-After each task update this file, `docs/DECISIONS.md`, `docs/HANDOFF.md`.
+## Active work — 2.5D redesign
+
+The agreed next iteration is [PLAN-2.5D.md](docs/PLAN-2.5D.md).
+Use [TASKS-2.5D.md](docs/TASKS-2.5D.md) for multi-agent packages, file ownership, dependencies and acceptance checks.
+Asset sources are in [ASSETS.md](docs/ASSETS.md); the user reference is [chkn-2.5d-reference.png](docs/references/chkn-2.5d-reference.png).
+
+The implementation tasks below record the original top-down version. Their completed checkboxes do not indicate acceptance of the full 2.5D redesign. P00, P06, P10 and P16 are accepted in the first iteration; P01–P05, P07–P09 and P11–P14 remain partially implemented. P15 and P17–P23 are pending. Details and evidence: [current board](docs/TASKS-2.5D.md), [QA report](docs/qa/office-iteration.md).
+
+Status: `[x]` done · `[~]` in progress · `[ ]` todo. For the new iteration, work in parallel only across the owners and dependencies defined in TASKS-2.5D.md. The coordinator updates shared status, `docs/DECISIONS.md` and `docs/HANDOFF.md` after integration; agents provide separate handoff reports.
+
+## Original implementation history
 
 ## Phase 0 — Foundation
 - [x] T01 Choose asset pack, fix the style (`docs/STYLE.md`, D1/D2)

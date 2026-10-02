@@ -1,0 +1,8 @@
+{
+  "retrieved": "2026-10-02",
+  "assets": [
+    {"file":"office.zip","url":"https://opengameart.org/sites/default/files/lpc_-_the_office.zip","page":"https://opengameart.org/content/lpc-revised-the-office","license":"OGA-BY-3.0 (selected used files)","sha256":"697B688DE1C18CA71EE5851CA925C4CFEA8BE810A82551C3595990D1E6266AAA"},
+    {"file":"objects.zip","url":"https://opengameart.org/sites/default/files/lpc_objectspack.zip","page":"https://opengameart.org/content/lpc-revised-base-object-kit","license":"CC-BY-SA-3.0; DRM waiver in original credits","sha256":"EC8DA59E8B31C44C8183F6737F6C84E59D1EC051914C951CD8B840B044585366"},
+    {"file":"structure.zip","url":"https://opengameart.org/sites/default/files/lpc_structure_pack.zip","page":"https://opengameart.org/content/lpc-revised-base-structure-kit","license":"CC-BY-SA-3.0; DRM waiver in original credits","sha256":"63EF1772B00B73FCB9209CFC913253FEF0E17CE115601E5C8CBC03F7B90872ED"}
+  ]
+}

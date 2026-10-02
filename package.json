@@ -14,7 +14,12 @@
     "shot": "node tools/shot.mjs",
     "bot": "tsx tools/bot.ts",
     "start": "tsx server/index.ts",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "check:coop": "tsx tools/check-coop.ts",
+    "check:network": "tsx tools/check-network.ts",
+    "check:network-ui": "node tools/check-network-ui.mjs",
+    "check:art": "node tools/check-art.mjs",
+    "check:office": "node tools/office-sample.mjs"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",

@@ -17,6 +17,21 @@ export type PlayerState = 'alive' | 'downed' | 'chicken' | 'dead';
 
 export interface AmmoState { mag: number; reserve: number }
 
+export interface Supplies { medkit: number; ammo: number }
+export interface SupportAction {
+  target: string; kind: 'revive' | 'heal' | 'ammo';
+  elapsed: number; progress: number; anchorX: number; anchorY: number;
+  cancelled: boolean; completed: boolean;
+  targetVersion: number;
+}
+export interface Mutation {
+  stage: 'twitch' | 'feathers' | 'silhouette'; elapsed: number;
+  type: EnemyType; tag: string;
+}
+export interface BetrayalPlan { checked: boolean; remaining: number; helped: number }
+/** Feet remain in the existing collision plane; artwork grows upwards from them. */
+export interface VisualAnchor { feetX: number; feetY: number; weaponY: number }
+
 export interface Player {
   id: string;
   slot: number;
@@ -42,6 +57,9 @@ export interface Player {
   keys: string[];
   combo: number; comboT: number;
   connected: boolean;
+  supplies: Supplies;
+  support: SupportAction | null;
+  supportVersion: number;
   tp: number;             // teleport counter (client resets prediction when it changes)
   saved?: { weapons: WeaponId[]; ammo: Partial<Record<WeaponId, AmmoState>> };
 }
@@ -70,6 +88,7 @@ export interface Enemy {
   abilityCd: number;
   ability: string;
   dormant: boolean;           // ignores sight until damaged / woken by script or noise
+  appearance?: { npcId: string; kind: string; name: string };
 }
 
 export type NpcMode = 'idle' | 'cower' | 'follow' | 'guard' | 'flee' | 'goto' | 'dead' | 'gone';
@@ -91,6 +110,8 @@ export interface Npc {
   rescued: boolean;
   vx: number; vy: number;
   hurtT: number;
+  mutation?: Mutation;
+  betrayal?: BetrayalPlan;
   props?: Record<string, any>;  // raw Tiled properties (server only)
 }
 
@@ -129,6 +150,8 @@ export type SimEvent =
   | { e: 'reload'; id: string; w: WeaponId }
   | { e: 'down'; id: string }
   | { e: 'revived'; id: string; by: string }
+  | { e: 'help'; id: string; by: string; kind: 'heal' | 'ammo' }
+  | { e: 'mutation'; id: string; x: number; y: number; stage: Mutation['stage'] | 'complete' }
   | { e: 'chicken'; id: string }
   | { e: 'cured'; id: string }
   | { e: 'npcdie'; id: string; x: number; y: number }

@@ -10,6 +10,7 @@ import { WEAPON_ART, PICKUP_ART } from './art/weapons.mjs';
 import { FX_ART } from './art/fx.mjs';
 import { buildWallSheet } from './art/walls.mjs';
 import { KENNEY_PROPS, NEW_PROPS, cutKenney } from './art/props.mjs';
+import { buildLpc } from './art/lpc.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const VENDOR = path.join(ROOT, 'vendor/kenney-topdown-shooter');
@@ -79,12 +80,22 @@ for (const [k, spec] of Object.entries(KENNEY_PROPS)) props.push({ name: k, canv
 for (const [k, fn] of Object.entries(NEW_PROPS)) props.push({ name: k, canvas: fn() });
 for (const p of props) propSizes[p.name] = [p.canvas.width, p.canvas.height];
 writeAtlas('props', props);
+const lpc = await buildLpc(ROOT);
+writeAtlas('people25', lpc.people);
+writeAtlas('office25', lpc.props);
+const officeTiles = createCanvas(sheet.width, sheet.height), og = officeTiles.getContext('2d');
+og.imageSmoothingEnabled = false; og.drawImage(sheet, 0, 0);
+for (const [i, source] of [[41,0],[42,0],[68,1],[69,1],[95,2],[96,2],[11,3]]) {
+  og.drawImage(lpc.floors[source].canvas, (i % 27) * 64, Math.floor(i / 27) * 64);
+}
+save('officeTiles.png', officeTiles);
 
 // 6) metadata for shared code
 const meta = {
   wall: { cols: walls.cols, perTheme: walls.perTheme, lookup: walls.lookup, themes: ['office', 'lab', 'industrial'] },
   weapons: weaponMeta,
   props: propSizes,
+  office25: lpc.meta,
 };
 fs.writeFileSync(path.join(META_OUT, 'artMeta.json'), JSON.stringify(meta, null, 1));
 console.log('done');

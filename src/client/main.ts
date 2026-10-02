@@ -16,7 +16,7 @@ const game = new Phaser.Game({
     height: Math.round(window.innerHeight * DPR),
     zoom: 1 / DPR,
   },
-  render: { antialias: true, pixelArt: false },
+  render: { antialias: false, pixelArt: true },
   input: { activePointers: 4 },
   // ?loop=timeout keeps the game ticking in hidden tabs (automated testing)
   fps: { target: 60, forceSetTimeOut: location.search.includes('loop=timeout') },

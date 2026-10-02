@@ -1,0 +1,4 @@
+# Preserve downloaded sources and original license/credit bytes.
+vendor/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+# The complete upstream credits table is archival data, not an editable patch.
+vendor/lpc-characters/CREDITS.csv -diff

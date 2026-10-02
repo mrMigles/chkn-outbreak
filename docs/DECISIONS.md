@@ -86,3 +86,31 @@ Each entry: what was decided, why, and consequences. Newest at the bottom.
 - Level end → `end` message with stats → next level after 5 s (weapons & follower NPCs carry over).
   Game over (everyone chicken/down) → retry the level after 6 s with the loadout from the level start.
 - Antidote moments (factory synthesis, level end) cure chicken players.
+
+## D16 — Agreed 2.5D redesign (2026-10-02; implementation in progress)
+
+- Source of intent: user-approved choices and [PLAN-2.5D.md](PLAN-2.5D.md), with [reference image](references/chkn-2.5d-reference.png).
+- Keep Phaser 3, the shared pure-TS simulation, Colyseus and orthogonal gameplay coordinates. Target a three-quarter view with detailed pixel art, directed bodies, separate weapons and floor-based depth sorting.
+- Use free asset libraries, primarily LPC with adapted lab/factory/FX packs. Record actual source files and licenses in [ASSETS.md](ASSETS.md). Generation is a last resort.
+- Campaign remains office → lab → factory → boss, with short transitions and wave arenas. Support uses one contextual button: revive, heal and share a universal ammunition package. Players remain cooperative humans; NPCs may betray the team through a readable mutation.
+- This direction supersedes D1's exclusive-pack and strict top-down requirements and D2's visual wall recipe for new work. D15's player-chicken/antidote behavior is historical; runtime players now remain cooperative humans. Other architectural decisions remain applicable unless explicitly revised.
+- Implementation and integration are split into P00–P23 in [TASKS-2.5D.md](TASKS-2.5D.md), with one owner per shared file and a visual office acceptance gate before the full campaign art pass.
+- First iteration implements the office prototype, contextual support, staged NPC mutation, random betrayal and client reconnection. Full campaign art/arenas remain pending; [QA report](qa/office-iteration.md) separates verified behavior from acceptance gaps.
+
+## D17 — Preserve arcade pace while changing the presentation
+
+- User requirement: keep the current game's drive. Existing weapon data, enemy combat parameters, speed, recoil, combo and synthesized sounds are retained. New body directions and free weapon aim change rendering, not logical movement coordinates.
+- LPC bodies use four directions/nine walking frames, feet anchored at native y=62 and integer ×2 scaling. Gun muzzle/tracers render 40 units above the floor. Picking an office enemy's visible body converts the pointer back to its ground position, so aiming at a tall sprite still hits its logical target. Projectile/flashlight alignment remains an acceptance item for P05.
+- New art is limited to the office until P09 acceptance. Public sources are saved with credits and reproducible adaptation; no AI images used. Current shared body silhouettes are prototypes, not the final professional cast.
+
+## D18 — Contextual support and human teammates
+
+- E tap/release shares one current-weapon magazine into finite reserve; hold heals +40 after 1.2 s (one medkit) or revives to 45 HP after 2.6 s (no cost). Carry one of each supply. No nearby teammate permits self-heal. Downed target has priority; target locks for one press and requires distance ≤80 plus clear line.
+- Moving, firing, leaving range, changing state, a new wall or disconnect cancels without spending. Edge queues retain quick taps between 30 Hz ticks. One helper owns progress; a target version invalidates concurrent old holds after completion so two helpers cannot chain two heals from one action.
+- Bleedout enters spectator state. Existing combat-clear transition returns connected human teammates with their loadout; P15 will connect this to formal arena intermissions. No living connected player means defeat; friendly fire stays off.
+
+## D19 — Readable NPC mutation and betrayal
+
+- Mutation is authoritative, 2.2 s: twitch → feathers at 0.7 → silhouette at 1.5 → hostile. Friendly NPC firing stops; clothing/name survive through appearance metadata. Weapon and mandatory story keys drop once. Pending mutation counts toward relevant script enemy tags.
+- Recruited/rescued allies roll 25% once; server RNG owns the result and a 35–90 s countdown. At least 20 s of aid, two random betrayals per level, one active mutation at a time and 30 s between random starts. Carry preserves the decision/countdown. Fixed seed supports reproducible checks; ordinary sessions choose a fresh seed.
+- Client automatically retries reconnect for 24 s within server's 25 s window, closes late successful handshakes after cancellation/deadline and restores playing/between/over UI. SDK and two app browser pages verify identity/supply retention and resumed snapshots. Deadline/cancellation, level-boundary UI and artificial latency remain pending P13/P14.

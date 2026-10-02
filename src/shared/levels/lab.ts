@@ -83,6 +83,11 @@ const lab: LevelScript = {
   onNpcDead(w, n) {
     if (n.id === 'omletov') w.msg('ПОТЕРЯ', 'Профессор Омлетов… Рецепт антидота придётся вспоминать самим.', 3);
   },
+  onNpcLost(w, n) {
+    if (n.id !== 'omletov' || w.flags.lostLabKey || w.players.some(p => p.keys.includes('lab'))) return;
+    w.flags.lostLabKey = true;
+    w.addPickup('keycard', n.x, n.y, { key: 'lab', ttl: -1 });
+  },
 };
 
 export default lab;

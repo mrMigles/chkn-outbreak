@@ -71,6 +71,7 @@ export class App {
           <b>ПК:</b> WASD — движение · мышь — прицел · ЛКМ — огонь · R — перезарядка · E — действие · колесо/1–7 — оружие<br>
           <b>Телефон:</b> левый стик — движение · правый стик — прицел и автоогонь
         </div>
+        <a href="credits.html" target="_blank" rel="noopener" style="color:#acb4bd;font-size:13px">Авторы графики и лицензии</a>
       </div>`);
     const name = d.querySelector<HTMLInputElement>('.name')!;
     name.addEventListener('change', () => { settings.name = name.value.trim() || 'Сотрудник'; saveSettings(); });
@@ -116,6 +117,7 @@ export class App {
   }
 
   titleCard(title: string, sub: string) {
+    this.ui.querySelectorAll('.title-card').forEach(card => card.remove());
     const d = document.createElement('div');
     d.className = 'title-card';
     d.innerHTML = `<div class="tc-title">${escapeHtml(title)}</div><div class="tc-sub">${escapeHtml(sub)}</div>`;
@@ -159,7 +161,7 @@ export class App {
     if (settings.server) return settings.server;
     const secure = location.protocol === 'https:';
     // dev: Vite on 5280, Colyseus on 2580; prod: the game server also serves the client
-    return location.port === '5280' ? `ws://${location.hostname}:2580` : `${secure ? 'wss' : 'ws'}://${location.host}`;
+    return import.meta.env.DEV ? `ws://${location.hostname}:2580` : `${secure ? 'wss' : 'ws'}://${location.host}`;
   }
 
   multiplayer(mode: 'host' | 'join') {
@@ -192,25 +194,71 @@ export class App {
       const room = mode === 'host'
         ? await client.create('game', { name: settings.name })
         : await client.joinById(code, { name: settings.name });
-      this.room = room;
-      room.onStateChange(() => { if (room.state.phase === 'lobby' && !this.game.scene.isActive('game')) this.lobby(); });
-      room.onMessage('start', (m: { level: string }) => this.netStart(m.level));
-      room.onMessage('snap', (snap: Snapshot) => this.net?.onSnapshot(snap));
-      room.onMessage('ev', (ev: SimEvent[]) => this.net?.onEvents(ev));
-      room.onMessage('end', (m: NetEnd) => this.netEnd(m));
-      room.onMessage('lobby', () => { this.stopGame(); this.net = null; this.lobby(); });
-      room.onLeave((c) => {
-        if (this.room !== room) return;
-        this.room = null; this.net = null;
-        this.stopGame();
-        this.mainMenu();
-        if (c > 1000) this.toastMenu('Соединение с сервером потеряно');
-      });
-      this.lobby();
+      this.bindRoom(room, client);
+      if (room.state.phase === 'lobby') this.lobby();
     } catch (e) {
       err.textContent = mode === 'join' ? 'Комната не найдена или заполнена.' : 'Сервер недоступен (запустите npm run server).';
       console.warn(e);
     }
+  }
+
+  private bindRoom(room: Room, client: Client) {
+    this.room = room;
+    let recoveredPhase = '';
+    const restorePhase = () => {
+      if (this.room !== room) return;
+      if (room.state.phase === 'lobby' && !this.game.scene.isActive('game')) this.lobby();
+      // Initial state also recovers if the start message arrived during rejoin.
+      if (room.state.phase === 'playing' && !this.net) this.netStart(room.state.level);
+      if (!this.net && room.state.phase !== recoveredPhase) {
+        if (room.state.phase === 'between') {
+          const panel = this.show('<div class="panel center"><h2>КОМАНДА НА ПЕРЕДЫШКЕ</h2><p class="flavor">Соединение восстановлено. Ждём начала следующего боя…</p><button class="btn ghost">Выйти в меню</button></div>');
+          panel.querySelector('button')!.addEventListener('click', () => this.leaveRoom());
+        }
+        if (room.state.phase === 'over') this.netEnd({ kind: 'win', stats: [] });
+        recoveredPhase = room.state.phase;
+      }
+    };
+    room.onStateChange(restorePhase);
+    room.onMessage('start', (m: { level: string }) => { if (this.room === room) this.netStart(m.level); });
+    room.onMessage('snap', (snap: Snapshot) => { if (this.room === room) this.net?.onSnapshot(snap); });
+    room.onMessage('ev', (ev: SimEvent[]) => { if (this.room === room) this.net?.onEvents(ev); });
+    room.onMessage('end', (m: NetEnd) => { if (this.room === room) this.netEnd(m); });
+    room.onMessage('lobby', () => { if (this.room === room) { this.stopGame(); this.net = null; this.lobby(); } });
+    room.onLeave(() => { if (this.room === room) void this.reconnect(room, client); });
+    restorePhase();
+  }
+
+  private async reconnect(old: Room, client: Client) {
+    const token = old.reconnectionToken;
+    this.stopGame(); this.net = null;
+    const panel = this.show(`<div class="panel center"><h2>ВОЗВРАЩАЕМСЯ В БОЙ</h2><p class="flavor">Восстанавливаем соединение… Команда ждёт до 25 секунд.</p><button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
+    panel.querySelector('button')!.addEventListener('click', () => this.leaveRoom());
+    const deadline = Date.now() + 24000;
+    while (this.room === old && Date.now() < deadline) {
+      try {
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const attempt = client.reconnect(token);
+        // Promise.race does not cancel the SDK handshake. Close a connection
+        // that completes after the user leaves or after the retry window ends.
+        void attempt.then(room => {
+          if (this.room !== old || Date.now() >= deadline) void room.leave(true);
+        }, () => {});
+        const room = await Promise.race([
+          attempt,
+          new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('Rejoin deadline')), Math.max(1, deadline - Date.now())); }),
+        ]).finally(() => clearTimeout(timeout));
+        // A cancelled/expired UI must not leave a late successful connection alive.
+        if (Date.now() >= deadline) { void room.leave(true); break; }
+        if (this.room !== old) { void room.leave(true); return; }
+        this.bindRoom(room, client);
+        return;
+      } catch {
+        await new Promise(resolve => setTimeout(resolve, 700));
+      }
+    }
+    if (this.room !== old) return;
+    this.room = null; this.mainMenu(); this.toastMenu('Не удалось вернуться. Войдите в комнату по коду.');
   }
 
   private toastMenu(text: string) {
@@ -246,7 +294,7 @@ export class App {
       <div class="flavor">Код комнаты — продиктуйте коллегам:</div>
       <div class="code">${escapeHtml(st.code)}</div>
       <div class="plist">${list.join('')}</div>
-      <div class="flavor" style="font-size:13px">1–4 игрока. Если вас заклюют и не поднимут — вы станете вооружённой курицей и будете охотиться на бывших коллег.</div>
+      <div class="flavor" style="font-size:13px">1–4 игрока против стаи. E: нажать — поделиться патронами, держать — лечить или поднять. После смерти вы вернётесь человеком в передышку. Берегитесь: даже союзные сотрудники могут превратиться!</div>
       ${action}
       <button class="btn ghost" data-a="leave">Выйти</button></div>`);
     d.addEventListener('click', (e) => {
@@ -260,6 +308,7 @@ export class App {
   private netStart(level: string) {
     const room = this.room;
     if (!room) return;
+    if (this.net?.levelId === level && this.game.scene.isActive('game')) return;
     const json = this.game.cache.tilemap.get('map_' + level)?.data as TiledMap | undefined;
     if (!json) return;
     const net = new NetSession(room, level, json);

@@ -100,12 +100,14 @@ export class GameRoom extends Room<RoomState> {
     if (!p) return;
     p.connected = false;
     const wp = this.world?.players.find((q) => q.id === client.sessionId);
-    if (wp) { wp.connected = false; wp.input = { ...wp.input, fire: false, interact: false }; }
+    if (wp) { wp.connected = false; this.world?.resetInput(wp.id); }
     try {
       if (consented) throw new Error('left');
       await this.allowReconnection(client, 25);
       p.connected = true;
-      if (wp) wp.connected = true;
+      // A level can change while the client is offline; do not update an old world.
+      const restored = this.world?.players.find((q) => q.id === client.sessionId);
+      if (restored) restored.connected = true;
       if (this.world && this.state.phase === 'playing') client.send('start', { level: this.world.mapId });
     } catch {
       this.state.players.delete(client.sessionId);
@@ -127,7 +129,7 @@ export class GameRoom extends Room<RoomState> {
     this.levelCarry = this.carry;
     const world = new World(map, LEVELS[id], { solo: false, carry: this.carry });
     const players = [...this.state.players.values()].sort((a, b) => a.slot - b.slot);
-    for (const p of players) world.addPlayer(p.id, p.name, p.slot);
+    for (const p of players) world.addPlayer(p.id, p.name, p.slot).connected = p.connected;
     world.start();
     this.world = world;
     this.state.level = id;

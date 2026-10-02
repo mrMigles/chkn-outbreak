@@ -199,3 +199,11 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 @media (pointer: coarse) and (max-width: 600px) {
   .hud-weapon { top: 70px; transform: scale(0.65); }
 }
+
+/* Support is one button; the small bar appears only during a hold. */
+.hud-support { position:absolute; left:50%; bottom:116px; transform:translateX(-50%); background:#10221ee8; padding:8px 14px; border:1px solid #77dbc2; border-radius:9px; display:none; min-width:200px; text-align:center; }
+.hud-support.show { display:block; }
+.hud-support > div { height:4px; margin-top:7px; background:#263e36; }
+.hud-support i { display:block; height:100%; background:#77dbc2; }
+.hud-supplies { position:absolute; left:16px; bottom:102px; color:#b5f5d5; font-weight:700; font-size:17px; text-shadow:0 2px 3px #000; }
+@media (max-width:900px) { .hud-obj { top:72px; max-width:calc(100vw - 32px); } }

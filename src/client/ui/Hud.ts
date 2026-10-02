@@ -34,6 +34,8 @@ export class Hud {
       <div class="hud-msg"><div class="msg-title"></div><div class="msg-sub"></div></div>
       <div class="hud-toast"></div>
       <div class="hud-hint"></div>
+      <div class="hud-support"><span></span><div><i></i></div></div>
+      <div class="hud-supplies"></div>
       <div class="hud-state"></div>
       <div class="hud-radio"><b></b><span></span></div>`;
     document.getElementById('ui')!.appendChild(this.el);
@@ -85,6 +87,15 @@ export class Hud {
     this.radioTimer -= dt;
     if (this.radioTimer <= 0) this.q('.hud-radio').classList.remove('show');
     if (!me) return;
+    this.q('.hud-supplies').textContent = `✚ ${me.supplies?.medkit ?? 0}   ▣ ${me.supplies?.ammo ?? 0}`;
+    const action = me.support;
+    const helping = !!action && !action.cancelled && !action.completed && action.kind !== 'ammo';
+    this.q('.hud-support').classList.toggle('show', helping);
+    if (helping) {
+      const name = view.players.find(p => p.id === action!.target)?.name ?? '';
+      this.q('.hud-support span').textContent = (action!.kind === 'revive' ? 'Поднимаем ' : 'Лечим ') + name;
+      this.q('.hud-support i').style.width = `${action!.progress * 100}%`;
+    }
     // hp
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     this.q('.hp-fill').style.width = hpPct + '%';
@@ -140,7 +151,7 @@ export class Hud {
     const st = this.q('.hud-state');
     if (me.state === 'downed') { st.textContent = `ВЫ РАНЕНЫ — ждите помощи (${Math.ceil(me.downT)})`; st.className = 'hud-state show downed'; }
     else if (me.state === 'chicken') { st.textContent = 'ВЫ — КУРИЦА. Заклюйте бывших коллег!'; st.className = 'hud-state show chicken'; }
-    else if (me.state === 'dead' && !solo) { st.textContent = `Возрождение через ${Math.ceil(me.respawnT)}…`; st.className = 'hud-state show'; }
+    else if (me.state === 'dead' && !solo) { st.textContent = 'НАБЛЮДЕНИЕ · вернётесь к команде в передышку'; st.className = 'hud-state show'; }
     else st.className = 'hud-state';
   }
 

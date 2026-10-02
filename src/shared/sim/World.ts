@@ -9,17 +9,19 @@ import type {
 } from './types';
 import { updateEnemy } from './enemyAI';
 import { updateNpc } from './npcAI';
+import { SupportController } from './support';
 import type { LevelScript } from '../levels/types';
 
-export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number }
+export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation'] }
 export interface Carry {
-  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number }>;
+  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number; supplies?: Player['supplies'] }>;
   npcs: CarryNpc[];
 }
 export interface WorldOptions {
   solo: boolean;
   carry?: Carry;
   difficulty?: number;
+  seed?: number;
 }
 
 interface Timer { t: number; fn: () => void; every?: number }
@@ -63,12 +65,17 @@ export class World implements WorldView {
   private trailT = 0;
   private spawnPoints: MapObject[] = [];
   enemyTags = new Map<number, string>();
+  private supportController = new SupportController();
+  private hadCombat = false;
+  private betrayals = 0;
+  private lastBetrayal = -30;
 
   constructor(map: GameMap, script: LevelScript, opts: WorldOptions) {
     this.map = map;
     this.mapId = map.id;
     this.script = script;
     this.opts = opts;
+    this.rng = new Rng(opts.seed ?? Math.floor(Math.random() * 0xffffffff));
     for (const o of map.objects) this.loadObject(o);
     this.flow = new FlowField(map);
     this.spawnPoints = map.objects.filter((o) => o.type === 'spawn');
@@ -125,6 +132,7 @@ export class World implements WorldView {
       reloadT: 0, fireCd: 0, bloom: 0, firing: false, shotSeq: 0,
       input: { seq: 0, x: s.x, y: s.y, aim: 0, fire: false, reload: false, interact: false, weapon: 0 },
       kills: 0, deaths: 0, score: 0, hurtT: 0, keys: [], combo: 0, comboT: 0, connected: true, tp: 0,
+      supplies: { ...(carry?.supplies ?? { medkit: 1, ammo: 1 }) }, support: null, supportVersion: 0,
     };
     p.input.x = p.x; p.input.y = p.y;
     p.cur = Math.max(0, p.weapons.length - 1);
@@ -135,6 +143,8 @@ export class World implements WorldView {
   }
 
   removePlayer(id: string) {
+    const p = this.players.find(q => q.id === id);
+    if (p) this.supportController.reset(p, this);
     this.players = this.players.filter((p) => p.id !== id);
     this.trails.delete(id);
     for (const n of this.npcs) if (n.follow === id) n.follow = null;
@@ -149,6 +159,7 @@ export class World implements WorldView {
       this.npcs.push({
         id: c.id, kind: c.kind, name: c.name, x: lead.x + Math.cos(a) * 60, y: lead.y + Math.sin(a) * 60, angle: 0, hp: c.hp, maxHp: c.maxHp,
         mode: 'follow', weapon: c.weapon, fireCd: 0, follow: lead.id, goal: null, lines: [], talkCd: 5, tag: c.id, rescued: true, vx: 0, vy: 0, hurtT: 0,
+        betrayal: c.betrayal ? { ...c.betrayal } : undefined, mutation: c.mutation ? { ...c.mutation } : undefined,
       });
     });
     this.script.onStart?.(this);
@@ -159,9 +170,9 @@ export class World implements WorldView {
     const players: Carry['players'] = {};
     for (const p of this.players) {
       const src = p.state === 'alive' || !p.saved ? p : p.saved;
-      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor };
+      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor, supplies: { ...p.supplies } };
     }
-    const npcs = this.npcs.filter((n) => n.mode === 'follow').map((n) => ({ id: n.id, kind: n.kind, name: n.name, weapon: n.weapon, hp: Math.max(n.hp, n.maxHp * 0.6), maxHp: n.maxHp }));
+    const npcs = this.npcs.filter((n) => n.mode === 'follow').map((n) => ({ id: n.id, kind: n.kind, name: n.name, weapon: n.weapon, hp: Math.max(n.hp, n.maxHp * 0.6), maxHp: n.maxHp, betrayal: n.betrayal ? { ...n.betrayal } : undefined, mutation: n.mutation ? { ...n.mutation } : undefined }));
     return { players, npcs };
   }
 
@@ -174,9 +185,9 @@ export class World implements WorldView {
   every(t: number, fn: () => void) { this.timers.push({ t, fn, every: t }); }
   /** Turn a survivor into a chicken (scripted infection). */
   infect(n: Npc, type: EnemyType = 'normal', tag = '') {
-    if (n.mode === 'dead' || n.mode === 'gone') return null;
-    n.mode = 'gone';
-    return this.spawnEnemy(type, n.x, n.y, { how: 'egg', aggro: true, tag });
+    if (n.mode === 'dead' || n.mode === 'gone' || n.mutation) return;
+    n.mutation = { stage: 'twitch', elapsed: 0, type, tag };
+    this.emit({ e: 'mutation', id: n.id, x: n.x, y: n.y, stage: 'twitch' });
   }
   setBlackout(on: boolean) { this.blackout = on; this.emit({ e: 'blackout', on }); }
   setAlarm(on: boolean) { this.alarm = on; this.emit({ e: 'alarm', on }); }
@@ -194,6 +205,7 @@ export class World implements WorldView {
     let n = 0;
     for (const e of this.enemies) if (this.enemyTags.get(e.id) === tag) n++;
     for (const w of this.waves) if (w.tag === tag) n += w.left;
+    for (const q of this.npcs) if (q.mode !== 'dead' && q.mode !== 'gone' && q.mutation?.tag === tag) n++;
     return n;
   }
 
@@ -291,7 +303,11 @@ export class World implements WorldView {
       for (const n of this.npcs) if (this.npcTargetable(n)) targets.push(n);
       this.flow.compute(targets);
     }
-    for (const n of this.npcs) updateNpc(this, n, dt);
+    for (const n of this.npcs) {
+      this.updateBetrayal(n, dt);
+      if (n.mutation && n.mode !== 'gone' && n.mode !== 'dead') this.updateMutation(n, dt);
+      else updateNpc(this, n, dt);
+    }
     this.separate();
     for (const e of [...this.enemies]) updateEnemy(this, e, dt);
     this.updateProjectiles(dt);
@@ -299,7 +315,54 @@ export class World implements WorldView {
     this.updateDoors();
     this.updateTriggers();
     this.script.onTick?.(this, dt);
+    const combat = this.enemies.length > 0 || this.waves.length > 0 || this.npcs.some(n => n.mutation && n.mode !== 'gone' && n.mode !== 'dead');
+    if (this.hadCombat && !combat) this.rallyTeam();
+    this.hadCombat = combat;
     this.checkLose();
+  }
+
+  private updateMutation(n: Npc, dt: number) {
+    const m = n.mutation!;
+    m.elapsed += dt;
+    const stage = m.elapsed < 0.7 ? 'twitch' : m.elapsed < 1.5 ? 'feathers' : 'silhouette';
+    if (stage !== m.stage) {
+      m.stage = stage; this.emit({ e: 'mutation', id: n.id, x: n.x, y: n.y, stage });
+    }
+    if (m.elapsed < 2.2) return;
+    n.mode = 'gone';
+    if (n.weapon) this.addPickup('weapon', n.x + 18, n.y, { weapon: n.weapon });
+    this.script.onNpcLost?.(this, n);
+    const e = this.spawnEnemy(m.type, n.x, n.y, { how: 'egg', aggro: true, tag: m.tag });
+    e.appearance = { npcId: n.id, kind: n.kind, name: n.name };
+    this.emit({ e: 'mutation', id: n.id, x: n.x, y: n.y, stage: 'complete' });
+  }
+
+  private updateBetrayal(n: Npc, dt: number) {
+    if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || (n.mode !== 'follow' && !n.rescued)) return;
+    if (!n.betrayal) n.betrayal = { checked: true, remaining: this.rng.chance(0.25) ? this.rng.range(35, 90) : -1, helped: 0 };
+    const plan = n.betrayal;
+    plan.helped += dt;
+    if (plan.remaining < 0) return;
+    plan.remaining = Math.max(0, plan.remaining - dt);
+    if (plan.remaining > 0 || plan.helped < 20 || this.betrayals >= 2 || this.time - this.lastBetrayal < 30 ||
+      this.npcs.some(q => q.mutation && q.mode !== 'gone' && q.mode !== 'dead')) return;
+    this.betrayals++; this.lastBetrayal = this.time;
+    this.say(n.id, 'Я прикрою… ко… ЧТО СО МНОЙ?!', 2.2);
+    this.infect(n, n.weapon ? 'armored' : 'normal', 'betrayal');
+  }
+
+  /** Only after combat clears; spectators return as teammates with their loadout. */
+  rallyTeam() {
+    const lead = this.humanPlayers.find(p => p.connected);
+    if (!lead || this.over) return;
+    for (const p of this.players) if (p.state === 'dead' && p.connected) {
+      const [x, y] = this.map.move(lead.x, lead.y, HUMAN_R, 0, 0);
+      p.x = x; p.y = y; p.input.x = x; p.input.y = y; p.tp++;
+      p.state = 'alive'; p.hp = 60; p.downT = 0; p.reviveT = 0;
+      p.reloadT = 0; p.fireCd = 0; p.hurtT = 0;
+      this.supportController.reset(p, this);
+      this.emit({ e: 'revived', id: p.id, by: '' });
+    }
   }
 
   private updateWaves(dt: number) {
@@ -347,9 +410,17 @@ export class World implements WorldView {
   setInput(id: string, inp: PlayerInput) {
     const p = this.players.find((q) => q.id === id);
     if (!p) return;
+    this.supportController.input(p, inp.interact);
     // reload is an edge: keep it latched until consumed
     const reload = p.input.reload || inp.reload;
     p.input = { ...inp, reload };
+  }
+
+  resetInput(id: string) {
+    const p = this.players.find(q => q.id === id);
+    if (!p) return;
+    p.input = { ...p.input, x: p.x, y: p.y, fire: false, reload: false, interact: false };
+    this.supportController.reset(p, this);
   }
 
   private updatePlayer(p: Player, dt: number) {
@@ -360,25 +431,15 @@ export class World implements WorldView {
     p.firing = false;
 
     if (p.state === 'dead') {
-      p.respawnT -= dt;
-      if (p.respawnT <= 0 && !this.opts.solo) this.becomeChicken(p, true);
+      this.supportController.reset(p, this);
       return;
     }
     if (p.state === 'downed') {
       p.downT -= dt * (p.reviveT > 0 ? 0.25 : 1);
       // crawl slowly
       this.acceptMove(p, inp.x, inp.y, dt, 50);
-      // revive by nearby human holding interact
-      const helper = this.players.find((q) => q !== p && q.state === 'alive' && q.input.interact && dist(q.x, q.y, p.x, p.y) < 70);
-      if (helper) {
-        p.reviveT += dt / PLAYER.reviveTime;
-        if (p.reviveT >= 1) {
-          p.state = 'alive'; p.hp = 45; p.reviveT = 0;
-          this.emit({ e: 'revived', id: p.id, by: helper.id });
-          this.say(p.id, this.rng.pick(['Спасибо! Я уже чувствовал перья!', 'Фух… кукаре… то есть спасибо!', 'Я снова человек!']));
-        }
-      } else p.reviveT = Math.max(0, p.reviveT - dt * 0.5);
-      if (p.downT <= 0) this.becomeChicken(p, false);
+      this.supportController.reset(p, this);
+      if (p.downT <= 0) { p.state = 'dead'; p.reviveT = 0; }
       return;
     }
 
@@ -386,6 +447,7 @@ export class World implements WorldView {
     const speed = (p.state === 'chicken' ? PLAYER.chickenSpeed : PLAYER.speed) * def0.speedMul;
     this.acceptMove(p, inp.x, inp.y, dt, speed);
     p.aim = inp.aim;
+    const helping = this.supportController.update(this, p, dt, () => this.interact(p));
 
     // weapon switch
     if (inp.weapon >= 0 && inp.weapon < p.weapons.length && inp.weapon !== p.cur) {
@@ -413,7 +475,7 @@ export class World implements WorldView {
     inp.reload = false;
 
     // fire
-    if (inp.fire && p.reloadT <= 0 && ammo.mag > 0) {
+    if (!helping && inp.fire && p.reloadT <= 0 && ammo.mag > 0) {
       let guard = 0;
       while (p.fireCd <= 0 && ammo.mag > 0 && guard++ < 4) {
         this.fire(p, w);
@@ -426,7 +488,6 @@ export class World implements WorldView {
     if (p.fireCd < 0) p.fireCd = 0;
 
     // interact with NPCs (toggle follow), locked doors, use-objects
-    if (inp.interact && p.state === 'alive') this.interact(p);
 
     // chicken player: hurt by nothing special, can't pick up stuff
   }
@@ -450,7 +511,7 @@ export class World implements WorldView {
     if (this.time - last < 0.4) return;
     // NPC
     for (const n of this.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || dist(n.x, n.y, p.x, p.y) > 80) continue;
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || dist(n.x, n.y, p.x, p.y) > 80 || !this.map.lineOfSight(p.x, p.y, n.x, n.y, false)) continue;
       this.interactCd.set(p.id, this.time);
       const r = this.script.onNpcUse?.(this, n, p);
       if (r === true) return;
@@ -484,41 +545,10 @@ export class World implements WorldView {
     }
   }
 
-  private becomeChicken(p: Player, respawn: boolean) {
-    if (this.opts.solo) {
-      p.state = 'dead';
-      this.gameOver('Вы превратились в курицу.');
-      return;
-    }
-    if (!respawn) {
-      p.saved = { weapons: [...p.weapons], ammo: JSON.parse(JSON.stringify(p.ammo)) };
-      this.emit({ e: 'chicken', id: p.id });
-      this.msg(`${p.name} превратился в курицу!`, 'Теперь он охотится на вас', 3);
-    }
-    p.state = 'chicken';
-    p.hp = p.maxHp = PLAYER.chickenHp;
-    p.armor = 0;
-    const w = this.rng.pick<WeaponId>(['smg', 'shotgun', 'rifle']);
-    p.weapons = [w];
-    p.ammo = { [w]: { mag: WEAPONS[w].mag, reserve: -1 } };
-    p.cur = 0; p.reloadT = 0;
-    // spawn far away from humans
-    const humans = [...this.players.filter((q) => q.state === 'alive'), ...this.npcs.filter((n) => n.mode !== 'dead' && n.mode !== 'gone')];
-    const cand = this.map.objects.filter((o) => o.type === 'spawner' || o.type === 'enemy' || o.type === 'chickenspawn');
-    let best: { x: number; y: number } = p, bestScore = -1;
-    for (const c of cand) {
-      const dmin = humans.length ? Math.min(...humans.map((h) => dist(h.x, h.y, c.cx, c.cy))) : 1000;
-      const score = dmin > 650 ? 3000 - Math.abs(dmin - 1000) : dmin;
-      if (score > bestScore) { bestScore = score; best = { x: c.cx, y: c.cy }; }
-    }
-    p.x = best.x; p.y = best.y; p.input.x = p.x; p.input.y = p.y;
-    p.tp++;
-  }
-
   cure(p: Player) {
     const saved = p.saved;
     p.state = 'alive'; p.hp = p.maxHp = PLAYER.hp; p.downT = 0; p.reviveT = 0;
-    if (saved) { p.weapons = saved.weapons; p.ammo = saved.ammo; } else { p.weapons = ['pistol']; p.ammo = { pistol: { mag: 12, reserve: -1 } }; }
+    if (saved) { p.weapons = saved.weapons; p.ammo = saved.ammo; }
     p.cur = Math.min(p.cur, p.weapons.length - 1);
     this.emit({ e: 'cured', id: p.id });
   }
@@ -553,7 +583,7 @@ export class World implements WorldView {
 
   private checkLose() {
     if (this.opts.solo || this.finished || !this.players.length) return;
-    if (this.players.every((p) => p.state !== 'alive' && p.state !== 'downed')) {
+    if (this.players.every((p) => p.state !== 'alive' || !p.connected)) {
       this.gameOver('Курицы победили. Все сотрудники оптимизированы.');
     }
   }
@@ -748,6 +778,7 @@ export class World implements WorldView {
     n.hurtT = 0.2;
     if (n.hp <= 0) {
       n.mode = 'dead';
+      this.script.onNpcLost?.(this, n);
       this.emit({ e: 'npcdie', id: n.id, x: n.x, y: n.y });
       this.script.onNpcDead?.(this, n);
     }
@@ -847,15 +878,17 @@ export class World implements WorldView {
     let text = '';
     switch (k.kind) {
       case 'health':
-        if (p.hp >= p.maxHp) return false;
-        p.hp = Math.min(p.maxHp, p.hp + 35); text = '+35 здоровья';
+        if (p.hp >= p.maxHp && p.supplies.medkit >= 1) return false;
+        p.supplies.medkit = 1;
+        p.hp = Math.min(p.maxHp, p.hp + 35); text = 'Аптечка · +35 здоровья';
         break;
       case 'armor':
         if (p.armor >= 100) return false;
         p.armor = Math.min(100, p.armor + 50); text = '+50 брони';
         break;
       case 'ammo': {
-        let any = false;
+        let any = p.supplies.ammo < 1;
+        p.supplies.ammo = 1;
         for (const w of p.weapons) {
           const def = WEAPONS[w], a = p.ammo[w]!;
           if (a.reserve < 0 || a.reserve >= def.reserveMax) continue;

@@ -151,6 +151,8 @@ export class NetSession implements Session {
 
   send(inp: PlayerInput) {
     const reload = !!(this.lastInput?.reload || inp.reload);
+    // Preserve both edges of taps shorter than the regular 30 Hz send interval.
+    if (inp.interact !== (this.lastInput?.interact ?? false) || (!inp.fire && this.lastInput?.fire)) this.room.send('input', inp);
     this.lastInput = { ...inp, reload };
   }
 

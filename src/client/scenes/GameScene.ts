@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Fx } from '../render/Fx';
 import { Lighting } from '../render/Lighting';
-import { EnemyView, NpcView, PlayerView, muzzleOf, ejectOf } from '../render/Actors';
+import { EnemyView, NpcView, PlayerView, muzzleOf, ejectOf, BODY_HEIGHT, worldDepth } from '../render/Actors';
 import { Input } from '../input/Input';
 import { Hud } from '../ui/Hud';
 import { sfx } from '../audio/Sfx';
@@ -12,7 +12,9 @@ import { propDef } from '../../shared/props';
 import { angleDiff, clamp, dist, lerp } from '../../shared/math';
 import type { Player, SimEvent } from '../../shared/sim/types';
 import { TILE } from '../../shared/map';
+import { supportTarget } from '../../shared/sim/support';
 import { settings, TEXT_RES } from '../settings';
+import artMeta from '../../shared/generated/artMeta.json';
 
 export interface GameSceneData { session: Session; onEnd: (ev: { kind: 'level' | 'gameover' | 'quit'; next?: string; win?: boolean; reason?: string }) => void }
 
@@ -54,6 +56,8 @@ export class GameScene extends Phaser.Scene {
   crosshair: Phaser.GameObjects.Image | null = null;
   hitMarker = 0;
   hitstop = 0;
+  wallFaces: Phaser.GameObjects.Image[] = [];
+  get elevation() { return this.session.levelId === 'office' ? BODY_HEIGHT : 0; }
 
   constructor() { super('game'); }
 
@@ -63,6 +67,7 @@ export class GameScene extends Phaser.Scene {
     this.players = new Map(); this.enemies = new Map(); this.npcs = new Map(); this.pickups = new Map(); this.pickupGlows = new Map();
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
+    this.wallFaces = [];
   }
 
   create() {
@@ -71,7 +76,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#17191d').setBounds(-96, -96, map.pw + 192, map.ph + 192);
     // ---- tilemap
     const tm = this.make.tilemap({ key: 'map_' + s.levelId });
-    const kt = tm.addTilesetImage('kenney', 'tiles', TILE, TILE, 0, 0)!;
+    const kt = tm.addTilesetImage('kenney', this.elevation ? 'officeTiles' : 'tiles', TILE, TILE, 0, 0)!;
     const wt = tm.addTilesetImage('walls', 'walls', TILE, TILE, 0, 0)!;
     tm.createLayer('floor', [kt], 0, 0)!.setDepth(0);
     tm.createLayer('decor', [kt], 0, 0)!.setDepth(1);
@@ -79,12 +84,28 @@ export class GameScene extends Phaser.Scene {
     // soft drop shadow of the walls onto the floor
     const shadow = tm.createBlankLayer('wall_shadow', [wt], 7, 9)!.setDepth(3.5).setAlpha(0.3);
     walls.forEachTile((t) => { if (t.index > 0) shadow.putTileAt(t.index, t.x, t.y).tint = 0x000000; });
+    if (this.elevation) {
+      walls.setDepth(2);
+      walls.forEachTile(t => {
+        if (t.index <= 0) return;
+        // Only the exposed south edge has a front facade. Interior wall cells
+        // keep the roof tiles; stacked facades would make a checkerboard wall.
+        if ((walls.getTileAt(t.x, t.y + 1)?.index ?? -1) > 0) return;
+        // The facade grows upwards; the collision grid and feet stay where they were.
+        const x = t.x * TILE + TILE / 2, y = (t.y + 1) * TILE;
+        const img = this.add.image(x, y, 'office25', 'wall_face').setOrigin(0.5, 1).setDepth(worldDepth(y));
+        this.wallFaces.push(img);
+      });
+    }
 
     // ---- props, labels, notes
     for (const o of map.objects) {
       if (o.type === 'prop') {
         const def = propDef(o.name);
-        const img = this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
+        const visual = this.elevation ? (artMeta.office25 as Record<string, { feetX: number; feetY: number }>)[o.name] : null;
+        const feetY = o.cy + o.h / 2;
+        const img = visual ? this.add.image(o.cx, feetY, 'office25', o.name).setOrigin(0.5, visual.feetY / this.textures.getFrame('office25', o.name).height).setDepth(worldDepth(feetY)) :
+          this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
         if (o.props.tint) img.setTint(parseInt(String(o.props.tint), 16));
         if (o.props.text) this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text) });
       } else if (o.type === 'label') {
@@ -166,7 +187,10 @@ export class GameScene extends Phaser.Scene {
       if (dist(this.px, this.py, me.x, me.y) > 160) { this.px = me.x; this.py = me.y; }
 
       let fire = inp.fire;
-      if (inp.aimMode === 'mouse') this.aim = Math.atan2(inp.aimWY - this.py, inp.aimWX - this.px);
+      if (inp.aimMode === 'mouse') {
+        const hit = this.elevation ? this.enemyUnderPointer(inp.aimWX, inp.aimWY) : null;
+        this.aim = hit ? Math.atan2(hit.y - this.py, hit.x - this.px) : Math.atan2(inp.aimWY - (this.py - this.elevation), inp.aimWX - this.px);
+      }
       else {
         // touch: right stick aims, auto-fire when a chicken is under the aim cone
         const target = this.findAutoTarget(inp.aimMode === 'stick' ? inp.stickA : this.aim, inp.aimMode === 'stick' ? 0.32 : Math.PI, me);
@@ -184,7 +208,7 @@ export class GameScene extends Phaser.Scene {
       if (this.desiredWeapon >= me.weapons.length) this.desiredWeapon = me.cur;
       if (fire && w && (me.ammo[w]?.mag ?? 0) === 0 && (me.ammo[w]?.reserve ?? 0) === 0 && Math.random() < 0.08) sfx.play('empty', { vol: 0.5 });
       s.send({ seq: ++this.seq, x: this.px, y: this.py, aim: this.aim, fire, reload: inp.reload, interact: inp.interact, weapon: this.desiredWeapon });
-      if (!s.solo) this.predictFire(dt, me, fire);
+      if (!s.solo) this.predictFire(dt, me, fire && !(inp.interact && (supportTarget(view0, s.map, me)?.state === 'downed' || me.support?.kind === 'heal')));
       sfx.loop('flame_me', 'flame', me.firing && w === 'flamethrower', 0.7);
     }
 
@@ -194,6 +218,7 @@ export class GameScene extends Phaser.Scene {
 
     // ---- sync views
     this.syncWorld(dt);
+    for (const wall of this.wallFaces) wall.setAlpha(this.py < wall.y && wall.y - this.py < 155 && Math.abs(this.px - wall.x) < 72 ? 0.28 : 1);
 
     // ---- camera
     this.updateCamera(dt, inp);
@@ -296,6 +321,17 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
+  /** Clicking a visible torso/head maps back to the feet collision plane. */
+  private enemyUnderPointer(x: number, y: number) {
+    return this.session.view.enemies.filter(e => {
+      const view = this.enemies.get(e.id);
+      if (!view?.pixel || e.state === 'rise') return false;
+      const halfWidth = view.spr.scaleX * 14, height = view.spr.scaleY * 58;
+      return Math.abs(x - view.dispX) <= halfWidth && y <= view.dispY && y >= view.dispY - height &&
+        this.session.map.lineOfSight(this.px, this.py, e.x, e.y, true);
+    }).sort((a, b) => b.y - a.y)[0];
+  }
+
   private updateCamera(dt: number, inp: ReturnType<Input['poll']>) {
     const cam = this.cameras.main;
     // look ahead towards aim
@@ -329,7 +365,7 @@ export class GameScene extends Phaser.Scene {
       const w = p.weapons[p.cur];
       const firing = mine && !s.solo ? this.localFiring : p.firing;
       if (firing && w === 'flamethrower' && (p.state === 'alive' || p.state === 'chicken')) {
-        const m = muzzleOf(pv.dispX, pv.dispY, pv.dispA, w);
+        const m = muzzleOf(pv.dispX, pv.dispY, pv.dispA, w, 0, this.elevation);
         this.fx.flame(m.x, m.y, pv.dispA, dt);
         if (!mine) sfx.play('flame', { x: m.x, y: m.y, vol: 0.4, max: 2 });
       }
@@ -456,8 +492,8 @@ export class GameScene extends Phaser.Scene {
         const pose = this.shooterPose(ev.o);
         const sx = pose?.x ?? ev.x, sy = pose?.y ?? ev.y;
         const a = pose?.mine ? this.aim : ev.a;
-        const m = muzzleOf(sx, sy, a, ev.w);
-        const ej = ejectOf(sx, sy, a);
+        const m = muzzleOf(sx, sy, a, ev.w, 0, this.elevation);
+        const ej = ejectOf(sx, sy, a, this.elevation);
         const def = WEAPONS[ev.w];
         if (ev.w === 'flamethrower') {
           if (!pose?.view) { fx.flame(m.x, m.y, a, 0.09); sfx.play('flame', { x: m.x, y: m.y, vol: 0.4, max: 2 }); }
@@ -465,7 +501,7 @@ export class GameScene extends Phaser.Scene {
         }
         fx.muzzle(ev.w, m.x, m.y, a, 0, 0, ej.x, ej.y);
         for (let i = 0; i < ev.ends.length; i += 2) {
-          const ex = ev.ends[i], ey = ev.ends[i + 1];
+          const ex = ev.ends[i], ey = ev.ends[i + 1] - this.elevation;
           if (def.tracer) {
             const pellet = def.pellets > 1;
             fx.tracer(m.x, m.y, ex, ey, ev.team === 'chicken' ? 0xff8a8a : def.tracer, def.tracerWidth * (pellet ? 1 : 1.2), pellet ? 3200 : 4200, pellet ? 70 : ev.w === 'machinegun' ? 150 : 110);
@@ -489,14 +525,14 @@ export class GameScene extends Phaser.Scene {
         }
         if (ev.o === this.session.myId) this.hitMarker = 0.12;
         if (ev.k === 'player' && ev.id === this.session.myId) break;
-        fx.impact(ev.k, ev.x, ev.y, ev.a, tint, ev.big);
+        fx.impact(ev.k, ev.x, ev.y - this.elevation, ev.a, tint, ev.big);
         break;
       }
       case 'kill': {
         if (ev.id === -1) { fx.kill('player', 0, ev.x, ev.y, ev.a, true, false); break; }
         const view = this.enemies.get(ev.id);
         const x = view?.dispX ?? ev.x, y = view?.dispY ?? ev.y;
-        fx.kill(ev.t, ev.v, x, y, ev.a, ev.gib, ev.burn, ev.t === 'chick' ? 0.7 : 1);
+        fx.kill(ev.t, ev.v, x, y, ev.a, ev.gib, ev.burn, ev.t === 'chick' ? 0.7 : 1, view?.pixel ? String(view.spr.frame.name) : undefined);
         if (dist(x, y, this.px, this.py) < 700) fx.shake(ev.t === 'boss' ? 0.8 : ev.gib ? 0.12 : 0.05);
         if (ev.by === this.session.myId && (ev.gib || ev.t === 'fat' || ev.t === 'armored')) this.hitstop = Math.max(this.hitstop, ev.t === 'boss' ? 260 : 40);
         if (ev.t === 'boss') { this.hud.message('ГЕНЕРАЛЬНЫЙ ПЕТУХ ПОВЕРЖЕН', 'Корпорация переходит на удалёнку', 5); }
@@ -545,13 +581,25 @@ export class GameScene extends Phaser.Scene {
         if (ev.id === this.session.myId) this.hud.message(this.session.solo ? 'ВАС ЗАКЛЕВАЛИ' : 'ВЫ РАНЕНЫ', this.session.solo ? '' : 'Попросите друга поднять вас (E)', 3);
         break;
       case 'revived': this.hud.toast('Игрок поднят!'); break;
+      case 'help':
+        if (ev.id === this.session.myId || ev.by === this.session.myId) {
+          this.hud.toast(ev.kind === 'heal' ? '+40 здоровья · аптечка использована' : 'Магазин патронов передан');
+          sfx.play('pickup', { vol: 0.7 });
+        }
+        break;
+      case 'mutation':
+        if (ev.stage === 'feathers') {
+          for (let i = 0; i < 12; i++) fx.high.emit({ frame: 'feather_' + i % 2, x: ev.x, y: ev.y - this.elevation, vx: (Math.random() - 0.5) * 160, vy: -40 - Math.random() * 100, life: 0.65, s0: 0.8, s1: 0.3, a0: 1, a1: 0, rot: Math.random() * 6 });
+        }
+        if (ev.stage === 'complete') { fx.spawnPuff(ev.x, ev.y, 'egg'); sfx.play('spawn', { x: ev.x, y: ev.y, vol: 0.7 }); }
+        break;
       case 'chicken':
         if (ev.id === this.session.myId) this.hud.message('ВЫ ПРЕВРАТИЛИСЬ В КУРИЦУ', 'Новая задача: заклевать бывших коллег', 4);
         sfx.play('boss_roar', { vol: 0.5, rate: 1.6 });
         break;
       case 'cured': if (ev.id === this.session.myId) this.hud.message('АНТИДОТ!', 'Вы снова человек', 3); break;
       case 'npcdie':
-        fx.kill('normal', 0, ev.x, ev.y, 0, false, false);
+        fx.kill('normal', 0, ev.x, ev.y, 0, false, false, 1, this.elevation ? this.npcs.get(ev.id)?.rig.body.frame.name as string | undefined : undefined);
         this.hud.toast('Выживший погиб');
         break;
       case 'door': sfx.play('door', { x: this.doors.get(ev.id)?.x, y: this.doors.get(ev.id)?.y, vol: 0.5 }); break;
@@ -627,21 +675,32 @@ export class GameScene extends Phaser.Scene {
     const v = this.session.view;
     let hint: string | null = null;
     const key = this.input2.touch ? '' : 'E — ';
-    for (const p of v.players) if (p.id !== me.id && p.state === 'downed' && dist(p.x, p.y, this.px, this.py) < 70) hint = `${key}держать: поднять ${p.name}`;
-    if (!hint) for (const n of v.npcs) {
-      if (n.mode === 'dead' || n.mode === 'gone' || dist(n.x, n.y, this.px, this.py) > 80) continue;
+    const ally = supportTarget(v, this.session.map, me);
+    if (ally) {
+      if (ally.state === 'downed') hint = `${key}держать: поднять ${ally.name}`;
+      else {
+        const weapon = ally.weapons[ally.cur], ammo = ally.ammo[weapon];
+        const actions = [];
+        if (me.supplies.ammo && ammo && ammo.reserve >= 0 && ammo.reserve < WEAPONS[weapon].reserveMax) actions.push(`нажать: патроны ${ally.name}`);
+        if (ally.hp < ally.maxHp && me.supplies.medkit) actions.push(`держать: лечить ${ally.name}`);
+        hint = actions.length ? key + actions.join(' · ') : null;
+      }
+    }
+    if (!ally && !hint) for (const n of v.npcs) {
+      if (n.mode === 'dead' || n.mode === 'gone' || n.mutation || dist(n.x, n.y, this.px, this.py) > 80 || !this.session.map.lineOfSight(me.x, me.y, n.x, n.y, false)) continue;
       if (n.mode === 'follow' && n.follow === me.id) hint = `${key}${n.name}: ждать здесь`;
       else if (n.rescued || n.weapon) hint = `${key}${n.name}: за мной`;
       else hint = `${key}поговорить`;
       break;
     }
-    if (!hint) for (const o of this.session.map.objects) {
+    if (!ally && !hint) for (const o of this.session.map.objects) {
       if (o.type === 'use' && dist(o.cx, o.cy, this.px, this.py) < 90 && !(o.props.done && (v as any).flags?.[o.name])) { hint = key + String(o.props.hint ?? 'использовать'); break; }
     }
-    if (!hint) for (const d of v.doors) {
+    if (!ally && !hint) for (const d of v.doors) {
       if (!d.open && d.locked && dist(d.x + d.w / 2, d.y + d.h / 2, this.px, this.py) < 115) { hint = key + (me.keys.includes(d.locked) ? 'открыть' : 'заперто'); break; }
     }
     let note: string | null = null;
+    if (!ally && me.hp < me.maxHp && me.supplies.medkit) hint = hint ? `${hint} · держать: лечить себя` : `${key}держать: лечить себя`;
     for (const n of this.notes) if (dist(n.x, n.y, this.px, this.py) < 95) { note = n.text; break; }
     this.hud.hint(hint ?? note);
     this.input2.showInteract(hint ? hint.replace(/^E — /, '').split(':')[0].slice(0, 14) : null);
@@ -651,6 +710,8 @@ export class GameScene extends Phaser.Scene {
     this.paused = !this.paused;
     const el = document.querySelector('.pause-menu');
     if (this.paused && !el) {
+      const p = this.session.view.players.find(q => q.id === this.session.myId);
+      if (p) this.session.send({ ...p.input, seq: ++this.seq, x: p.x, y: p.y, fire: false, reload: false, interact: false, weapon: p.cur });
       const d = document.createElement('div');
       d.className = 'overlay pause-menu';
       d.innerHTML = `<div class="panel"><h2>ПАУЗА</h2>

@@ -1,0 +1,41 @@
+{
+  "revision": "4963a69795255fb15a934c47f478a8bdcf3668f5",
+  "assets": [
+    {
+      "sha256": "1E0E8F0C11BA5F4F7B3D4439FC416802B4227DA2FE146C13DE3DE254D9F87F77",
+      "file": "spritesheets/body/bodies/male/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/body/bodies/male/walk.png"
+    },
+    {
+      "sha256": "7E863954DC8C3C748D0727415C39888106BDD3779BEB2E3B18011A3A9EF3E53C",
+      "file": "spritesheets/head/heads/human/male/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/head/heads/human/male/walk.png"
+    },
+    {
+      "sha256": "96A5C32678B0FBD1620599747D700ABA32503472D142A7B310AEC842E83F802B",
+      "file": "spritesheets/torso/clothes/longsleeve/formal/male/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/torso/clothes/longsleeve/formal/male/walk.png"
+    },
+    {
+      "sha256": "CFD7AD4D0D64B3D580B5F8CDDD8B9622E14F506ECEF2D979A5C7674F627B16AD",
+      "file": "spritesheets/legs/formal/male/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/formal/male/walk.png"
+    },
+    {
+      "sha256": "AA86F9C6AF54AFB0B5EC52417FABF48F8D667A40AB9CCB44C8C46569B085898E",
+      "file": "spritesheets/hair/parted/adult/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/hair/parted/adult/walk.png"
+    },
+    {
+      "sha256": "F544C6F65A3D87F08D8449E87A4F889BD1BC1BF6D714066EF5C30AB2BDAFAB46",
+      "file": "spritesheets/feet/shoes/basic/male/walk.png",
+      "license": "CC-BY-SA-3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/feet/shoes/basic/male/walk.png"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "renderer": "Chromium WebGL via SwiftShader (software)",
+  "combat": {
+    "trace": {
+      "shots": 30,
+      "kills": 1
+    },
+    "state": "alive",
+    "fps": 33
+  },
+  "sizes": [
+    [
+      1280,
+      720
+    ],
+    [
+      640,
+      720
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      844,
+      390
+    ],
+    [
+      1920,
+      1080
+    ]
+  ],
+  "support": {
+    "shown": true,
+    "text": "Поднимаем Друг",
+    "progress": 0.3076923076923076
+  },
+  "errors": []
+}

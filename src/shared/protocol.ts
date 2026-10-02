@@ -20,6 +20,7 @@ export interface Snapshot {
   e: number[];          // flat enemies, E_STRIDE each
   bm: number;           // boss max hp
   n: Partial<Npc>[];
+  appearances: Record<number, NonNullable<Enemy['appearance']>>;
   r: number[];          // flat projectiles, 6 each
   k: number[];          // flat pickups, 6 each
   d: (string | number)[]; // door id, open, locked-flag triples
@@ -51,9 +52,10 @@ export function encodeSnapshot(w: WorldView): Snapshot {
       downT: Math.round(p.downT * 10) / 10, reviveT: Math.round(p.reviveT * 100) / 100, respawnT: Math.round(p.respawnT * 10) / 10,
       weapons: p.weapons, cur: p.cur, ammo: p.ammo, reloadT: Math.round(p.reloadT * 100) / 100, firing: p.firing,
       kills: p.kills, score: Math.floor(p.score), combo: p.combo, tp: p.tp, keys: p.keys, hurtT: Math.round(p.hurtT * 100) / 100, bloom: Math.round(p.bloom * 1000) / 1000,
+      supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected,
     })),
-    e, bm,
-    n: w.npcs.filter((x) => x.mode !== 'gone').map((x) => ({ id: x.id, kind: x.kind, name: x.name, x: r1(x.x), y: r1(x.y), angle: Math.round(x.angle * 100) / 100, hp: Math.ceil(x.hp), maxHp: x.maxHp, mode: x.mode, weapon: x.weapon, rescued: x.rescued, follow: x.follow, hurtT: x.hurtT > 0 ? 0.2 : 0 })),
+    e, bm, appearances: Object.fromEntries(w.enemies.filter(x => x.appearance).map(x => [x.id, x.appearance!])),
+    n: w.npcs.filter((x) => x.mode !== 'gone').map((x) => ({ id: x.id, kind: x.kind, name: x.name, x: r1(x.x), y: r1(x.y), angle: Math.round(x.angle * 100) / 100, hp: Math.ceil(x.hp), maxHp: x.maxHp, mode: x.mode, weapon: x.weapon, rescued: x.rescued, follow: x.follow, hurtT: x.hurtT > 0 ? 0.2 : 0, mutation: x.mutation })),
     r, k,
     d: w.doors.flatMap((d) => [d.id, d.open ? 1 : 0, d.locked ? 1 : 0]),
     br: w.barrels.flatMap((b) => [b.id, r1(b.x), r1(b.y)]),
@@ -75,6 +77,7 @@ export function decodeEnemies(s: Snapshot, prev: Map<number, Enemy>): Enemy[] {
       x = { id, type, variant: e[i + 2], x: e[i + 3], y: e[i + 4], angle: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, state: 'idle', t: 0, cd: 0, aggro: true, target: null, speedMul: 1, burnT: 0, stunT: 0, flashT: 0, wanderA: 0, phase: 0, abilityCd: 0, ability: '', dormant: false };
     }
     x.type = type;
+    x.appearance = s.appearances?.[id];
     x.variant = e[i + 2];
     x.x = e[i + 3]; x.y = e[i + 4];
     x.angle = e[i + 5] / 100;

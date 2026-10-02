@@ -516,5 +516,70 @@
    48,
    40
   ]
+ },
+ "office25": {
+  "desk": {
+   "feetX": 64,
+   "feetY": 83,
+   "facing": [
+    "s"
+   ]
+  },
+  "desk_b": {
+   "feetX": 64,
+   "feetY": 83,
+   "facing": [
+    "s"
+   ]
+  },
+  "water_cooler": {
+   "feetX": 32,
+   "feetY": 120,
+   "facing": [
+    "s"
+   ]
+  },
+  "printer": {
+   "feetX": 64,
+   "feetY": 120,
+   "facing": [
+    "s"
+   ]
+  },
+  "plant": {
+   "feetX": 32,
+   "feetY": 100,
+   "facing": [
+    "s"
+   ]
+  },
+  "plant_small": {
+   "feetX": 32,
+   "feetY": 100,
+   "facing": [
+    "s"
+   ]
+  },
+  "cabinet": {
+   "feetX": 32,
+   "feetY": 184,
+   "facing": [
+    "s"
+   ]
+  },
+  "office_chair": {
+   "feetX": 32,
+   "feetY": 56,
+   "facing": [
+    "s"
+   ]
+  },
+  "bin": {
+   "feetX": 32,
+   "feetY": 56,
+   "facing": [
+    "s"
+   ]
+  }
  }
 }
