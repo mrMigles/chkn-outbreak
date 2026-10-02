@@ -95,6 +95,10 @@ export interface Enemy {
   abilityCd: number;
   ability: string;
   dormant: boolean;           // ignores sight until damaged / woken by script or noise
+  /** D69: seconds left blinded by a flashlight (elite Валера): slower and takes more damage. Sim only. */
+  blindT?: number;
+  /** D69: hit-and-run elites retreat into the dark for this long after a bite. Sim only. */
+  fleeT?: number;
   appearance?: { npcId: string; kind: string; name: string };
 }
 
@@ -184,7 +188,11 @@ export type SimEvent =
   | { e: 'level'; next: string; win?: boolean }
   | { e: 'gameover'; reason: string }
   | { e: 'fuse'; id: number }
-  | { e: 'propbreak'; id: number; x: number; y: number; m: string };
+  | { e: 'propbreak'; id: number; x: number; y: number; m: string }
+  /** D69: scripted horror beats (floor 8) and cutscene props (floor 12). */
+  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark'; x: number; y: number }
+  | { e: 'light'; v: number }
+  | { e: 'cine'; k: 'heli' | 'chapter'; text?: string; sub?: string };
 
 /** Render-facing view of the world (identical for local sim and network snapshots). */
 export interface WorldView {
@@ -211,6 +219,10 @@ export interface WorldView {
   blackout: boolean;
   alarm: boolean;
   bossId: number;
+  /** D69: name over the boss bar (elite chickens: Валера, директор); absent = the final boss. */
+  bossName?: string;
+  /** D69: darkness override set by a script (−1 = the map's own ambient). */
+  light?: number;
 }
 
 export interface IncidentView {

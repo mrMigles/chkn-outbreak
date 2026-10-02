@@ -79,7 +79,13 @@ export function updateNpc(w: World, n: Npc, dt: number) {
   switch (n.mode) {
     case 'follow': follow(w, n, dt); break;
     case 'goto':
-      if (n.goal && moveTo(w, n, n.goal.x, n.goal.y, SPEED, dt, 10)) { n.goal = null; n.mode = 'guard'; w.script.onNpcArrive?.(w, n); }
+      if (!n.goal) break;
+      // D69: around corners along the corridors (straight line only when the goal is in sight)
+      if (dist(n.x, n.y, n.goal.x, n.goal.y) > 60 && !w.map.lineOfSight(n.x, n.y, n.goal.x, n.goal.y, false)) {
+        const d = w.navDir(n.x, n.y, n.goal.x, n.goal.y);
+        if (d) { moveTo(w, n, n.x + d[0] * 40, n.y + d[1] * 40, SPEED * 0.85, dt, 1); break; }
+      }
+      if (moveTo(w, n, n.goal.x, n.goal.y, SPEED * 0.85, dt, 10)) { n.goal = null; n.mode = 'guard'; w.script.onNpcArrive?.(w, n); }
       break;
     case 'flee':
       if (threat && threat.d < 300) {

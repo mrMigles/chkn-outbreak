@@ -28,6 +28,8 @@ export interface Snapshot {
   pd: number[];         // pods: id, x, y, broken
   incidents?: WorldView['incidents'];
   bn?: WorldView['bonus'];
+  /** D69: boss bar name, darkness override */
+  bnm?: string; am?: number;
 }
 export const E_STRIDE = 11;
 
@@ -49,6 +51,7 @@ export function encodeSnapshot(w: WorldView): Snapshot {
     t: Math.round(w.time * 1000) / 1000,
     bn: w.bonus ? { ...w.bonus } : null,
     incidents: w.incidents?.map(({ id, kind, x, y, phase, seconds, left, paused }) => ({ id, kind, x: r1(x), y: r1(y), phase, seconds: Math.ceil(seconds * 10) / 10, left, paused })),
+    ...(w.bossName ? { bnm: w.bossName } : {}), ...(w.light !== undefined && w.light >= 0 ? { am: w.light } : {}),
     o: w.objective, ot: w.objectiveTarget.join('|'), bk: w.broken, bo: w.blackout ? 1 : 0, al: w.alarm ? 1 : 0, b: w.bossId,
     p: w.players.map((p) => ({
       id: p.id, slot: p.slot, name: p.name, look: p.look, x: r1(p.x), y: r1(p.y), aim: Math.round(p.aim * 100) / 100,

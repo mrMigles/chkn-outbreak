@@ -62,6 +62,10 @@ export class World implements WorldView {
   blackout = false;
   alarm = false;
   bossId = -1;
+  /** D69: boss bar caption for elite chickens. */
+  bossName?: string;
+  /** D69: scripted darkness override (−1 = the map's ambient). */
+  light = -1;
   events: SimEvent[] = [];
   flags: Record<string, any> = {};
   script: LevelScript;
@@ -240,6 +244,28 @@ export class World implements WorldView {
     this.emit({ e: 'mutation', id: n.id, x: n.x, y: n.y, stage: 'twitch' });
   }
   setBlackout(on: boolean) { this.blackout = on; this.emit({ e: 'blackout', on }); }
+  /** D69: darkness override for scripted light (0 = fully lit, 0.95 = pitch black; −1 = back to the map's). */
+  setLight(v: number) { if (this.light === v) return; this.light = v; this.emit({ e: 'light', v }); }
+  /** D69: horror beat / cutscene prop for clients (no rules). */
+  scare(k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark', x: number, y: number) { this.emit({ e: 'scare', k, x: Math.round(x), y: Math.round(y) }); }
+  cine(k: 'heli' | 'chapter', text?: string, sub?: string) { this.emit({ e: 'cine', k, ...(text ? { text } : {}), ...(sub ? { sub } : {}) }); }
+  /** D69: an elite chicken gets the boss bar. */
+  setBoss(e: Enemy, name: string) { this.bossId = e.id; this.bossName = name; if (e.appearance) e.appearance.name = name; }
+  /** D69 floor 8: sleeping chickens, flashlight-shy wake-ups, surprise damage. */
+  get stealth() { return !!this.map.props.stealth; }
+  /** D69: walk an NPC along the floor's corridors to a point (path-following, not a straight line). */
+  npcGoto(n: Npc, x: number, y: number) { n.mode = 'goto'; n.goal = { x, y }; }
+  private navFields = new Map<string, FlowField>();
+  /** Downhill direction towards (gx, gy) through the map (cached flow field per goal). */
+  navDir(x: number, y: number, gx: number, gy: number): [number, number] | null {
+    const key = `${Math.round(gx / 32)},${Math.round(gy / 32)}`;
+    let f = this.navFields.get(key);
+    if (!f) {
+      if (this.navFields.size > 6) this.navFields.clear();
+      f = new FlowField(this.map); f.compute([{ x: gx, y: gy }], 30000); this.navFields.set(key, f);
+    }
+    return f.dirAt(x, y);
+  }
   setAlarm(on: boolean) { this.alarm = on; this.emit({ e: 'alarm', on }); }
   npc(id: string) { return this.npcs.find((n) => n.id === id); }
   /** A survivor placed by a script (D66: corridor and lift-hall scenes). Deterministic: no RNG. */
@@ -308,6 +334,7 @@ export class World implements WorldView {
     this.finished = true;
     // chickens are cured at the end of a level
     for (const p of this.players) if (p.state !== 'alive') this.cure(p);
+    if (this.script.chapterEnd?.award) this.award(this.script.chapterEnd.award);
     this.emit({ e: 'level', next: next ?? this.script.next ?? '', win: !(next ?? this.script.next) });
   }
 
@@ -834,6 +861,10 @@ export class World implements WorldView {
       armored = kind === 'bullet';
     }
     if (e.state === 'rise') dmg *= 0.5;
+    // D69 floor 8: a sleeping chicken caught unawares takes heavy damage; a flashlight-blinded elite too
+    const asleep = this.stealth && e.dormant && !e.aggro;
+    if (asleep && kind !== 'fire') dmg *= 2.5;
+    if ((e.blindT ?? 0) > 0) dmg *= 1.6;
     e.hp -= dmg;
     e.flashT = 0.09;
     e.aggro = true;
@@ -846,7 +877,7 @@ export class World implements WorldView {
     }
     if (head && e.type === 'boss') this.bonusSystem.onBossHead(by);
     if (e.hp <= 0) {
-      this.bonusSystem.onKill(e, by, this.enemyTags.get(e.id), kind, head);
+      this.bonusSystem.onKill(e, by, this.enemyTags.get(e.id), kind, head, asleep);
       this.killEnemy(e, a, by, kind === 'explosion' || dmg > 60, kind === 'fire', head);
     }
   }
@@ -979,7 +1010,9 @@ export class World implements WorldView {
   /** Gunfire / explosions wake chickens up. */
   noise(x: number, y: number, r: number) {
     const r2 = r * r;
-    for (const e of this.enemies) if (!e.aggro && dist2(x, y, e.x, e.y) < r2) { e.aggro = true; e.dormant = false; }
+    // D69 floor 8: in the dark a shot only wakes the sleepers close by
+    const r2s = this.stealth ? r2 * 0.12 : r2;
+    for (const e of this.enemies) if (!e.aggro && dist2(x, y, e.x, e.y) < (e.dormant ? r2s : r2)) { e.aggro = true; e.dormant = false; }
   }
 
   // ------------------------------------------------------------------ projectiles

@@ -590,6 +590,7 @@ export class App {
       <div class="lobby-note flavor"></div>
       <div class="lobby-share"></div>
       ${st.summon ? '<button class="btn" data-a="summon">📣 Призвать чат</button>' : ''}
+      ${chat ? '<button class="btn cont" data-a="solo-mode">🎮 Одиночный режим<small>выйти из комнаты чата в главное меню</small></button>' : ''}
       <div class="menu-extras">
         <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
         <button class="btn ghost" data-a="controls">Как управлять</button>
@@ -623,7 +624,7 @@ export class App {
       if (a === 'controls') sub((back) => { const p = this.show(`<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup()}<button class="btn primary" data-a="back">Понятно</button></div>`); p.querySelector('[data-a="back"]')!.addEventListener('click', back); });
       if (a === 'browser') this.openInBrowser(btn);
       if (a === 'banner-close') this.closeBanner(btn);
-      if (a === 'leave') this.leaveRoom();
+      if (a === 'leave' || a === 'solo-mode') this.leaveRoom();
     });
   }
 

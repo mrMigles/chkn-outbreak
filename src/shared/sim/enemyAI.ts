@@ -5,6 +5,22 @@ import type { Enemy, Npc, Player } from './types';
 
 type Target = { id: string; x: number; y: number; ref: Player | Npc; isPlayer: boolean };
 
+/**
+ * Elite chickens: scripted mutants with their own melee numbers and a telegraphed charge (D52 root manager,
+ * D69 Валера on floor 8 and the executive director on floor 11). Keyed by the survivor they used to be.
+ * hitRun: seconds an elite retreats after a bite; blind: a flashlight cone slows it and opens it up.
+ */
+interface Elite {
+  damage: number; attackRange: number; attackCd: number; windup: number;
+  charge: { cd: number; wind: number; run: number; speed: number; dmg: number; line: string };
+  hitRun?: number; blind?: boolean; eggs?: { cd: number; n: number; line: string };
+}
+export const ELITES: Record<string, Elite> = {
+  root_manager: { damage: 42, attackRange: 60, attackCd: .8, windup: .35, charge: { cd: 6.5, wind: .6, run: .75, speed: 460, dmg: 48, line: 'ROOT идёт без согласования!' } },
+  valera: { damage: 24, attackRange: 50, attackCd: .75, windup: .28, charge: { cd: 7.5, wind: .55, run: .6, speed: 540, dmg: 28, line: 'Ctrl+Alt+КО-КО!' }, hitRun: 2.2, blind: true },
+  director: { damage: 34, attackRange: 70, attackCd: 1.05, windup: .42, charge: { cd: 7, wind: .75, run: .8, speed: 470, dmg: 40, line: 'Это не обсуждается!' }, eggs: { cd: 9, n: 5, line: 'Делегирую!' } },
+};
+
 const losByWorld = new WeakMap<World, Map<number, { t: number; ok: boolean }>>();
 
 function findTarget(w: World, e: Enemy, sight: number): { t: Target | null; d: number } {
@@ -55,8 +71,8 @@ function steer(w: World, e: Enemy, t: Target, td: number, speed: number, dt: num
 }
 
 export function updateEnemy(w: World, e: Enemy, dt: number) {
-  const root = e.appearance?.npcId === 'root_manager';
-  const def = root ? { ...ENEMIES[e.type], damage: 42, attackRange: 60, attackCd: .8, windup: .35 } : ENEMIES[e.type];
+  const elite = e.appearance ? ELITES[e.appearance.npcId] : undefined;
+  const def = elite ? { ...ENEMIES[e.type], damage: elite.damage, attackRange: elite.attackRange, attackCd: elite.attackCd, windup: elite.windup } : ENEMIES[e.type];
   e.flashT -= dt; e.stunT -= dt; e.cd -= dt;
   if (e.burnT > 0) {
     e.burnT -= dt;
@@ -77,6 +93,15 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
   }
 
   const { t, d: td } = findTarget(w, e, def.sight);
+  // D69 floor 8: sleeping chickens sit still; a player stepping close or shining a flashlight in their eyes wakes them
+  if (!e.aggro && e.dormant && w.stealth) {
+    if (stealthWake(w, e)) {
+      e.dormant = false; e.aggro = true;
+      w.say(String(e.id), w.rng.pick(['КО?!', 'КТО ЗДЕСЬ?!', 'Свет! Выключи свет!', 'КУДАХ?!']), 1.4);
+      for (const o of w.enemies) if (o !== e && !o.aggro && dist(o.x, o.y, e.x, e.y) < 220) { o.aggro = true; o.dormant = false; }
+    }
+    return;
+  }
   if (!e.aggro) {
     if (!e.dormant && t && td < def.sight && los(w, e, t)) {
       e.aggro = true;
@@ -96,30 +121,58 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
   }
   if (!t) return;
   if (e.type === 'boss') return updateBoss(w, e, t, td, dt);
-  if (root) {
+  if (elite) {
+    const ch = elite.charge;
     e.abilityCd -= dt;
+    if (elite.blind) {
+      // a flashlight cone on it: slowed and exposed (damage x1.6 in World.damageEnemy)
+      const lit = w.players.some(p => p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < 560 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < .42 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true));
+      const was = (e.blindT ?? 0) > 0;
+      e.blindT = lit ? .35 : Math.max(0, (e.blindT ?? 0) - dt);
+      if (lit && !was && w.rng.chance(.25)) w.say(String(e.id), w.rng.pick(['А-А-А! СВЕТ!', 'Убери фонарик! Глаза!', 'Тёмная тема! ВЕРНИТЕ ТЁМНУЮ ТЕМУ!']), 1.5);
+    }
+    if ((e.fleeT ?? 0) > 0 && e.state !== 'charge') {
+      // hit-and-run: back into the dark, then come again
+      e.fleeT = (e.fleeT ?? 0) - dt;
+      steer(w, e, t, td, ENEMIES[e.type].speed * e.speedMul * ((e.blindT ?? 0) > 0 ? .5 : 1.1), dt, true);
+      return;
+    }
     if (e.state === 'charge') {
       e.t -= dt;
       if (e.ability === 'charge_wind') {
         e.angle = Math.atan2(t.y - e.y, t.x - e.x);
-        if (e.t <= 0) { e.ability = 'charge_run'; e.t = .75; }
+        if (e.t <= 0) { e.ability = 'charge_run'; e.t = ch.run; }
       } else {
-        [e.x, e.y] = w.map.move(e.x, e.y, def.radius * .8, Math.cos(e.angle) * 460 * dt, Math.sin(e.angle) * 460 * dt);
-        if (dist(e.x, e.y, t.x, t.y) <  70 && los(w, e, t)) { hurt(w, e, t, 48); e.t = 0; e.cd = .9; }
+        [e.x, e.y] = w.map.move(e.x, e.y, def.radius * .8, Math.cos(e.angle) * ch.speed * dt, Math.sin(e.angle) * ch.speed * dt);
+        if (dist(e.x, e.y, t.x, t.y) <  70 && los(w, e, t)) { hurt(w, e, t, ch.dmg); e.t = 0; e.cd = .9; if (elite.hitRun) e.fleeT = elite.hitRun; }
         if (e.t <= 0) { e.state = 'chase'; e.ability = ''; }
       }
       return;
     }
+    if (elite.eggs) {
+      // phase is unused by elites: it counts down to the next «делегирование» (eggs that hatch into chicks)
+      e.phase -= dt;
+      if (e.phase <= -elite.eggs.cd && td < 700 && los(w, e, t)) {
+        e.phase = 0;
+        w.say(String(e.id), elite.eggs.line, 1.5);
+        const toT = Math.atan2(t.y - e.y, t.x - e.x), n = elite.eggs.n;
+        for (let i = 0; i < n; i++) {
+          const a = toT + (i / (n - 1) - 0.5) * 1.4, sp = 280 + w.rng.next() * 220;
+          w.addProjectile('egg', e.x + Math.cos(a) * 40, e.y + Math.sin(a) * 40, Math.cos(a) * sp, Math.sin(a) * sp, String(e.id), 'chicken', 0, 0.9 + w.rng.next() * 0.3);
+        }
+        return;
+      }
+    }
     if (e.abilityCd <= 0 && td < 850 && los(w, e, t)) {
-      e.abilityCd = 6.5; e.state = 'charge'; e.ability = 'charge_wind'; e.t = .6;
-      w.say(String(e.id), 'ROOT идёт без согласования!', 1.5);
+      e.abilityCd = ch.cd; e.state = 'charge'; e.ability = 'charge_wind'; e.t = ch.wind;
+      w.say(String(e.id), ch.line, 1.5);
       w.emit({ e: 'swing', id: e.id, x: e.x, y: e.y, a: Math.atan2(t.y - e.y, t.x - e.x) });
       return;
     }
   }
 
   const burning = e.burnT > 0 ? 1.25 : 1;
-  const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * (w.opts.difficulty ?? 1) ** 0.3;
+  const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * ((e.blindT ?? 0) > 0 ? .45 : 1) * (w.opts.difficulty ?? 1) ** 0.3;
 
   switch (e.state) {
     case 'windup': {
@@ -133,6 +186,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
         w.addProjectile('spit', e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, Math.cos(a) * 400, Math.sin(a) * 400, String(e.id), 'chicken', def.damage * (w.script.enemyDamage ?? 1), 1.3);
       } else if (td < def.attackRange + 22) {
         hurt(w, e, t, def.damage);
+        if (elite?.hitRun) e.fleeT = elite.hitRun;
       }
       return;
     }
@@ -267,4 +321,15 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
     return;
   }
   steer(w, e, t, td, def.speed * rage, dt);
+}
+
+/** D69: a sleeping chicken wakes when someone steps close or holds a flashlight on it. */
+function stealthWake(w: World, e: Enemy) {
+  for (const p of w.players) {
+    if (p.state !== 'alive') continue;
+    const d = dist(p.x, p.y, e.x, e.y);
+    if (d < 120) return true;
+    if (d < 340 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < .4 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true)) return true;
+  }
+  return false;
 }

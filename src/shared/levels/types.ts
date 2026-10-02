@@ -1,6 +1,7 @@
 import type { World } from '../sim/World';
 import type { Enemy, Npc, Pickup, Player } from '../sim/types';
 import type { WeaponId } from '../weapons';
+import type { AchievementKey } from '../achievements';
 
 /** Level logic. Hooks run inside the authoritative simulation (browser solo or Colyseus room). */
 export interface LevelScript {
@@ -15,6 +16,10 @@ export interface LevelScript {
   enemyHp?: number;
   enemyDamage?: number;
   music?: string;
+  /** D69: first floor of a chapter: «Глава 2. Город» above the title card. */
+  chapter?: string;
+  /** D69: last floor of a chapter: a chapter-complete panel and an achievement for everyone. */
+  chapterEnd?: { title: string; text: string; award?: AchievementKey };
   onStart?(w: World): void;
   onTick?(w: World, dt: number): void;
   onTrigger?(w: World, id: string, by: Player): void;

@@ -74,7 +74,8 @@ const level: LevelScript = {
     if (admin && !w.flags.elenaScaled) { w.flags.elenaScaled = true; admin.hp = admin.maxHp = 320; admin.speedMul = 1.3; }
     const boss = w.enemies.find(e => e.appearance?.npcId === 'root_manager');
     if (boss && !w.flags.rootScaled) {
-      w.flags.rootScaled = true; boss.hp = boss.maxHp = 2200 * (1 + .4 * (w.players.length - 1)); boss.speedMul = 1.8; boss.abilityCd = 2.5;
+      w.flags.rootScaled = true; // D68: rules 5 halve the root manager (2200 was too long a fight for the second floor)
+      boss.hp = boss.maxHp = (w.rules >= 5 ? 1100 : 2200) * (1 + .4 * (w.players.length - 1)); boss.speedMul = 1.8; boss.abilityCd = 2.5;
       boss.appearance!.name = 'Рутовый петушок · sudo ко-ко';
     }
     if (boss && w.time >= w.flags.rootSupportAt && w.countTag('root_attack') < 48) {

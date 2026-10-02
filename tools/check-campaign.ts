@@ -82,7 +82,7 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   const manager = w.npc('root_manager')!; place(w, manager.x, manager.y + 100); step(w, .2);
   assert.ok(w.flags.rootStarted); step(w, 3.2);
   const root = w.enemies.find(e => e.appearance?.npcId === 'root_manager')!;
-  assert.ok(root && root.maxHp >= 2200); assert.notEqual(root.type, 'boss');
+  assert.ok(root && root.maxHp >= 1100 && root.maxHp < 2200); assert.notEqual(root.type, 'boss');
   w.cancelWaves(); w.enemies = [root]; root.x = 2800; root.y = 1550;
   place(w, 2950, 1550); root.abilityCd = 0;
   step(w, .7); assert.equal(root.state, 'charge');

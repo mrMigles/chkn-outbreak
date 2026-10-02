@@ -15,6 +15,22 @@ export const ACHIEVEMENTS = {
   board_meeting: { name: 'Неудобные вопросы', description: 'Ангар: 15 попаданий в голову генеральному.', icon: '👔', rare: true },
   combo_master: { name: 'Эффективный менеджер', description: 'Комбо x50 где угодно.', icon: '📈', rare: true },
   close_call: { name: 'На волоске', description: 'Пережить удар, оставшись с 10 здоровья или меньше.', icon: '🩹' },
+  // D69: chapter 1 (floors 8, 11, 12) and chapter 2 (the city)
+  quiet_hour: { name: 'Тихий час', description: 'Этаж 8: 10 петушков, убитых во сне.', icon: '😴', rare: true },
+  light_theme: { name: 'Светлая тема', description: 'Этаж 8: победить Петуха Тёмной Темы.', icon: '💡' },
+  who_is_there: { name: 'Кто здесь?!', description: 'Этаж 8: пережить все четыре пугалки.', icon: '👻' },
+  two_keys: { name: 'Два ключа, как в кино', description: 'Этаж 8: открыть дверь двумя размыкателями одновременно.', icon: '🗝️' },
+  bureaucrat: { name: 'Бюрократ', description: 'Этаж 11: собрать три визы для приёма у директора.', icon: '📑' },
+  reglament: { name: 'Регламент', description: 'Этаж 11: 30 петушков за одно совещание.', icon: '⏱️', rare: true },
+  exec_order: { name: 'Исполнительный лист', description: 'Этаж 11: уволить Петуха-директора.', icon: '🗂️' },
+  business_lunch: { name: 'Бизнес-ланч', description: 'Этаж 12: съесть курочку. Не спрашивайте, из какого отдела.', icon: '🍗' },
+  chapter_office: { name: 'Офисный выживальщик', description: 'Пройти главу 1 «Офис».', icon: '🏢', rare: true },
+  air_raid: { name: 'Воздушная тревога', description: 'Улица: 35 петушков у вертолёта.', icon: '🚁', rare: true },
+  shawarma: { name: 'Шаурма не из курицы', description: 'Улица: отбить ларёк Ашота.', icon: '🌯' },
+  grandma: { name: 'Цыпа-цыпа', description: 'Улица: получить пирожок у бабушки.', icon: '🥟' },
+  sanepid: { name: 'Санэпидстанция', description: 'Рынок: 30 петушков.', icon: '🧴', rare: true },
+  subscribed: { name: 'Подписка оформлена', description: 'Довести блогера Стёпу до проходной «Провансаля» человеком.', icon: '📱', rare: true },
+  chapter_city: { name: 'Городская легенда', description: 'Пройти главу 2 «Город».', icon: '🌆', rare: true },
 } as const;
 /** D62: rare achievements can be shared into the room's Telegram chat after the floor. */
 export const isRare = (key: string) => !!(ACHIEVEMENTS as Record<string, { rare?: boolean }>)[key]?.rare;

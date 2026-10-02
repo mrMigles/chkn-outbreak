@@ -96,7 +96,7 @@ export class NetSession implements Session {
     v.incidents = s.incidents ?? [];
     v.bonus = s.bn ?? null;
     v.broken = s.bk ?? [];
-    v.objective = s.o; v.objectiveTarget = s.ot ? s.ot.split('|') : []; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b;
+    v.objective = s.o; v.objectiveTarget = s.ot ? s.ot.split('|') : []; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b; v.bossName = s.bnm; v.light = s.am ?? -1;
     // players
     const players: Player[] = [];
     for (const raw of s.p) {
