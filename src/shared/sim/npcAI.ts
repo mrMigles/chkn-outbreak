@@ -72,7 +72,7 @@ export function updateNpc(w: World, n: Npc, dt: number) {
       const def = WEAPONS[n.weapon];
       w.fireFrom(n.id, 'human', n.weapon, n.x, n.y, a + (w.rng.next() - 0.5) * 0.08, null, 0.7);
       n.fireCd = 1 / (def.rof * 0.6);
-      if (w.rng.next() < 0.04 && n.talkCd <= 0) { w.say(n.id, w.rng.pick(COMBAT_LINES)); n.talkCd = 6; }
+      if (w.rng.next() < 0.04 && n.talkCd <= 0) { w.say(n.id, w.rng.pick(COMBAT_LINES), 3.2, true); n.talkCd = 6; }
     }
   }
 

@@ -88,6 +88,7 @@ const level: LevelScript = {
       w.humanPlayers.length && w.humanPlayers.every(p => p.x >= lift.x && p.x <= lift.x + lift.w && p.y >= lift.y && p.y <= lift.y + lift.h) &&
       FRIENDS.every(id => { const n = w.npc(id)!; return n.mode === 'follow' && dist(n.x, n.y, lift.cx, lift.cy) < 285; })) {
       w.flags.evacuated = true;
+      w.award('no_one_left');
       for (const id of FRIENDS) w.npc(id)!.mode = 'gone';
       // Earlier office survivors evacuate too; nobody is dragged into the lab against the story.
       for (const n of w.npcs) if (n.mode === 'follow') n.mode = 'gone';

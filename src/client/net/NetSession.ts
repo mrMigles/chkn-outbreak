@@ -53,6 +53,7 @@ export class NetSession implements Session {
   onSnapshot(s: Snapshot) {
     const v = this.view;
     v.time = s.t;
+    v.incidents = s.incidents ?? [];
     v.broken = s.bk ?? [];
     v.objective = s.o; v.objectiveTarget = s.ot ? s.ot.split('|') : []; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b;
     // players

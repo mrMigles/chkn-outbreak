@@ -30,7 +30,7 @@ p.rect(59, 22, 67, 22, '#'); p.rect(59, 23, 59, 31, '#'); p.rect(60, 31, 64, 31,
 p.rect(59, 25, 59, 26, 'D');
 const objects: ObjSpec[] = [];
 const obj = (type: string, name: string, x: number, y: number, props?: ObjSpec['props'], size?: [number, number]) => objects.push({ type, name, at: [x, y], props, size });
-const prop = (name: string, x: number, y: number) => obj('prop', name, x, y);
+const prop = (name: string, x: number, y: number, props?: ObjSpec['props']) => obj('prop', name, x, y, props);
 const label = (text: string, x: number, y: number) => obj('label', '', x, y, { text, size: 22, color: '#5f6870' });
 const desk = (x: number, y: number) => { prop('desk_light', x, y); prop('office_chair', x, y + 1.15); };
 for (const x of [19, 24, 29, 34, 37]) for (const y of [4, 9, 14, 19]) desk(x, y);
@@ -44,7 +44,10 @@ label('PHOENIX · ПИНГ-ПОНГ', 8, 17);
 label('ОПЕНСПЕЙС · CAPELLA', 27, 21);
 label('CASTOR', 59, 21); label('SIRIUS', 8, 40);
 label('ALTAIR', 54, 38); label('ЭТАЖ 7 · ЛИФТЫ', 45, 37);
-prop('counter_a', 46, 3); prop('sink', 47, 3); prop('vending', 47, 11);
+prop('counter_a', 46, 3); prop('sink', 47, 3);
+prop('vending', 47, 11, { incident: 'coffee', incidentId: 'incident_coffee7' });
+obj('use', 'incident_coffee7', 47, 11.8, { incident: 'coffee', hint: 'кофе: +15 HP и бег на 10 сек' });
+label('КОФЕ · 1 ПОРЦИЯ', 46, 12.4);
 prop('table_round', 46, 7); prop('office_chair', 45, 8.1); prop('plant', 44, 3);
 label('КУХНЯ', 46, 10);
 prop('cabinet', 47, 15); prop('printer', 46, 19);
@@ -75,6 +78,12 @@ for (const [x, y] of [[45, 34], [42, 24], [46, 9], [8, 14], [63, 25]]) obj('pick
 obj('pickup', 'health', 44, 33);
 obj('note', '', 44, 30, { text: 'План эвакуации: 1. Сохраняйте спокойствие. 2. Не сохраняйте Excel. 3. Бегите.' });
 obj('note', '', 46, 4, { text: 'КУКАРЕКС — пилотная партия лаборатории −3. Не смешивать с кофе. Не выдавать сотрудникам. Подпись: менеджер.' });
+// Optional hazard in the west hallway. The lift, story gate and manager remain clear.
+prop('terminal', 21, 31, { incident: 'alarm', incidentId: 'incident_alarm7' });
+obj('use', 'incident_alarm7', 21, 31.75, { incident: 'alarm', group: 'escort', hint: 'обезвредить сигналку' });
+label('СИГНАЛКА · НЕ СТРЕЛЯТЬ', 20.5, 29.5);
+obj('note', '', 21.8, 32.5, { text: 'Инструкция: «При пожаре нажмите кнопку. При петухах сначала подумайте». Последнюю строку дописала охрана.' });
+obj('note', '', 45, 11.8, { text: 'Кофе проверен: бодрит, лечит, не несётся. Одна порция на команду. Бухгалтерия опять считает чашки.' });
 const level: LevelSource = { id: 'office7', theme: 'office7', mapProps: { ambient: 0, wallFace: 'office7' }, grid: p.rows(), legend: {
   '#': { wall: true }, g: { floor: [500] }, c: { floor: [501] }, k: { floor: F.white },
   D: { floor: [501], door: { id: 'castor_lock', locked: 'f7_pass', theme: 'office7' } },

@@ -30,6 +30,7 @@ jobs:
       - run: npm run check:combat
       - run: npm run check:campaign
       - run: npm run check:polish
+      - run: npm run check:engagement
       - run: npm run check:progress
       - run: npm run check:coop
       - run: npm run check:levels

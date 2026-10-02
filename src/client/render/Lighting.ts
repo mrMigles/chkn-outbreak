@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { settings } from '../settings';
 import type { Light } from './Fx';
 import type { GameMap, MapObject } from '../../shared/map';
 
@@ -61,9 +62,9 @@ export class Lighting {
 
     for (const s of this.statics) {
       let on = 1;
-      if (s.flicker) { s.ph += dt; on = Math.sin(s.ph * 23) + Math.sin(s.ph * 7.3) > -1.2 * (1 - s.flicker) ? 1 : 0.15; }
-      if (s.kind === 'alarm') { on = this.alarm ? 1 : 0; if (s.beam) s.beam.setRotation(this.t * 3 + s.ph).setVisible(on > 0); }
-      if (s.kind === 'emergency') on = this.blackout || this.alarm || this.base > 0.5 ? on * (0.6 + 0.4 * Math.abs(Math.sin(this.t * 2 + s.ph))) : 0;
+      if (s.flicker && !settings.reducedFlashes) { s.ph += dt; on = Math.sin(s.ph * 23) + Math.sin(s.ph * 7.3) > -1.2 * (1 - s.flicker) ? 1 : 0.15; }
+      if (s.kind === 'alarm') { on = this.alarm ? 1 : 0; if (s.beam) s.beam.setRotation(settings.reducedFlashes ? s.ph : this.t * 3 + s.ph).setVisible(on > 0); }
+      if (s.kind === 'emergency') on = this.blackout || this.alarm || this.base > 0.5 ? on * (settings.reducedFlashes ? .7 : .6 + .4 * Math.abs(Math.sin(this.t * 2 + s.ph))) : 0;
       s.on = on;
       s.glow.setVisible(on > 0.05).setAlpha((s.kind === 'emergency' ? 0.5 : 0.22) * on);
     }

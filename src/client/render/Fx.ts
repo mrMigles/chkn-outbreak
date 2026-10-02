@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { settings } from '../settings';
 import { DecalLayer, Particles } from './Particles';
 import { sfx } from '../audio/Sfx';
 import { WEAPONS, WeaponId } from '../../shared/weapons';
@@ -217,10 +218,12 @@ export class Fx {
 
   boom(x: number, y: number, r: number, kind: string) {
     const s = r / 150;
-    this.high.emit({ frame: 'glow', x, y, vx: 0, vy: 0, life: 0.35, s0: r / 30, s1: r / 24, a0: 1, a1: 0, tint: 0xffd27a, add: true });
-    this.high.emit({ frame: 'flash_star', x, y, vx: 0, vy: 0, life: 0.12, s0: 2.5 * s, s1: 4 * s, a0: 1, a1: 0, rot: rand(0, 6), add: true });
-    this.high.emit({ frame: 'ring', x, y, vx: 0, vy: 0, life: 0.32, s0: 0.3, s1: r / 52, a0: 0.8, a1: 0, add: true, tint: 0xfff0c0 });
-    this.light(x, y, r * 4, 0xffb060, 1, 0.45);
+    if (!settings.reducedFlashes) {
+      this.high.emit({ frame: 'glow', x, y, vx: 0, vy: 0, life: 0.35, s0: r / 30, s1: r / 24, a0: 1, a1: 0, tint: 0xffd27a, add: true });
+      this.high.emit({ frame: 'flash_star', x, y, vx: 0, vy: 0, life: 0.12, s0: 2.5 * s, s1: 4 * s, a0: 1, a1: 0, rot: rand(0, 6), add: true });
+      this.high.emit({ frame: 'ring', x, y, vx: 0, vy: 0, life: 0.32, s0: 0.3, s1: r / 52, a0: 0.8, a1: 0, add: true, tint: 0xfff0c0 });
+      this.light(x, y, r * 4, 0xffb060, 1, 0.45);
+    }
     for (let i = 0; i < 34 * s; i++) {
       const aa = rand(0, 6.28), sp = rand(40, 340) * s;
       this.high.emit({ frame: 'fire', x: x + rand(-10, 10), y: y + rand(-10, 10), vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: rand(0.35, 0.8), drag: 3.5, s0: rand(0.8, 1.4) * s, s1: rand(1.8, 3) * s, a0: 1, a1: 0, tint: 0xfff3b0, tint1: 0xff3a00, add: true, rot: rand(0, 6) });

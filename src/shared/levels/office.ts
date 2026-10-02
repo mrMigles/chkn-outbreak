@@ -138,14 +138,21 @@ const office: LevelScript = {
       w.setAlarm(true);
       w.say('pa', 'Перезагрузка серверов… Ориентировочное время: 40 секунд. Спасибо за терпение.', 4.5);
       w.setObjective('Продержаться, пока сервер перезагружается');
+      // D55: the reboot is the floor's main defence — an opening rush, then waves every 5 s
+      // that grow and split between two directions; a live cap keeps it readable.
       let t = 0;
-      const groups = ['near', 'srv', 'near', 'kitchen', 'srv', 'corridor'];
-      const pool: EnemyType[] = ['normal', 'normal', 'normal', 'fast', 'spitter'];
-      w.every(7, () => {
+      const groups = ['near', 'srv', 'kitchen', 'near', 'corridor', 'srv'];
+      const pool: EnemyType[] = ['normal', 'normal', 'normal', 'fast', 'fast', 'spitter'];
+      const late: EnemyType[] = [...pool, 'fat'];
+      w.spawnWave('srv', ['normal', 'normal', 'fast'], 5, 0.5, true, 'blackout');
+      w.spawnWave('near', pool, 4, 0.6, true, 'blackout');
+      w.every(5, () => {
         if (!w.blackout) return;
-        t += 7;
-        const g = groups[Math.floor(t / 7) % groups.length];
-        w.spawnWave(g, pool, 2 + Math.floor(t / 20), 0.6, true, 'blackout');
+        t += 5;
+        if (w.countTag('blackout') >= 18) return;
+        const g = groups[Math.floor(t / 5) % groups.length];
+        w.spawnWave(g, t >= 20 ? late : pool, 3 + Math.floor(t / 12), 0.5, true, 'blackout');
+        if (t >= 15) w.spawnWave(groups[(Math.floor(t / 5) + 3) % groups.length], pool, 3, 0.6, true, 'blackout');
       });
       w.after(40, () => {
         w.setBlackout(false);

@@ -13,14 +13,14 @@ try {
     // Quiet lift foyer isolates support/reconnection from the office's timed attack.
     await page.addInitScript(() => localStorage.setItem('chkn-settings', JSON.stringify({dev:true, devLevel:'office7', tutorials:false})));
     await page.goto(base + '/?loop=timeout');
-    await page.getByRole('button',{name:'Создать комнату',exact:true}).waitFor();
+    await page.locator('button[data-a="host"]').waitFor();
   }
   await host.locator('.name').fill('QA ведущий');
-  await host.getByRole('button',{name:'Создать комнату',exact:true}).click();
+  await host.locator('button[data-a="host"]').click();
   await host.locator('.code').waitFor();
   const code = await host.locator('.code').textContent();
   await friend.locator('.name').fill('QA друг');
-  await friend.getByRole('button',{name:'Войти по коду',exact:true}).click();
+  await friend.locator('button[data-a="join"]').click();
   await friend.locator('.code-input').fill(code);
   await friend.getByRole('button',{name:'Войти',exact:true}).click();
   await friend.locator('.code').waitFor();

@@ -11,7 +11,10 @@ const TAP_TIME = 0.22;
 export function supportTarget(view: WorldView, map: GameMap, p: Player): Player | null {
   const candidates = view.players.filter(q => q !== p && q.id !== p.id && q.connected &&
     (q.state === 'alive' || q.state === 'downed') && dist(p.x, p.y, q.x, q.y) <= HELP_RADIUS &&
-    map.lineOfSight(p.x, p.y, q.x, q.y, false));
+    map.lineOfSight(p.x, p.y, q.x, q.y, false) && (q.state === 'downed' ||
+      (q.hp < q.maxHp && p.supplies.medkit > 0) ||
+      (p.supplies.ammo > 0 && q.ammo[q.weapons[q.cur]] && q.ammo[q.weapons[q.cur]]!.reserve >= 0 &&
+        q.ammo[q.weapons[q.cur]]!.reserve < WEAPONS[q.weapons[q.cur]].reserveMax)));
   candidates.sort((a, b) => Number(b.state === 'downed') - Number(a.state === 'downed') ||
     dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y) || a.id.localeCompare(b.id));
   return candidates[0] ?? null;
@@ -64,14 +67,17 @@ export class SupportController {
         const action = p.support;
         if (action && !action.cancelled && !action.completed && action.elapsed < TAP_TIME && action.kind !== 'revive') {
           const target = w.players.find(q => q.id === action.target);
+          let shared = false;
           if (target === p) use();
           else if (this.valid(p, target, w) && target!.state === 'alive' && p.supplies.ammo > 0) {
             const weapon = target!.weapons[target!.cur], ammo = target!.ammo[weapon], def = WEAPONS[weapon];
             if (ammo && ammo.reserve >= 0 && ammo.reserve < def.reserveMax) {
               ammo.reserve = Math.min(def.reserveMax, ammo.reserve + def.mag);
               p.supplies.ammo--; w.emit({ e: 'help', id: target!.id, by: p.id, kind: 'ammo' });
+              shared = true;
             }
           }
+          if (target !== p && !shared) use();
         }
         this.cancel(p, w); p.support = null;
       }
@@ -101,6 +107,7 @@ export class SupportController {
       if (a.kind === 'revive') {
         target!.state = 'alive'; target!.hp = 45; target!.reviveT = 0; target!.downT = 0;
         w.emit({ e: 'revived', id: target!.id, by: p.id });
+        w.award('field_medic', p.id);
       } else {
         target!.hp = Math.min(target!.maxHp, target!.hp + 40); p.supplies.medkit--;
         w.emit({ e: 'help', id: target!.id, by: p.id, kind: 'heal' });

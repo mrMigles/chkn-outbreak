@@ -54,6 +54,11 @@ enemy('normal', 25, 6, 'yard0'); enemy('armored', 32, 14, 'yard0'); enemy('norma
 spawner('yard', 44, 2.6); spawner('yard', 44, 19.4); spawner('yard', 13.5, 19.4); spawner('yard', 30, 2.6);
 trigger('yard', 13, 2, 32, 19);
 for (const [x, y] of [[18, 3], [40, 3], [18, 19], [40, 19]]) light(x, y, 'lamp', 'ffd9a0', 300);
+// Optional risk in open yard space; far from entry barrels and the story valves.
+prop('terminal', 30, 4.5, 0, { incident: 'alarm', incidentId: 'incident_alarm_factory' });
+objs.push({ type: 'use', name: 'incident_alarm_factory', at: at(30, 5.25), props: { incident: 'alarm', group: 'yard', hint: 'обезвредить сигналку' } });
+label(30, 3.1, 'СИГНАЛКА · НЕ СТРЕЛЯТЬ', 18);
+note(31.5, 5.1, 'Охрана: «Сигнализация реагирует на вторжение и на плохую стрельбу. Второе случается чаще».');
 
 // ---------------------------------------------------------------- warehouse
 for (const y of [5, 9.5, 14]) for (const x of [50, 56.5, 63]) prop('shelf', x, y);
@@ -65,6 +70,11 @@ note(50, 5.8, 'Накладная: «Корм комбинированный, 40
 spawner('wh', 46.5, 2.6); spawner('wh', 46.5, 19.5); spawner('wh', 67, 12);
 trigger('warehouse', 46, 2, 22, 19);
 for (const x of [50, 63]) light(x, 11.5, 'lamp', 'cfe0ff', 280, { flicker: 0.15 });
+// Southern warehouse pocket: an optional stand with two clear escape directions.
+prop('terminal', 53, 18.5, 0, { incident: 'cache', incidentId: 'incident_cache_factory' });
+objs.push({ type: 'use', name: 'incident_cache_factory', at: at(53, 19.25), props: { incident: 'cache', group: 'wh', hint: 'припасы: держаться рядом 12 сек' } });
+label(53, 17.6, 'ПРИПАСЫ · НЕОБЯЗАТЕЛЬНО', 18);
+note(54.5, 19.4, 'Выдача боеприпасов: «Сначала талончик, потом очередь». Петушки решили, что очередь — это команда к атаке.');
 
 // ---------------------------------------------------------------- boiler
 prop('generator', 6.5, 13.6); prop('machine', 6.5, 21); prop('pipe_h', 4, 29); prop('pipe_h', 9, 29); prop('generator', 6.5, 34.5);

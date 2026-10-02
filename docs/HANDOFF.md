@@ -2,6 +2,12 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 7 (2026-10-02, Claude) — phones first, continue, controls, cache
+
+Decisions D55–D56. Menu has Continue/New game for solo and rooms with the floor caption; solo resumes the floor where you died. HUD rebuilt as a top grid + bottom stack; on phones everything sits in the corners (weapon panel = switch weapon), checked at Galaxy S25 portrait/landscape by `node tools/qa-phone.mjs` (screens in `docs/qa/phone/`). First-run «Как управлять» popup, also in pause and menu; pause has Settings/Controls pages; rotate hint only occasionally. Server reboot on floor 6 is a much bigger defence. Deploys can no longer leave a stale cached page (build id, cache headers, one-time auto reload).
+
+Checks: build, check:campaign (+ reboot waves), coop, combat, levels, engagement, progress, polish, engagement-ui, polish-ui, network-ui, qa-phone. Not tested on a real S25 device.
+
 ## Iteration 6 (2026-10-02, Codex) — Castor siege and six reported fixes
 
 Decisions D50–D54 supersede iteration 5 where applicable. Floor seven now starts with an actual locked Castor and a 22-enemy siege, then Елена mutates during the pass handover. Her defeat drops the key; unlock Андрей/Серёга and continue the five-friend evacuation. Patrols arrive more often. Root has 2200 solo HP, a telegraphed player-targeting charge, stronger melee, 28 initial attackers and support until his death.

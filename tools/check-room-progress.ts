@@ -70,16 +70,17 @@ try {
   assert.ok(Math.hypot(me(returned)!.x! - saved.x, me(returned)!.y! - saved.y) < 8);
   assert.deepEqual(me(returned)!.weapons, saved.weapons);
   console.log('PASS empty-room disposal + server restart + same code preserve floor, position and inventory');
-  const legacyCode = 'VONE';
   const legacy = JSON.parse(fs.readFileSync(path.join(dir, code + '.json'), 'utf8'));
-  fs.writeFileSync(path.join(dir, legacyCode + '.json'), JSON.stringify({ ...legacy, version: 1 }));
+  for (const [version, legacyCode] of [[1, 'VONE'], [2, 'VTWO']] as const) {
+  fs.writeFileSync(path.join(dir, legacyCode + '.json'), JSON.stringify({ ...legacy, version }));
   assert.equal((await fetch(http + '/api/rooms/resume', { method: 'POST', body: JSON.stringify({ code: legacyCode }) })).status, 200);
   const migrated = bind(await client.joinById(legacyCode, { name: 'Старое сохранение QA' }));
   await until(() => migrated.state.phase === 'lobby', 'legacy lobby'); migrated.send('start');
   await until(() => me(migrated)?.state === 'alive', 'legacy floor entry');
   assert.ok(Math.hypot(me(migrated)!.x! - first.x!, me(migrated)!.y! - first.y!) < 8);
   assert.equal(migrated.state.level, 'office7');
-  console.log('PASS version-one saves retain the code and current floor without replaying obsolete rules');
+  console.log(`PASS version-${version} saves retain the code and current floor without replaying obsolete rules`);
+  }
   const invalid = await fetch(http + '/api/rooms/resume', { method: 'POST', body: JSON.stringify({ code: '../bad' }) });
   assert.equal(invalid.status, 400);
   console.log('PASS invalid save path rejected');

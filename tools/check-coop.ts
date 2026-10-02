@@ -28,6 +28,7 @@ scenario('revive requires 2.6 seconds; no ammo or medkit expense', () => {
   const w = setup(), [a,b] = w.players; down(b); input(w,a,true); step(w,2.5);
   assert.equal(b.state,'downed'); step(w,0.15); assert.equal(b.state,'alive'); assert.equal(b.hp,45);
   assert.deepEqual(a.supplies,{medkit:1,ammo:1}); assert.equal(w.events.filter(e=>e.e==='revived').length,1);
+  assert.ok(a.achievements?.includes('field_medic')); assert.ok(!b.achievements?.includes('field_medic'));
 });
 scenario('a wall blocks revival', () => {
   const w=setup(),[a,b]=w.players; down(b);

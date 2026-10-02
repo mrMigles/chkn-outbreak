@@ -7,6 +7,10 @@ export const settings = {
   look: '',          // encoded appearance (shared/look.ts); '' = slot default
   music: 0.55,
   tutorials: true,
+  banter: true,
+  combatText: true,
+  achievementPopups: true,
+  reducedFlashes: false,
   seenTips: [] as string[],
   // developer mode (?dev=1 or five taps on the logo): level select, god mode, full arsenal, hotkeys
   dev: false,

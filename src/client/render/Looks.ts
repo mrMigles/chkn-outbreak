@@ -1,3 +1,4 @@
+import { v } from '../version';
 // Runtime character textures: composes LPC layers (lpc atlas) into one Phaser texture per look.
 // Texture key `look:<code>` (human) / `mut:<code>` (chicken-person). Frames: `<dir>_<0..8>` walk, `hurt_<0..5>`, humans also `a<dir>_<0..8>` (armed walk).
 import Phaser from 'phaser';
@@ -11,8 +12,8 @@ const strips = new Map<string, HTMLCanvasElement>();
 /** Loads the layer atlas outside Phaser (it is only a compositing source, never a GPU texture). */
 export function loadLayerAtlas(): Promise<void> {
   return Promise.all([
-    fetch('assets/gen/lpc.json').then((r) => r.json()),
-    new Promise<HTMLImageElement>((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = 'assets/gen/lpc.png'; }),
+    fetch(v('assets/gen/lpc.json')).then((r) => r.json()),
+    new Promise<HTMLImageElement>((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = v('assets/gen/lpc.png'); }),
   ]).then(([json, image]) => { atlasFrames = json.frames; atlasImage = image; });
 }
 

@@ -46,7 +46,7 @@ try {
   assert.equal(await page.evaluate(()=>__game.scene.getScene('game').session.world.flags.elenaStarted),undefined);
   results.push('solo death panel appears; retry resets the current floor');
   await page.goto(base+'/?loop=timeout');
-  await page.getByRole('button',{name:'Создать комнату',exact:true}).click();
+  await page.locator('button[data-a="host"]').click();
   await page.locator('button[data-a="start"]').waitFor(); await page.locator('button[data-a="start"]').click();
   await page.waitForFunction(()=>__app.net?.gotSnapshot);
   const entry=await page.evaluate(()=>{const p=__app.net.view.players.find(p=>p.id===__app.net.myId);return {x:p.x,y:p.y};});

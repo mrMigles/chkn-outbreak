@@ -152,13 +152,15 @@ export interface Pod { id: number; x: number; y: number; hp: number; broken: boo
 export type HitKind = 'flesh' | 'wall' | 'armor' | 'prop' | 'player' | 'npc';
 
 export type SimEvent =
+  | { e: 'achievement'; id: string; key: string }
+  | { e: 'notice'; tone: 'danger' | 'reward' | 'tip'; text: string; sub: string }
   | { e: 'shot'; o: string; w: WeaponId; x: number; y: number; a: number; ends: number[]; team: Team }
   | { e: 'hit'; x: number; y: number; a: number; k: HitKind; d: number; id?: number | string; big?: boolean; o?: string; hs?: boolean }
   | { e: 'kill'; id: number; x: number; y: number; a: number; t: EnemyType; v: number; gib: boolean; by: string; burn: boolean; hs?: boolean }
   | { e: 'boom'; x: number; y: number; r: number; k: 'gl' | 'barrel' | 'exploder' | 'boss' }
   | { e: 'proj'; id: number; k: ProjKind; x: number; y: number; vx: number; vy: number }
   | { e: 'splat'; x: number; y: number; k: ProjKind }
-  | { e: 'say'; who: string; text: string; d: number }
+  | { e: 'say'; who: string; text: string; d: number; flavor?: boolean }
   | { e: 'pdmg'; id: string; d: number; x: number; y: number }
   | { e: 'pick'; id: string; k: PickupKind; w?: WeaponId; text: string }
   | { e: 'reload'; id: string; w: WeaponId }
@@ -184,6 +186,7 @@ export type SimEvent =
 
 /** Render-facing view of the world (identical for local sim and network snapshots). */
 export interface WorldView {
+  incidents?: IncidentView[];
   mapId: string;
   time: number;
   players: Player[];
@@ -202,4 +205,10 @@ export interface WorldView {
   blackout: boolean;
   alarm: boolean;
   bossId: number;
+}
+
+export interface IncidentView {
+  id: string; kind: 'alarm' | 'coffee' | 'cache'; x: number; y: number;
+  phase: 'ready' | 'warning' | 'active' | 'done' | 'disabled';
+  seconds: number; left: number; paused?: boolean;
 }

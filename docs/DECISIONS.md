@@ -309,3 +309,16 @@ Each entry: what was decided, why, and consequences. Newest at the bottom.
 - Normal saving while alive still preserves actual progress by room code. Reconnecting while defeated restores the panel. Client guards prevent a stale `playing` patch from reopening gameplay over the result screen.
 - If the host leaves while the death panel is open, the promoted host receives the retry button immediately; the room cannot be stranded waiting for a departed host.
 - Save format is version 2 because movement, targeting and floor-seven replay rules changed. Version-one saves retain the room code, current floor and entry loadout, but discard obsolete input frames and begin that floor. Tests cover disk replay for all six maps, actual server restart, host retry, migration and browser death/reconnection flows.
+
+## D55 — Mobile-first HUD, continue buttons, controls help, heavier server reboot (2026-10-02)
+
+- Main menu: «Одиночная игра» and «С коллегами» each have **Продолжить** (with «Этап N/5 · floor title» or «Комната ABCD · …») and **Новая игра**; both buttons are always visible, Continue is disabled without a save. Solo saves the current floor and its entry loadout in `chkn-solo-save` (`src/client/progress.ts`) on every floor start/completion; death keeps it, victory clears it. A new solo game over an existing save needs a second tap. Room Continue rejoins the last code through `/api/rooms/resume`.
+- HUD is one top grid (HP+supplies | objective/boss/incident | score; alerts/tips/buffs below the corners) and one bottom-centre stack (radio, support, toast, hint) — panels push each other instead of overlapping. Phones (`.hud.touch`): pause in the top-right corner, weapon panel bottom-right **is** the switch-weapon button (⇄ badge; the separate ⇄ button is gone), ⟳ above it, the action button beside ⟳ with a short label; the centre hint line shows only notes. Portrait stacks the objective under the HP/score row; the camera shows ~11 tiles across. `tools/qa-phone.mjs` checks Galaxy S25 sizes (384×740, 832×330, 832×384) with every slot filled: no overlaps, nothing over the player.
+- «Как управлять» popup (drawn touch scheme or keyboard map) opens once before the first fight (pauses solo), from the pause menu and from the main menu. The portrait «rotate» hint appears for 4.5 s at most once per 20 minutes.
+- Pause menu: Продолжить / Настройки / Управление / В главное меню; settings are a full sub-page (two columns on short landscape screens).
+- Floor 6 server reboot: opening rush of 9, then every 5 s a growing wave, a second direction from 15 s, fat managers from 20 s; live cap 18. A team that keeps shooting meets ~60 attackers in 40 s instead of ~13 (`check:campaign`).
+
+## D56 — No stale builds after deploys
+
+- Each build has an id (`BUILD_ID` or a timestamp) compiled into the client and written to `dist/version.json`. The server sends `index.html`/`version.json` with `no-store`, content-hashed bundles as immutable, everything else `no-cache` + ETag (304 on revalidation). Atlases, maps, LPC data and music are requested with `?v=<build>`.
+- On start, and when a menu tab becomes visible again, the client compares its id with `version.json`; on mismatch it reloads once with `?v=<new>` (sessionStorage guard against loops). Covers browser heuristics, Telegram WebView and proxies. Never reloads mid-game or inside a room.

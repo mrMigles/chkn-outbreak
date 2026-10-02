@@ -9,8 +9,8 @@ export function readCheckpoint(code: string): RoomCheckpoint | undefined {
     const save = JSON.parse(fs.readFileSync(file(code), 'utf8'));
     // Old input tapes used different movement/story rules: retain the room and entry loadout,
     // but start its current floor instead of replaying incompatible combat.
-    if (save.version === 1 && Array.isArray(save.frames)) return { ...save, version: 2, frames: [] };
-    return save.version === 2 && Array.isArray(save.frames) ? save : undefined;
+    if ((save.version === 1 || save.version === 2) && Array.isArray(save.frames)) return { ...save, version: 3, frames: [] };
+    return save.version === 3 && Array.isArray(save.frames) ? save : undefined;
   }
   catch { return undefined; }
 }

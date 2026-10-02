@@ -1,0 +1,144 @@
+{
+  "results": [
+    "desktop: menu, 44px preferences, persistent pause settings, own-player awards, queued danger alert, separate mini-goal, paused cache can be skipped for nearby coffee",
+    "phone-landscape: menu, 44px preferences, persistent pause settings, own-player awards, queued danger alert, separate mini-goal, paused cache can be skipped for nearby coffee",
+    "phone-portrait: menu, 44px preferences, persistent pause settings, own-player awards, queued danger alert, separate mini-goal, paused cache can be skipped for nearby coffee"
+  ],
+  "errors": [],
+  "screenshots": [
+    "docs/qa/engagement/desktop-menu.png",
+    "docs/qa/engagement/desktop-settings.png",
+    "docs/qa/engagement/desktop-achievements.png",
+    "docs/qa/engagement/desktop-alarm.png",
+    "docs/qa/engagement/desktop-cache.png",
+    "docs/qa/engagement/phone-landscape-menu.png",
+    "docs/qa/engagement/phone-landscape-settings.png",
+    "docs/qa/engagement/phone-landscape-achievements.png",
+    "docs/qa/engagement/phone-landscape-alarm.png",
+    "docs/qa/engagement/phone-landscape-cache.png",
+    "docs/qa/engagement/phone-portrait-menu.png",
+    "docs/qa/engagement/phone-portrait-settings.png",
+    "docs/qa/engagement/phone-portrait-achievements.png",
+    "docs/qa/engagement/phone-portrait-alarm.png",
+    "docs/qa/engagement/phone-portrait-cache.png"
+  ],
+  "layouts": [
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "alertBox": {
+        "x": 960,
+        "y": 72,
+        "width": 310,
+        "height": 74.265625,
+        "scrollWidth": 305,
+        "clientWidth": 305
+      },
+      "goalBox": {
+        "x": 435,
+        "y": 68,
+        "width": 410,
+        "height": 47.03125,
+        "scrollWidth": 407,
+        "clientWidth": 407
+      },
+      "storyBox": {
+        "x": 360,
+        "y": 8,
+        "width": 560,
+        "height": 54,
+        "scrollWidth": 556,
+        "clientWidth": 556
+      },
+      "weaponBox": {
+        "x": 1041.546875,
+        "y": 622,
+        "width": 228.453125,
+        "height": 82,
+        "scrollWidth": 224,
+        "clientWidth": 224
+      }
+    },
+    {
+      "name": "phone-landscape",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "alertBox": {
+        "x": 594.671875,
+        "y": 52,
+        "width": 193.328125,
+        "height": 61.53125,
+        "scrollWidth": 188,
+        "clientWidth": 188
+      },
+      "goalBox": {
+        "x": 213.3125,
+        "y": 54,
+        "width": 371.359375,
+        "height": 38.34375,
+        "scrollWidth": 368,
+        "clientWidth": 368
+      },
+      "storyBox": {
+        "x": 213.3125,
+        "y": 8,
+        "width": 371.359375,
+        "height": 40,
+        "scrollWidth": 369,
+        "clientWidth": 369
+      },
+      "weaponBox": {
+        "x": 672.296875,
+        "y": 328,
+        "width": 161.703125,
+        "height": 54,
+        "scrollWidth": 158,
+        "clientWidth": 158
+      }
+    },
+    {
+      "name": "phone-portrait",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alertBox": {
+        "x": 14,
+        "y": 140.34375,
+        "width": 320,
+        "height": 47.359375,
+        "scrollWidth": 315,
+        "clientWidth": 315
+      },
+      "goalBox": {
+        "x": 10,
+        "y": 97,
+        "width": 324,
+        "height": 38.34375,
+        "scrollWidth": 321,
+        "clientWidth": 321
+      },
+      "storyBox": {
+        "x": 10,
+        "y": 51,
+        "width": 324,
+        "height": 40,
+        "scrollWidth": 322,
+        "clientWidth": 322
+      },
+      "weaponBox": {
+        "x": 218.296875,
+        "y": 782,
+        "width": 161.703125,
+        "height": 54,
+        "scrollWidth": 158,
+        "clientWidth": 158
+      }
+    }
+  ]
+}

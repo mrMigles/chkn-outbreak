@@ -95,6 +95,7 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   step(w, .1); assert.equal(w.finished, false, 'friends must physically arrive, not merely be marked found');
   for (const id of FRIENDS) { const n = w.npc(id)!; n.x = lift.cx; n.y = lift.cy; }
   step(w, .1); assert.equal(w.finished, true);
+  assert.ok(w.players[0].achievements?.includes('no_one_left'));
   assert.ok(w.events.some(e => e.e === 'level' && e.next === 'lab'));
   assert.equal(w.carryOut().npcs.length, 0, 'friends evacuated, not carried into the lab');
   console.log('PASS Castor siege, locked rescue, Elena mutation/drop, door, five rescues, root charge, trophy, escort and lab');
@@ -107,6 +108,18 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   step(w, 12); assert.ok(w.countTag('gen') >= 20);
   step(w, 24); assert.equal(w.blackout, false); assert.equal(w.flags.power, true);
   console.log('PASS generator blackout, corridor-only attackers, increased wave count and restored power');
+}
+{
+  // D55: the server reboot on floor 6 is a real defence — opening rush, growing two-sided waves
+  const w = make('office'); w.god = true; w.enemies = [];
+  const ids = new Set<number>();
+  w.script.onUse!(w, 'reboot', w.players[0]);
+  step(w, 3); w.enemies.forEach(e => ids.add(e.id)); assert.ok(w.countTag('blackout') >= 8, 'opening rush');
+  // the team keeps shooting: clear the floor every few seconds, as a player would
+  for (let t = 0; t < 40; t++) { step(w, 1); w.enemies.forEach(e => ids.add(e.id)); if (t % 4 === 3) w.enemies = []; }
+  assert.ok(ids.size >= 30, `reboot brought only ${ids.size} attackers`);
+  assert.equal(w.blackout, false); assert.equal(w.flags.power, true);
+  console.log(`PASS server reboot: ${ids.size} attackers over 40 s, power restored`);
 }
 const state = (w: World) => JSON.stringify({
   view: encodeSnapshot(w), flags: w.flags, rng: w.rng.state,

@@ -58,6 +58,11 @@ light(6, 6, 'lamp', 'ffe2a8', 300, { flicker: 0.4 });
 label(6, 8.8, 'УРОВЕНЬ −3', 20);
 note(9.5, 2.6, 'Табличка: «Проект ЯЙЦО. Посторонним вход строго воспрещён. Курам — тем более»');
 pickup('ammo', 9.4, 8.6); pickup('health', 2.6, 8.6);
+// A recovery beat before decontamination; no new threats in the arrival lobby.
+prop('vending', 8.8, 3.3, 0, { incident: 'coffee', incidentId: 'incident_coffee_lab' });
+objs.push({ type: 'use', name: 'incident_coffee_lab', at: at(8.8, 4.1), props: { incident: 'coffee', hint: 'кофе: +15 HP и бег на 10 сек' } });
+label(7.5, 5.5, 'КОФЕ БЕЗ КУКАРЕКСА', 18);
+note(9.5, 5.4, 'На автомате: «Двойной эспрессо. Ноль мутаций. Проверял лаборант — пока человек».');
 
 // ---------------------------------------------------------------- decon corridor
 light(15, 5, 'emergency', 'ff2a1a', 220); light(26, 5, 'emergency', 'ff2a1a', 220);
@@ -136,6 +141,11 @@ enemy('exploder', 30, 37, 'viv'); enemy('exploder', 40, 44, 'viv'); enemy('spitt
 light(33, 38, 'lamp', 'b7ff9a', 240, { flicker: 0.5 });
 label(33, 42.6, 'ВИВАРИЙ', 26);
 note(32, 34, 'Табличка: «Образцы 1–40: агрессивны. Образцы 41–80: тоже»');
+// Side objective: enough space to circle away from the terminal, then return to it.
+prop('terminal', 26.8, 34.5, 0, { incident: 'cache', incidentId: 'incident_cache_lab' });
+objs.push({ type: 'use', name: 'incident_cache_lab', at: at(26.8, 35.25), props: { incident: 'cache', group: 'inc', hint: 'припасы: держаться рядом 12 сек' } });
+label(26.8, 33.4, 'ПРИПАСЫ · НЕОБЯЗАТЕЛЬНО', 18);
+note(27.8, 36.5, 'Терминал: «Ваши патроны очень важны для нас. Оставайтесь на линии». Вентиляция уже подключилась.');
 
 // ---------------------------------------------------------------- cold storage
 prop('shelf', 50, 33.6); prop('shelf', 57, 33.6); prop('crate', 60.4, 45.4); prop('crate_small', 59.5, 45.6);

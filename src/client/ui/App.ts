@@ -15,9 +15,14 @@ import type { GameSceneData } from '../scenes/GameScene';
 import { openEditor, currentLook } from './Editor';
 import { lookPortrait } from '../render/Looks';
 import { encodeLook } from '../../shared/look';
-import { resetTips } from './Tutorial';
+import { preferencesMarkup, bindPreferences } from './Preferences';
+import { ACHIEVEMENTS, type AchievementKey } from '../../shared/achievements';
+import { earnedAchievements } from './AchievementProfile';
 import { telegramSession, telegramBack, type TgSession } from '../telegram';
 import { music } from '../audio/Music';
+import { loadSolo, saveSolo, clearSolo, loadRoom, saveRoom, levelCaption } from '../progress';
+import { controlsMarkup } from './ControlsHelp';
+import { reloadIfOutdated } from '../version';
 
 /** Menus (HTML/CSS) + game flow (levels, retries, multiplayer lobby). */
 export class App {
@@ -41,6 +46,11 @@ export class App {
 
   async ready() {
     this.booted = true;
+    if (await reloadIfOutdated()) return;
+    // a tab left open across a deploy updates itself when the player comes back to the menu
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !this.room && !this.game.scene.isActive('game')) void reloadIfOutdated();
+    });
     // ?level=<id> jumps straight into a level (testing)
     const lv = new URLSearchParams(location.search).get('level');
     if (lv && LEVELS[lv]) { this.startSolo(lv); return; }
@@ -85,6 +95,7 @@ export class App {
   mainMenu() {
     this.stopGame();
     telegramBack(null);
+    const solo = loadSolo(), room = loadRoom();
     const d = this.show(`
       <div class="menu">
         <div class="logo big" data-a="logo">CHKN<span>OUTBREAK</span></div>
@@ -97,13 +108,22 @@ export class App {
           </div>
         </div>
         ${this.tg ? `<button class="btn primary" data-a="chat">Играть с чатом · ${escapeHtml(this.tg.chatTitle || 'комната чата')}</button>` : ''}
-        <button class="btn ${this.tg ? '' : 'primary'}" data-a="solo">Одиночная игра</button>
-        <div class="row">
-          <button class="btn" data-a="host">Создать комнату</button>
-          <button class="btn" data-a="join">Войти по коду</button>
+        <div class="menu-group">
+          <div class="menu-label">Одиночная игра</div>
+          <div class="row">
+            <button class="btn cont ${solo && !this.tg ? 'primary' : ''}" data-a="solo-continue" ${solo ? '' : 'disabled'}>Продолжить<small>${solo ? escapeHtml(levelCaption(solo.level)) : 'нет сохранения'}</small></button>
+            <button class="btn cont ${solo || this.tg ? '' : 'primary'}" data-a="solo">Новая игра<small>${solo ? 'сохранение сотрётся' : escapeHtml(levelCaption(FIRST_LEVEL))}</small></button>
+          </div>
+        </div>
+        <div class="menu-group">
+          <div class="menu-label">С коллегами · 1–4 игрока</div>
+          <div class="row">
+            <button class="btn cont" data-a="resume-room" ${room ? '' : 'disabled'}>Продолжить<small>${room ? escapeHtml(`Комната ${room.code}${room.level ? ' · ' + levelCaption(room.level) : ''}`) : 'нет комнаты'}</small></button>
+            <button class="btn cont" data-a="host">Новая игра<small>новая комната</small></button>
+          </div>
+          <button class="btn ghost" data-a="join">Войти по коду коллеги</button>
         </div>
         <button class="btn ghost" data-a="arena">Полигон (тест оружия)</button>
-        ${localStorage.getItem('chkn-last-room') ? '<button class="btn ghost" data-a="resume-room">Продолжить последнюю комнату</button>' : ''}
         ${settings.dev ? `<div class="dev-box">
           <div class="dev-title">DEV-режим <button class="btn tiny ghost" data-a="devoff" title="Выключить">✕</button></div>
           <div class="row small">
@@ -116,27 +136,15 @@ export class App {
           </div>
           <div class="dev-help">«Создать комнату» стартует с выбранного уровня. В игре (соло): F6 — бессмертие, F7 — всё оружие, F8 — убить всех, F9 — пройти уровень.</div>
         </div>` : ''}
-        <div class="row small">
-          <label class="field inline"><span>Громкость</span><input type="range" class="vol" min="0" max="1" step="0.05" value="${settings.volume}"></label>
-          <label class="field inline"><span>Тряска</span><input type="range" class="shake" min="0" max="1.5" step="0.1" value="${settings.shake}"></label>
+        <div class="menu-extras">
+          <button class="btn ghost" data-a="preferences">Настройки</button>
+          <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
         </div>
-        <div class="row small">
-          <label class="field inline"><span>Музыка</span><input type="range" class="mus" min="0" max="1" step="0.05" value="${settings.music}"></label>
-          <label class="field inline check"><input type="checkbox" class="tips" ${settings.tutorials ? 'checked' : ''}><span>Подсказки</span></label>
-          <button class="btn tiny ghost" data-a="tipsreset" title="Показать все подсказки заново">↺</button>
-        </div>
-        <div class="controls-help">
-          <b>ПК:</b> WASD — движение · мышь — прицел · ЛКМ — огонь · R — перезарядка · E — действие · колесо/1–7 — оружие<br>
-          <b>Телефон:</b> левый стик — движение · правый стик — прицел и автоогонь
-        </div>
+        <button class="btn ghost" data-a="controls">Как управлять</button>
         <a href="credits.html" target="_blank" rel="noopener" style="color:#acb4bd;font-size:13px">Авторы графики и лицензии</a>
       </div>`);
     const name = d.querySelector<HTMLInputElement>('.name')!;
     name.addEventListener('change', () => { settings.name = name.value.trim() || 'Сотрудник'; saveSettings(); });
-    d.querySelector<HTMLInputElement>('.vol')!.addEventListener('input', (e) => { settings.volume = +(e.target as HTMLInputElement).value; sfx.setVolume(settings.volume); saveSettings(); });
-    d.querySelector<HTMLInputElement>('.shake')!.addEventListener('input', (e) => { settings.shake = +(e.target as HTMLInputElement).value; saveSettings(); });
-    d.querySelector<HTMLInputElement>('.mus')!.addEventListener('input', (e) => { settings.music = +(e.target as HTMLInputElement).value; saveSettings(); });
-    d.querySelector<HTMLInputElement>('.tips')!.addEventListener('change', (e) => { settings.tutorials = (e.target as HTMLInputElement).checked; saveSettings(); });
     const devLevel = d.querySelector<HTMLSelectElement>('.dev-level');
     devLevel?.addEventListener('change', () => { settings.devLevel = devLevel.value; saveSettings(); });
     d.querySelector<HTMLInputElement>('.dev-god')?.addEventListener('change', (e) => { settings.devGod = (e.target as HTMLInputElement).checked; saveSettings(); });
@@ -145,14 +153,24 @@ export class App {
     music.set('calm');
     sfx.setVolume(settings.volume);
     d.addEventListener('click', (e) => {
-      const a = (e.target as HTMLElement).dataset.a;
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-a]');
+      const a = btn?.dataset.a;
+      if (btn instanceof HTMLButtonElement && btn.disabled) return;
       settings.name = name.value.trim() || 'Сотрудник'; saveSettings();
-      if (a === 'solo') { this.levelStartCarry = undefined; this.startSolo(FIRST_LEVEL); }
+      if (a === 'solo') {
+        // an existing save is only overwritten on a second, deliberate tap
+        const b = btn!;
+        if (solo && !b.classList.contains('confirm')) { b.classList.add('confirm'); b.innerHTML = 'Точно заново?<small>нажмите ещё раз</small>'; return; }
+        this.levelStartCarry = undefined; this.startSolo(FIRST_LEVEL);
+      }
+      if (a === 'solo-continue' && solo) this.startSolo(solo.level, solo.carry);
       if (a === 'arena') { this.levelStartCarry = undefined; this.startSolo('arena'); }
       if (a === 'host' || a === 'join') this.multiplayer(a);
-      if (a === 'resume-room') { this.multiplayer('join'); const input = this.screen?.querySelector<HTMLInputElement>('.code-input'); if (input) input.value = localStorage.getItem('chkn-last-room') || ''; }
+      if (a === 'resume-room' && room) this.resumeRoom(room.code);
+      if (a === 'controls') this.controls();
       if (a === 'look') { const host = this.show(''); openEditor(host, () => this.mainMenu()); }
-      if (a === 'tipsreset') { resetTips(); this.toastMenu('Подсказки будут показаны снова'); }
+      if (a === 'preferences') this.preferences();
+      if (a === 'achievements') this.achievements();
       if (a === 'chat') this.chatRoom();
       if (a === 'devplay') { this.levelStartCarry = undefined; this.startSolo(settings.devLevel); }
       if (a === 'devoff') { settings.dev = false; saveSettings(); this.mainMenu(); }
@@ -163,6 +181,33 @@ export class App {
     });
   }
 
+  private controls() {
+    const d = this.show(`<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup()}<button class="btn primary" data-a="back">Понятно</button></div>`);
+    d.querySelector('[data-a="back"]')!.addEventListener('click', () => this.mainMenu());
+  }
+
+  /** «Продолжить» for rooms: the server rebuilds the room from its save if it was closed. */
+  private resumeRoom(code: string) {
+    const d = this.show(`<div class="panel center"><h2>КОМНАТА ${escapeHtml(code)}</h2><p class="flavor">Возвращаемся к команде…</p><div class="err"></div>
+      <button class="btn ghost" data-a="back">Назад</button></div>`);
+    d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'back') this.leaveRoom(); });
+    void this.connect('join', code, d.querySelector('.err')!);
+  }
+
+  private preferences() {
+    const d = this.show(`<div class="panel preferences-panel"><h2>НАСТРОЙКИ</h2>${preferencesMarkup()}<button class="btn primary" data-a="back">Готово</button></div>`);
+    bindPreferences(d);
+    d.querySelector('[data-a="back"]')!.addEventListener('click', () => this.mainMenu());
+  }
+
+  private achievements() {
+    const earned = new Set(earnedAchievements());
+    const entries = (Object.entries(ACHIEVEMENTS) as [AchievementKey, typeof ACHIEVEMENTS[AchievementKey]][]).map(([key, a]) =>
+      `<li class="achievement-entry ${earned.has(key) ? 'earned' : 'locked'}"><span class="achievement-icon" aria-hidden="true">${a.icon}</span><div><b>${escapeHtml(a.name)}${earned.has(key) ? ' ✓' : ''}</b><p>${escapeHtml(a.description)}</p></div></li>`).join('');
+    const d = this.show(`<div class="panel achievements-panel"><h2>ДОСТИЖЕНИЯ</h2><p class="flavor">${earned.size}/${Object.keys(ACHIEVEMENTS).length} · личная трудовая книжка на этом устройстве</p><ul class="achievement-list">${entries}</ul><button class="btn primary" data-a="back">В меню</button></div>`);
+    d.querySelector('[data-a="back"]')!.addEventListener('click', () => this.mainMenu());
+  }
+
   private stopGame() {
     if (this.game.scene.isActive('game')) this.game.scene.stop('game');
   }
@@ -170,6 +215,7 @@ export class App {
   startSolo(levelId: string, carry?: Carry) {
     this.currentLevel = levelId;
     this.levelStartCarry = carry;
+    saveSolo(levelId, carry);
     const json = this.game.cache.tilemap.get('map_' + levelId).data as TiledMap;
     const session = new LocalSession(levelId, json, settings.name, carry, 1, settings.look);
     if (settings.dev) {
@@ -208,6 +254,7 @@ export class App {
   levelComplete(session: Session, next?: string, win?: boolean) {
     const me = session.view.players.find((p) => p.id === session.myId);
     const carry = session.carry();
+    if (session.solo) { if (win || !next || !LEVELS[next]) clearSolo(); else saveSolo(next, carry); }
     const d = this.show(`<div class="panel center">
       <h2>${win ? 'ПОБЕДА!' : 'ЭТАП ПРОЙДЕН'}</h2>
       <div class="stats"><div><b>${me?.kills ?? 0}</b><span>куриц оптимизировано</span></div><div><b>${Math.floor(me?.score ?? 0)}</b><span>KPI</span></div></div>
@@ -279,7 +326,7 @@ export class App {
         ? await client.create('game', { name: settings.name, look: settings.look, ...(settings.dev && LEVELS[settings.devLevel] ? { level: settings.devLevel } : {}) })
         : await client.joinById(code, { name: settings.name, look: settings.look });
       this.bindRoom(room, client);
-      localStorage.setItem('chkn-last-room', room.roomId);
+      saveRoom(room.roomId, room.state.level);
       if (room.state.phase === 'lobby') this.lobby();
       return true;
     } catch (e) {
@@ -405,6 +452,7 @@ export class App {
     const json = this.game.cache.tilemap.get('map_' + level)?.data as TiledMap | undefined;
     if (!json) return;
     this.netResult = false;
+    saveRoom(room.roomId, level);
     const net = new NetSession(room, level, json);
     this.net = net;
     this.runSession(net);

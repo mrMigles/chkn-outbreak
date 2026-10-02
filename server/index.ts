@@ -14,6 +14,7 @@ const DIST = path.resolve(process.cwd(), 'dist');
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png',
   '.json': 'application/json', '.tmj': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+  '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.webp': 'image/webp', '.woff2': 'font/woff2',
 };
 
 /** The chat's room exists (created on first open); one creation at a time per code. */
@@ -41,7 +42,11 @@ const json = (res: http.ServerResponse, code: number, body: unknown) => { res.wr
 const httpServer = http.createServer(async (req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
   if (url === '/health' || url === '/healthz') { res.writeHead(200); res.end('ok'); return; }
-  if (url === '/version') { json(res, 200, { build: process.env.BUILD_ID ?? 'dev' }); return; }
+  if (url === '/version') {
+    let build = process.env.BUILD_ID ?? 'dev';
+    try { build = JSON.parse(fs.readFileSync(path.join(DIST, 'version.json'), 'utf8')).build ?? build; } catch { /* no client build */ }
+    res.setHeader('cache-control', 'no-store'); json(res, 200, { build }); return;
+  }
   if (req.method === 'POST' && url === '/api/rooms/resume') {
     if (req.headers.origin) res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
     const code = String((await readBody(req)).code ?? '').toUpperCase();
@@ -75,7 +80,16 @@ const httpServer = http.createServer(async (req, res) => {
   }
   let file = path.join(DIST, url === '/' ? 'index.html' : url);
   if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(DIST, 'index.html');
-  res.writeHead(200, { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream' });
+  // D56: the page and version.json are never cached; Vite's content-hashed bundles are immutable;
+  // everything else (atlases, maps, music — requested with ?v=<build>) revalidates by ETag.
+  const stat = fs.statSync(file), name = path.basename(file);
+  const etag = `"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
+  const cache = name === 'index.html' || name === 'version.json' ? 'no-store, max-age=0'
+    : file.startsWith(path.join(DIST, 'assets')) && /-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(name) ? 'public, max-age=31536000, immutable'
+    : 'no-cache';
+  const headers: Record<string, string> = { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'cache-control': cache, etag };
+  if (cache === 'no-cache' && req.headers['if-none-match'] === etag) { res.writeHead(304, headers); res.end(); return; }
+  res.writeHead(200, headers);
   fs.createReadStream(file).pipe(res);
 });
 

@@ -15,6 +15,8 @@ import { rayBody, enemyBox, HUMAN_BOX, type BodyBox } from './hitbox';
 import { updateNpc } from './npcAI';
 import { SupportController } from './support';
 import type { LevelScript } from '../levels/types';
+import { ACHIEVEMENTS, type AchievementKey } from '../achievements';
+import { Incidents } from './Incidents';
 
 export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation']; props?: Npc['props'] }
 export interface Carry {
@@ -79,6 +81,8 @@ export class World implements WorldView {
   enemyTags = new Map<number, string>();
   private supportController = new SupportController();
   private hadCombat = false;
+  private incidentSystem: Incidents;
+  get incidents() { return this.incidentSystem.views; }
   private betrayals = 0;
   private lastBetrayal = -30;
 
@@ -92,13 +96,15 @@ export class World implements WorldView {
     for (const o of map.objects) this.loadObject(o);
     for (const o of map.objects) {
       if (o.type !== 'prop') continue;
-      const def = propDef(o.name);
+      const base = propDef(o.name);
+      const def = o.props.incident === 'alarm' ? { ...base, hp: 60, h: 120, bullets: false, inset: 0 } : base;
       if (!def.hp) continue;
       const feetY = o.cy + o.h / 2 - (def.inset ?? 0);
-      this.dprops.push({ id: o.id, name: o.name, x: o.cx, y: feetY, hp: def.hp, mat: def.mat ?? 'wood', box: { hw: Math.max(12, o.w / 2 - (def.inset ?? 0)), h: def.h ?? 50, head: 0 }, blocksBullets: def.bullets, drop: def.drop });
+      this.dprops.push({ id: o.id, name: o.name, x: o.cx, y: feetY, hp: def.hp, mat: def.mat ?? 'wood', box: { hw: o.props.incident === 'alarm' ? 32 : Math.max(12, o.w / 2 - (def.inset ?? 0)), h: def.h ?? 50, head: 0 }, blocksBullets: def.bullets, drop: def.drop });
     }
     this.flow = new FlowField(map);
     this.spawnPoints = map.objects.filter((o) => o.type === 'spawn');
+    this.incidentSystem = new Incidents(this);
   }
 
   // ------------------------------------------------------------------ setup
@@ -202,7 +208,13 @@ export class World implements WorldView {
 
   // ------------------------------------------------------------------ script API
   emit(ev: SimEvent) { this.events.push(ev); }
-  say(who: string, text: string, d = 3.2) { this.emit({ e: 'say', who, text, d }); }
+  award(key: AchievementKey, id?: string) {
+    for (const p of this.players) {
+      if (id && p.id !== id || (p.achievements ??= []).includes(key)) continue;
+      p.achievements.push(key); this.emit({ e: 'achievement', id: p.id, key });
+    }
+  }
+  say(who: string, text: string, d = 3.2, flavor = false) { this.emit({ e: 'say', who, text, d, ...(flavor ? { flavor } : {}) }); }
   /** target: map object / NPC name(s) or a point; empty = no direction (survive/defend). */
   setObjective(text: string, target?: string | string[] | { x: number; y: number }) {
     const targets = !target ? [] : typeof target === 'string' ? [target] : Array.isArray(target) ? target : [`@${Math.round(target.x)},${Math.round(target.y)}`];
@@ -368,11 +380,12 @@ export class World implements WorldView {
     this.updateDoors();
     this.updateTriggers();
     this.script.onTick?.(this, dt);
+    this.incidentSystem.update(dt);
     if (this.time >= (this.flags.gagAt ?? 12) && this.mapId !== 'office') {
       this.flags.gagAt = this.time + this.rng.range(18, 28);
       const odd = this.enemies.find(e => e.appearance?.npcId.startsWith('odd_') && e.aggro && this.onScreen(e.x, e.y));
-      if (odd) this.say(String(odd.id), this.rng.pick(['Ко-ко-ко… у вас микрофон выключен!', 'Это совещание могло быть яйцом!', 'Я не агрессивный, я проактивный!', 'Отпуск согласован. Согласован КЛЮВОМ!', 'Кто выкатил птиц в прод?!']), 2.6);
-      else if (this.rng.chance(.3) && this.enemies.length) this.say('pa', this.rng.pick(['Коллеги, перестаньте клевать кулер. Он на гарантии.', 'Потерянное яйцо можно забрать в отделе кадров.', 'Напоминаем: драка с петухом считается тимбилдингом.']), 4);
+      if (odd) this.say(String(odd.id), this.rng.pick(['Ко-ко-ко… у вас микрофон выключен!', 'Это совещание могло быть яйцом!', 'Я не агрессивный, я проактивный!', 'Отпуск согласован. Согласован КЛЮВОМ!', 'Кто выкатил птиц в прод?!']), 2.6, true);
+      else if (this.rng.chance(.3) && this.enemies.length) this.say('pa', this.rng.pick(['Коллеги, перестаньте клевать кулер. Он на гарантии.', 'Потерянное яйцо можно забрать в отделе кадров.', 'Напоминаем: драка с петухом считается тимбилдингом.']), 4, true);
     }
     const combat = this.enemies.length > 0 || this.waves.length > 0 || this.npcs.some(n => n.mutation && n.mode !== 'gone' && n.mode !== 'dead');
     if (this.hadCombat && !combat) this.rallyTeam();
@@ -625,8 +638,9 @@ export class World implements WorldView {
     for (const o of this.map.objects) {
       if (o.type !== 'use') continue;
       if (dist(o.cx, o.cy, p.x, p.y) > 90) continue;
+      if (o.props.incident && !this.map.lineOfSight(p.x, p.y, o.cx, o.cy, false)) continue;
       this.interactCd.set(p.id, this.time);
-      this.script.onUse?.(this, o.name, p);
+      if (!this.incidentSystem.use(o.name, p)) this.script.onUse?.(this, o.name, p);
       return;
     }
     for (const d of this.doors) {
@@ -751,7 +765,7 @@ export class World implements WorldView {
         if (pierce-- <= 0) { endT = h.t; break; }
         dmg *= 0.7;
       }
-      if (endT === wall.d && wall.what === 'prop') { const d = this.dprops.find((q) => q.id === wall.id); if (d) this.damageProp(d, dmg); }
+      if (endT === wall.d && wall.what === 'prop') { const d = this.dprops.find((q) => q.id === wall.id); if (d) this.damageProp(d, dmg, owner); }
       if (endT === wall.d && wall.what !== 'none') {
         this.emit({ e: 'hit', x: x + dx * wall.d, y: y + dy * wall.d, a: Math.atan2(wall.ny, wall.nx), k: wall.what === 'wall' ? 'wall' : 'prop', d: 0 });
       }
@@ -764,7 +778,7 @@ export class World implements WorldView {
     if (v.kind === 'enemy') this.damageEnemy(v.ref, dmg, a, knock, owner, 'bullet', hx, hy, head);
     else if (v.kind === 'barrel') this.damageBarrel(v.ref, dmg, owner);
     else if (v.kind === 'pod') { this.emit({ e: 'hit', x: hx, y: hy, a, k: 'prop', d: dmg }); this.damagePod(v.ref, dmg); }
-    else if (v.kind === 'dprop') { this.emit({ e: 'hit', x: hx, y: hy, a, k: 'prop', d: 0 }); this.damageProp(v.ref, dmg); }
+    else if (v.kind === 'dprop') { this.emit({ e: 'hit', x: hx, y: hy, a, k: 'prop', d: 0 }); this.damageProp(v.ref, dmg, owner); }
     else if (v.kind === 'player') {
       this.emit({ e: 'hit', x: hx, y: hy, a, k: 'player', d: dmg, id: v.ref.id });
       this.damagePlayer(v.ref, dmg * (v.ref.state === 'chicken' ? 1 : 0.55), hx - Math.cos(a) * 50, hy - Math.sin(a) * 50);
@@ -892,6 +906,7 @@ export class World implements WorldView {
   explode(x: number, y: number, r: number, dmg: number, by: string, k: 'gl' | 'barrel' | 'exploder' | 'boss') {
     this.emit({ e: 'boom', x: Math.round(x), y: Math.round(y), r, k });
     this.noise(x, y, 1000);
+    let roasted = 0;
     for (const e of [...this.enemies]) {
       const d = dist(x, y, e.x, e.y);
       const er = ENEMIES[e.type].radius;
@@ -899,7 +914,9 @@ export class World implements WorldView {
       if (!this.map.lineOfSight(x, y, e.x, e.y, true) && d > 40) continue;
       const f = 1 - clamp((d - er) / r, 0, 1) * 0.6;
       this.damageEnemy(e, dmg * f, Math.atan2(e.y - y, e.x - x), 600 * f, by, 'explosion');
+      if (e.hp <= 0) roasted++;
     }
+    if (k === 'barrel' && roasted >= 3 && this.players.some(p => p.id === by)) this.award('barrel_barbeque', by);
     const fromPlayer = this.players.some((p) => p.id === by);
     for (const p of this.players) {
       const d = dist(x, y, p.x, p.y);
@@ -916,11 +933,12 @@ export class World implements WorldView {
     }
     for (const b of [...this.barrels]) if (dist(x, y, b.x, b.y) < r * 0.85) this.damageBarrel(b, 100, by);
     for (const p of this.pods) if (!p.broken && dist(x, y, p.x, p.y) < r * 0.8) this.damagePod(p, 100);
-    for (const d of [...this.dprops]) if (dist(x, y, d.x, d.y) < r * 0.9) this.damageProp(d, dmg * 1.5);
+    for (const d of [...this.dprops]) if (dist(x, y, d.x, d.y) < r * 0.9) this.damageProp(d, dmg * 1.5, by);
   }
 
-  damageProp(d: World['dprops'][number], dmg: number) {
+  damageProp(d: World['dprops'][number], dmg: number, by = '') {
     if (d.hp <= 0) return;
+    this.incidentSystem.damage(d.id, by);
     d.hp -= dmg;
     if (d.hp > 0) return;
     this.dprops.splice(this.dprops.indexOf(d), 1);
@@ -1052,11 +1070,11 @@ export class World implements WorldView {
       case 'antidote':
         text = 'Антидот';
         break;
-      case 'achievement':
-        for (const q of this.players) if (!(q.achievements ??= []).includes(k.key || 'root_rooster')) q.achievements.push(k.key || 'root_rooster');
-        text = '🏆 Ачивка: Рутовый петушок';
-        this.msg('РУТОВЫЙ ПЕТУШОК', 'Ачивка получена всей командой · sudo отпуск', 4);
+      case 'achievement': {
+        const key = k.key && k.key in ACHIEVEMENTS ? k.key as AchievementKey : 'root_rooster';
+        this.award(key); text = '🏆 Ачивка: ' + ACHIEVEMENTS[key].name;
         break;
+      }
     }
     this.emit({ e: 'pick', id: p.id, k: k.kind, w: k.weapon, text });
     this.script.onPickup?.(this, k, p);

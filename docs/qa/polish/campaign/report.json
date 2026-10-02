@@ -1,0 +1,20 @@
+{
+  "god": "1",
+  "mobile": "0",
+  "report": [
+    {
+      "level": "office7",
+      "done": false,
+      "retries": 0,
+      "log": [
+        "[8s] office7: Пробиться к запертому Castor: Андрей и Серёга в окружении",
+        "[5s] office7: Разогнать стаю у двери Castor"
+      ],
+      "minHp": 100,
+      "deaths": 0,
+      "stuck": 0,
+      "kills": 13
+    }
+  ],
+  "errors": []
+}

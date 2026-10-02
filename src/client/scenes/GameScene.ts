@@ -9,6 +9,8 @@ import { music } from '../audio/Music';
 import { Tutorial } from '../ui/Tutorial';
 import { Input } from '../input/Input';
 import { Hud } from '../ui/Hud';
+import { preferencesMarkup, bindPreferences } from '../ui/Preferences';
+import { controlsMarkup } from '../ui/ControlsHelp';
 import { sfx } from '../audio/Sfx';
 import type { Session } from '../net/Session';
 import { WEAPONS, WeaponId } from '../../shared/weapons';
@@ -30,6 +32,14 @@ const SHAKE: Record<WeaponId, number> = { pistol: 0.13, smg: 0.055, rifle: 0.11,
 const KICK: Record<WeaponId, number> = { pistol: 3, smg: 2, rifle: 3.5, shotgun: 10, machinegun: 3.5, grenade: 8, flamethrower: 0.5 };
 
 interface Bubble { text: Phaser.GameObjects.Text; who: string; t: number; d: number }
+
+/** «держать: поднять Петя · …» → «поднять Петя» for the round action button. */
+function touchLabel(hint: string) {
+  let first = hint.replace(/^E — /, '').split(' · ')[0];
+  first = /^(держать|нажать):/.test(first) ? first.replace(/^[^:]+:\s*/, '') : first.replace(/:\s*/, ', ');
+  first = first.charAt(0).toUpperCase() + first.slice(1);
+  return first.length > 18 ? first.slice(0, 17) + '…' : first;
+}
 
 export class GameScene extends Phaser.Scene {
   session!: Session;
@@ -73,6 +83,8 @@ export class GameScene extends Phaser.Scene {
   tutorial!: Tutorial;
   private warmup: Phaser.GameObjects.Image[] = [];
   private warmFrames = 0;
+  private incidentMarkers = new Map<string, { icon: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Graphics }>();
+  private lastCombatPop = 0;
 
   constructor() { super('game'); }
 
@@ -84,6 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
     this.wallFaces = [];
+    this.incidentMarkers = new Map(); this.lastCombatPop = 0;
   }
 
   create() {
@@ -136,7 +149,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (o.props.tint) img.setTint(parseInt(String(o.props.tint), 16));
         if (o.name === 'table_tennis') this.pingPong = { ball: this.add.rectangle(o.cx, o.cy - 12, 5, 5, 0xffe5a3).setDepth(worldDepth(feetY) + .00002), x: o.cx, y: o.cy - 12 };
-        if (def.hp) this.propImgs.set(o.id, img);
+        if (def.hp || o.props.incident === 'alarm') this.propImgs.set(o.id, img);
         if (o.props.text) this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text) });
       } else if (o.type === 'label') {
         this.add.text(o.cx, o.cy, String(o.props.text ?? o.name), {
@@ -153,7 +166,7 @@ export class GameScene extends Phaser.Scene {
     this.lighting = new Lighting(this, map);
     this.guide = new Guide(this, map);
     this.input2 = new Input(this);
-    this.hud = new Hud();
+    this.hud = new Hud(this.input2.touch);
     for (const k of Object.keys(this.textures.get('office25').frames)) if (k.startsWith('gun_')) this.hud.icons['w_' + k.slice(4)] = this.textures.getBase64('office25', k);
     this.tutorial = new Tutorial(this.input2.touch);
     this.prewarmLooks();
@@ -174,6 +187,34 @@ export class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => telegramBack(null));
     this.time0 = this.time.now;
     sfx.resume();
+    if (this.input2.touch) {
+      // the weapon panel is the switch button on phones (D55)
+      this.hud.el.querySelector('.hud-weapon')!.addEventListener('touchstart', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        this.input2.state.weaponDelta = 1;
+        haptic('hit');
+      }, { passive: false });
+    }
+    this.firstRunHelp();
+  }
+
+  /** «Как управлять» before the very first fight; the portrait hint only now and then. */
+  private firstRunHelp() {
+    const automated = navigator.webdriver && !new URLSearchParams(location.search).has('help');
+    if (!automated && settings.tutorials && !settings.seenTips.includes('controls') && this.session.levelId !== 'arena') {
+      settings.seenTips.push('controls', 'move');
+      saveSettings();
+      this.togglePause('controls');
+      return;
+    }
+    const hint = document.querySelector<HTMLElement>('.rotate-hint');
+    if (!hint || !this.input2.touch || innerWidth > innerHeight) return;
+    let last = 0;
+    try { last = Number(localStorage.getItem('chkn-rotate-hint') || 0); } catch { /* ignore */ }
+    if (Date.now() - last < 20 * 60_000) return;
+    try { localStorage.setItem('chkn-rotate-hint', String(Date.now())); } catch { /* ignore */ }
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 4500);
   }
 
   /** Composite every look this level can show up front, so spawns never stall a frame. */
@@ -206,8 +247,10 @@ export class GameScene extends Phaser.Scene {
     const h = this.scale.height / dpr, w = this.scale.width / dpr;
     const touch = this.input2?.touch;
     // show roughly 13 tiles vertically on desktop, a bit more on phones
-    const tilesV = touch ? 8.5 : 10;
-    this.baseZoom = clamp(Math.min(h / (tilesV * TILE), w / (tilesV * 1.5 * TILE)), 0.42, 2.2) * dpr;
+    const tilesV = touch ? 9 : 10;
+    // phones in portrait: ~11 tiles across (enemies stay readable, a long view up and down)
+    const fit = touch && h > w ? w / (11 * TILE) : Math.min(h / (tilesV * TILE), w / (tilesV * 1.5 * TILE));
+    this.baseZoom = clamp(fit, 0.42, 2.2) * dpr;
     cam.setZoom(this.baseZoom);
   }
 
@@ -220,6 +263,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.off('resize', this.onResize, this);
     sfx.loop('flame_me', 'flame', false);
     sfx.loop('alarm', 'alarm', false);
+    sfx.loop('incident-alarm', 'alarm', false);
     this.session.dispose();
   }
 
@@ -295,7 +339,10 @@ export class GameScene extends Phaser.Scene {
         if (pv) flashlights.push({ x: pv.dispX, y: pv.dispY, a: pv.dispA });
       }
     }
+    this.lighting.alarm = s.view.alarm || (s.view.incidents ?? []).some(i => i.kind === 'alarm' && (i.phase === 'warning' || i.phase === 'active'));
+    sfx.loop('incident-alarm', 'alarm', (s.view.incidents ?? []).some(i => i.kind === 'alarm' && (i.phase === 'warning' || i.phase === 'active')), .2);
     this.lighting.update(this.cameras.main, dt, this.fx.lights, flashlights);
+    this.updateIncidents();
 
     // ---- music intensity
     this.updateMusic(dt);
@@ -448,15 +495,30 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  private hsT = 0;
   /** "В ГОЛОВУ!" pop over the enemy's head for the local shooter (rate-limited). */
-  private headshotPop(x: number, y: number) {
-    if (this.time.now - this.hsT < 250) return;
-    this.hsT = this.time.now;
-    const t = this.add.text(x, y - 14, 'В ГОЛОВУ!', { fontFamily: 'Rubik, sans-serif', fontSize: '13px', fontStyle: '700', color: '#ffd84a', stroke: '#2a0b0b', strokeThickness: 4 })
+  private combatPop(x: number, y: number, text: string, head: boolean) {
+    const t = this.add.text(x, y - 14, text, { fontFamily: 'Rubik, sans-serif', fontSize: head ? '13px' : '12px', fontStyle: '700', color: head ? '#ffd84a' : '#ffffff', stroke: '#2a0b0b', strokeThickness: 4 })
       .setOrigin(0.5, 1).setDepth(45).setResolution(TEXT_RES());
     this.tweens.add({ targets: t, y: y - 44, alpha: 0, scale: 1.25, duration: 650, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
-    sfx.play('headshot', { vol: 0.6 });
+  }
+
+  private updateIncidents() {
+    for (const i of this.session.view.incidents ?? []) {
+      let marker = this.incidentMarkers.get(i.id);
+      if (!marker) {
+        marker = { icon: this.add.text(i.x, i.y - 105, '', { fontFamily: 'Rubik, sans-serif', fontSize: '22px', fontStyle: 'bold', stroke: '#19201e', strokeThickness: 4 }).setOrigin(.5, 1).setDepth(38).setResolution(TEXT_RES()), zone: this.add.graphics().setDepth(6) };
+        this.incidentMarkers.set(i.id, marker);
+      }
+      const color = i.phase === 'done' || i.phase === 'disabled' ? '#93c8a3' : i.kind === 'alarm' ? '#ff6857' : i.kind === 'coffee' ? '#f4d28d' : '#8dd2ed';
+      marker.icon.setText(i.phase === 'done' || i.phase === 'disabled' ? '✓' : i.kind === 'alarm' ? '!' : i.kind === 'coffee' ? '☕' : '▣').setColor(color).setVisible(dist(i.x, i.y, this.px, this.py) < 620);
+      marker.zone.clear();
+      if (i.kind === 'cache' && i.phase === 'active') marker.zone.lineStyle(2, i.paused ? 0xd7b575 : 0x8dd2ed, .6).strokeCircle(i.x, i.y, 180);
+      if (i.kind === 'alarm') {
+        const o = this.session.map.objects.find(o => o.props.incidentId === i.id);
+        const image = o && this.propImgs.get(o.id);
+        if (image) image.setTint(i.phase === 'disabled' || i.phase === 'done' ? 0x7ea58c : 0xff7368);
+      }
+    }
   }
 
   private updateCamera(dt: number, inp: ReturnType<Input['poll']>) {
@@ -678,7 +740,11 @@ export class GameScene extends Phaser.Scene {
         }
         if (ev.o === this.session.myId) {
           this.hitMarker = 0.12;
-          if (ev.hs) this.headshotPop(ev.x, ev.y - this.elevation);
+          if (ev.hs) sfx.play('headshot', { vol: .6 });
+          if (settings.combatText && ev.d > 0 && this.time.now - this.lastCombatPop > 100) {
+            this.lastCombatPop = this.time.now;
+            this.combatPop(ev.x, ev.y - this.elevation, ev.hs ? 'В ГОЛОВУ! ' + Math.round(ev.d) : String(Math.round(ev.d)), !!ev.hs);
+          }
         }
         if (ev.k === 'player' && ev.id === this.session.myId) break;
         fx.impact(ev.k, ev.x, ev.y - this.elevation, ev.a, tint, ev.big);
@@ -704,7 +770,9 @@ export class GameScene extends Phaser.Scene {
         if (ev.k === 'spit') sfx.play('spit', { x: ev.x, y: ev.y, vol: 0.6 });
         break;
       case 'splat': fx.splat(ev.x, ev.y, ev.k); break;
-      case 'say': this.say(ev.who, ev.text, ev.d); break;
+      case 'say': if (!ev.flavor || settings.banter) this.say(ev.who, ev.text, ev.d); break;
+      case 'achievement': if (ev.id === this.session.myId) this.hud.achievement(ev.key); break;
+      case 'notice': this.hud.notice(ev.text, ev.sub, ev.tone); if (ev.tone === 'danger') sfx.play('ui', { vol: .65, rate: .7 }); break;
       case 'pdmg':
         if (ev.id === this.session.myId) {
           this.hud.damage(ev.d);
@@ -869,6 +937,8 @@ export class GameScene extends Phaser.Scene {
       break;
     }
     if (!ally && !hint) for (const o of this.session.map.objects) {
+      const incident = v.incidents?.find(i => i.id === o.name);
+      if (incident && (incident.phase === 'done' || incident.phase === 'disabled' || incident.phase === 'active')) continue;
       if (o.type === 'use' && dist(o.cx, o.cy, this.px, this.py) < 90 && !(o.props.done && (v as any).flags?.[o.name])) { hint = key + String(o.props.hint ?? 'использовать'); break; }
     }
     if (!ally && !hint) for (const d of v.doors) {
@@ -877,11 +947,12 @@ export class GameScene extends Phaser.Scene {
     let note: string | null = null;
     if (!ally && me.hp < me.maxHp && me.supplies.medkit) hint = hint ? `${hint} · держать: лечить себя` : `${key}держать: лечить себя`;
     for (const n of this.notes) if (dist(n.x, n.y, this.px, this.py) < 95) { note = n.text; break; }
-    this.hud.hint(hint ?? note);
-    this.input2.showInteract(hint ? hint.replace(/^E — /, '').split(':')[0].slice(0, 14) : null);
+    // phones: the action button carries the label, the centre line only shows notes
+    this.hud.hint(this.input2.touch ? note : hint ?? note);
+    this.input2.showInteract(hint ? touchLabel(hint) : null);
   }
 
-  togglePause() {
+  togglePause(view: 'menu' | 'controls' = 'menu') {
     this.paused = !this.paused;
     const el = document.querySelector('.pause-menu');
     if (this.paused && !el) {
@@ -889,16 +960,29 @@ export class GameScene extends Phaser.Scene {
       if (p) this.session.send({ ...p.input, seq: ++this.seq, x: p.x, y: p.y, fire: false, reload: false, interact: false, weapon: p.cur });
       const d = document.createElement('div');
       d.className = 'overlay pause-menu';
-      d.innerHTML = `<div class="panel"><h2>ПАУЗА</h2>
-        <button class="btn primary" data-a="resume">Продолжить</button>
-        <button class="btn" data-a="quit">В главное меню</button></div>`;
+      const render = (v: 'menu' | 'settings' | 'controls') => {
+        d.dataset.view = v;
+        d.innerHTML = v === 'settings'
+          ? `<div class="panel preferences-panel"><h2>НАСТРОЙКИ</h2>${preferencesMarkup()}<button class="btn primary" data-a="back">Назад</button></div>`
+          : v === 'controls'
+            ? `<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup(this.input2.touch)}<button class="btn primary" data-a="${view === 'controls' ? 'resume' : 'back'}">${view === 'controls' ? 'Понятно, в бой!' : 'Назад'}</button></div>`
+            : `<div class="panel"><h2>ПАУЗА</h2>${this.session.solo ? '' : '<p class="flavor">Команда продолжает бой — пауза только у вас.</p>'}
+              <button class="btn primary" data-a="resume">Продолжить</button>
+              <div class="row"><button class="btn" data-a="settings">Настройки</button><button class="btn" data-a="controls">Управление</button></div>
+              <button class="btn ghost" data-a="quit">В главное меню</button></div>`;
+        d.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => sfx.play('ui', { vol: 0.6 })));
+        if (v === 'settings') bindPreferences(d);
+      };
       d.addEventListener('click', (e) => {
-        const a = (e.target as HTMLElement).dataset.a;
+        const a = (e.target as HTMLElement).closest<HTMLElement>('[data-a]')?.dataset.a;
         if (a === 'resume') this.togglePause();
+        if (a === 'settings' || a === 'controls') render(a);
+        if (a === 'back') { render('menu'); this.fx.shakeScale = settings.shake; }
         if (a === 'quit') { d.remove(); this.ended = true; this.onEnd({ kind: 'quit' }); }
       });
+      render(view);
       document.getElementById('ui')!.appendChild(d);
-    } else if (!this.paused) el?.remove();
+    } else if (!this.paused) { el?.remove(); this.fx.shakeScale = settings.shake; }
     if (this.session.solo) {
       // freeze local simulation while paused
       if (this.paused) this.time.timeScale = 0;

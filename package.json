@@ -27,6 +27,8 @@
     "check:progress": "tsx tools/check-room-progress.ts",
     "check:polish": "tsx tools/check-polish.ts",
     "check:polish-ui": "node tools/check-polish-ui.mjs",
+    "check:engagement": "tsx tools/check-engagement.ts",
+    "check:engagement-ui": "node tools/check-engagement-ui.mjs",
     "qa:play": "node tools/qa-play.mjs",
     "qa:menu": "node tools/qa-menu.mjs",
     "art:fetch": "node tools/art/lpc-fetch.mjs"

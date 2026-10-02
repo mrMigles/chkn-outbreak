@@ -1,3 +1,4 @@
+import { v } from '../version';
 // Adaptive music: calm exploration, tense skirmish, full wave and boss — crossfaded by combat intensity.
 // Tracks: Juhani Junkala, "Chiptune Adventures" (CC0), see docs/ASSETS.md.
 import { settings } from '../settings';
@@ -15,7 +16,7 @@ class Music {
   init() {
     if (this.el.size) return;
     for (const t of TRACKS) {
-      const a = new Audio(`assets/music/${t}.ogg`);
+      const a = new Audio(v(`assets/music/${t}.ogg`));
       a.loop = true; a.preload = t === 'calm' ? 'auto' : 'metadata'; a.volume = 0;
       this.el.set(t, a); this.gain.set(t, 0);
     }

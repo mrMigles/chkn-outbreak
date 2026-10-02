@@ -14,7 +14,7 @@ export interface InputState {
   pause: boolean;                  // edge
 }
 
-const isTouch = () => window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+export const isTouch = () => window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 /** Keyboard + mouse + virtual twin sticks (DOM overlay). */
 export class Input {
@@ -55,7 +55,6 @@ export class Input {
       <div class="touch-zone left"></div><div class="touch-zone right"></div>
       <div class="tbtn t-interact hidden" data-b="interact">E</div>
       <div class="tbtn t-reload" data-b="reload">⟳</div>
-      <div class="tbtn t-switch" data-b="switch">⇄</div>
       <div class="tbtn t-pause" data-b="pause">❚❚</div>`;
     document.getElementById('ui')!.appendChild(root);
     this.root = root;
