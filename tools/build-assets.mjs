@@ -82,6 +82,8 @@ for (const p of props) propSizes[p.name] = [p.canvas.width, p.canvas.height];
 writeAtlas('props', props);
 const lpc = await buildLpc(ROOT);
 for (const p of lpc.props) if (p.name === 'desk_light' || p.name === 'table_tennis') propSizes[p.name] = [p.canvas.width, p.canvas.height];
+// D69: new 2.5D-only props declare their physical footprint (foot) separately from the picture
+for (const p of lpc.props) { const m = lpc.meta[p.name]; if (m?.foot) propSizes[p.name] = m.foot; else if (m && !propSizes[p.name]) propSizes[p.name] = [p.canvas.width, Math.min(p.canvas.height, 48)]; }
 writeAtlas('lpc', lpc.people, 4096);
 writeAtlas('office25', lpc.props);
 // tiles25: Kenney tile layout, every floor/rug index used by the maps replaced with LPC floors (×2)

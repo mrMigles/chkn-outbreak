@@ -25,6 +25,7 @@ const office: LevelScript = {
   id: 'office',
   title: 'Этаж 6. Офис «Курникс Групп»',
   subtitle: 'Пятница, 17:55. До выходных — пять минут',
+  chapter: 'Глава 1 · Офис',
   next: 'office7',
   // the first level is a gentle introduction: softer chickens, smaller waves (D30)
   enemyHp: 0.85,

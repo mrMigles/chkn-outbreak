@@ -7,6 +7,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import path from 'node:path';
 import fs from 'node:fs';
 import { LAYERS, layerFile } from './lpc-layers.mjs';
+import { buildCity } from './city.mjs';
 
 function canvas(w, h) { const c = createCanvas(w, h); c.getContext('2d').imageSmoothingEnabled = false; return c; }
 function cut(img, x, y, w, h, scale = 2) {
@@ -403,12 +404,13 @@ export async function buildLpc(root) {
     if (lit && y > 2 && y < 5 && x > 13 && x < 18) return lit;
   } });
   const doorSide = (face, lit) => box(8, 56, 0, { face, topC: face, dark: 'o', details: (x, y) => (lit && y > 4 && y < 8 && x > 1 && x < 6 ? lit : y === 28 && x > 2 && x < 5 ? 'y' : undefined) });
-  for (const [theme, face] of [['office', 't'], ['lab', 'm'], ['industrial', 'g']]) {
+  for (const [theme, face] of [['office', 't'], ['lab', 'm'], ['industrial', 'g'], ['dark', 'd'], ['exec', 'b'], ['street', 'g'], ['cafe', 't'], ['office7', 'l']]) {
     props.push({ name: `door_${theme}`, canvas: doorFace(face, face === 't' ? 'B' : 'l', null) });
     props.push({ name: `door_${theme}_side`, canvas: doorSide(face, null) });
   }
   props.push({ name: 'door_locked', canvas: doorFace('g', 'l', 'R') });
   props.push({ name: 'door_locked_side', canvas: doorSide('g', 'R') });
+  await buildCity(root, { add, floors, props });
   return { people, props, meta, floors, gunMeta };
 }
 

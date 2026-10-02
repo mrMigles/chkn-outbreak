@@ -31,6 +31,19 @@ export const PROP_DEFS: Record<string, PropDef> = {
   lab_bench: SOLID, egg_pod: { ...HARD, round: true }, egg_pod_broken: { ...HARD, round: true }, lab_console: HARD,
   machine: HARD, generator: HARD, conveyor: SOLID, pallet: SOLID, pipe_h: FLAT, shelf: HARD, forklift: HARD,
   terminal: HARD, elevator: FLAT, emergency_light: { ...FLAT, top: true, light: 0xff2a1a },
+  // D69: chapter 1 floors 8/11/12 and the city (footprints in artMeta via `foot`)
+  ...Object.fromEntries(['taxi', 'red', 'blue', 'white', 'green', 'grey'].flatMap(c => ['', '_l', '_v'].map(v => [`car_${c}${v}`, { ...HARD, inset: 2 }]))),
+  car_burnt: { ...HARD, inset: 2 },
+  tree_round: { ...HARD, round: true, inset: 0 }, tree_oak: { ...HARD, round: true, inset: 0 }, tree_pine: { ...HARD, round: true, inset: 0 }, tree_big: { ...HARD, round: true, inset: 0 },
+  hedge: { solid: true, bullets: false, inset: 6, hp: 40, mat: 'plant', h: 70 },
+  street_lamp: { ...HARD, round: true, inset: 0 }, trash_can: { ...SOLID, round: true, hp: 30, mat: 'metal', h: 50 },
+  fountain: { ...HARD, inset: 0 }, shopping_cart: { ...SOLID, hp: 25, mat: 'metal', h: 50 }, fence: { solid: true, bullets: false, inset: 0 },
+  flowers_0: FLAT, flowers_1: FLAT, flowers_2: FLAT, bench: { ...SOLID, hp: 45, mat: 'wood', h: 40 },
+  cone: { ...SOLID, round: true, inset: 2, hp: 8, mat: 'plant', h: 30 }, hydrant: { ...HARD, round: true, inset: 2 },
+  kiosk: { ...HARD, inset: 2 }, stall: { ...SOLID, inset: 2, hp: 90, mat: 'wood', h: 80, drop: 'crate' }, bus_stop: { ...SOLID, inset: 2 }, billboard: { solid: true, bullets: false, inset: 0 },
+  heli_wreck: { ...HARD, inset: 4 }, heli_side: FLAT,
+  breaker: FLAT, desk_phone: FLAT, bar_stool: FLAT, portrait_ceo: FLAT, painting_wide: FLAT, painting_sea: FLAT, chicken_plate: FLAT, coffee_cup: FLAT,
+  pano_0: FLAT, pano_1: FLAT, pano_2: FLAT,
 };
 
 export function propDef(name: string): PropDef {

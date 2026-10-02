@@ -129,12 +129,15 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
       const lit = w.players.some(p => p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < 560 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < .42 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true));
       const was = (e.blindT ?? 0) > 0;
       e.blindT = lit ? .35 : Math.max(0, (e.blindT ?? 0) - dt);
+      e.litT = lit ? (e.litT ?? 0) + dt : 0;
       if (lit && !was && w.rng.chance(.25)) w.say(String(e.id), w.rng.pick(['А-А-А! СВЕТ!', 'Убери фонарик! Глаза!', 'Тёмная тема! ВЕРНИТЕ ТЁМНУЮ ТЕМУ!']), 1.5);
+      // held in a beam for a while: it bolts back into the dark
+      if (e.litT > 1.1 && e.state !== 'charge' && !(e.fleeT ?? 0)) { e.litT = 0; e.fleeT = 1.5; if (w.rng.chance(.4)) w.say(String(e.id), w.rng.pick(['Не поймаешь!', 'Я в тёмном режиме!', 'Ко-ко… офлайн!']), 1.4); }
     }
     if ((e.fleeT ?? 0) > 0 && e.state !== 'charge') {
       // hit-and-run: back into the dark, then come again
-      e.fleeT = (e.fleeT ?? 0) - dt;
-      steer(w, e, t, td, ENEMIES[e.type].speed * e.speedMul * ((e.blindT ?? 0) > 0 ? .5 : 1.1), dt, true);
+      e.fleeT = Math.max(0, (e.fleeT ?? 0) - dt);
+      steer(w, e, t, td, ENEMIES[e.type].speed * e.speedMul * 1.25, dt, true);
       return;
     }
     if (e.state === 'charge') {
@@ -172,7 +175,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
   }
 
   const burning = e.burnT > 0 ? 1.25 : 1;
-  const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * ((e.blindT ?? 0) > 0 ? .45 : 1) * (w.opts.difficulty ?? 1) ** 0.3;
+  const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * ((e.blindT ?? 0) > 0 ? .7 : 1) * (w.opts.difficulty ?? 1) ** 0.3;
 
   switch (e.state) {
     case 'windup': {

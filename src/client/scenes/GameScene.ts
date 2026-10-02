@@ -25,7 +25,7 @@ import type { Player, SimEvent } from '../../shared/sim/types';
 import { BUFFS, type BuffKind } from '../../shared/sim/types';
 import { TILE } from '../../shared/map';
 import { supportTarget } from '../../shared/sim/support';
-import { rayBody, enemyBox } from '../../shared/sim/hitbox';
+import { rayBody, enemyBox, enemyScale } from '../../shared/sim/hitbox';
 import { settings, saveSettings, TEXT_RES } from '../settings';
 import artMeta from '../../shared/generated/artMeta.json';
 
@@ -85,6 +85,9 @@ export class GameScene extends Phaser.Scene {
   hitMarker = 0;
   hitstop = 0;
   wallFaces: Phaser.GameObjects.Image[] = [];
+  private fadeProps: { img: Phaser.GameObjects.Image; x: number; y: number; hw: number; h: number }[] = [];
+  /** D69 floor 8: chickens' eyes glow above the darkness */
+  redEyes = false;
   get elevation() { return HAND_H; }
   tutorial!: Tutorial;
   coach!: Coach;
@@ -103,7 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.pingPong = undefined;
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
-    this.wallFaces = [];
+    this.wallFaces = []; this.fadeProps = [];
     this.incidentMarkers = new Map(); this.lastCombatPop = 0;
   }
 
@@ -156,6 +159,8 @@ export class GameScene extends Phaser.Scene {
           img = this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
         }
         if (o.props.tint) img.setTint(parseInt(String(o.props.tint), 16));
+        // D69: tall outdoor things (trees, kiosks, lamps) turn see-through over the local player, like walls
+        if (visual && !visual.wall && img.displayHeight > 150) this.fadeProps.push({ img, x: o.cx, y: feetY, hw: img.displayWidth * 0.45, h: img.displayHeight * 0.9 });
         if (o.name === 'table_tennis') this.pingPong = { ball: this.add.rectangle(o.cx, o.cy - 12, 5, 5, 0xffe5a3).setDepth(worldDepth(feetY) + .00002), x: o.cx, y: o.cy - 12 };
         if (def.hp || o.props.incident === 'alarm') this.propImgs.set(o.id, img);
         if (o.props.text) this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text) });
@@ -172,6 +177,8 @@ export class GameScene extends Phaser.Scene {
     this.fx.map = map;
     this.fx.shakeScale = settings.shake;
     this.lighting = new Lighting(this, map);
+    this.redEyes = !!map.props.redEyes;
+    this.lighting.setOverride(s.view.light, true);
     this.guide = new Guide(this, map);
     this.input2 = new Input(this);
     this.hud = new Hud(this.input2.touch);
@@ -336,6 +343,7 @@ export class GameScene extends Phaser.Scene {
     // ---- sync views
     this.syncWorld(dt);
     for (const wall of this.wallFaces) wall.setAlpha(this.py < wall.y && wall.y - this.py < 155 && Math.abs(this.px - wall.x) < 72 ? 0.28 : 1);
+    for (const f of this.fadeProps) f.img.setAlpha(this.py < f.y - 4 && f.y - this.py < f.h && Math.abs(this.px - f.x) < f.hw ? 0.4 : 1);
 
     // ---- camera
     this.updateSpectate(inp);
@@ -352,6 +360,7 @@ export class GameScene extends Phaser.Scene {
         if (pv) flashlights.push({ x: pv.dispX, y: pv.dispY, a: pv.dispA });
       }
     }
+    this.lighting.setOverride(s.view.light);
     this.lighting.alarm = s.view.alarm || (s.view.incidents ?? []).some(i => i.kind === 'alarm' && (i.phase === 'warning' || i.phase === 'active'));
     sfx.loop('incident-alarm', 'alarm', (s.view.incidents ?? []).some(i => i.kind === 'alarm' && (i.phase === 'warning' || i.phase === 'active')), .2);
     this.lighting.update(this.cameras.main, dt, this.fx.lights, flashlights);
@@ -464,7 +473,7 @@ export class GameScene extends Phaser.Scene {
           const dx = Math.cos(a), dy = Math.sin(a);
           for (const e of this.session.view.enemies) {
             if (e.state === 'rise') continue;
-            const h = rayBody(this.px, this.py, dx, dy, e.x, e.y, enemyBox(e.type), d);
+            const h = rayBody(this.px, this.py, dx, dy, e.x, e.y, enemyBox(e.type, enemyScale(e)), d);
             if (h) d = h.t;
           }
           ends.push(this.px + dx * d, this.py + dy * d);
@@ -617,6 +626,7 @@ export class GameScene extends Phaser.Scene {
       let ev = this.enemies.get(e.id);
       if (!ev) { ev = new EnemyView(this, e); this.enemies.set(e.id, ev); }
       ev.sync(e, e.x, e.y, dt, time);
+      if (this.redEyes) ev.eyes(this, e, this.lighting.ambient, time);
       if (e.burnT > 0) this.fx.burning(e.x, e.y, dt, e.type === 'boss' ? 3 : e.type === 'fat' ? 1.4 : 1);
     }
     for (const [id, ev] of this.enemies) if (!seenE.has(id)) { ev.destroy(); this.enemies.delete(id); }
@@ -898,6 +908,15 @@ export class GameScene extends Phaser.Scene {
         fx.spawnPuff(ev.x, ev.y, ev.how);
         sfx.play('spawn', { x: ev.x, y: ev.y, vol: 0.5, max: 3 });
         break;
+      case 'light':
+        this.lighting.setOverride(ev.v, true);
+        sfx.play('breaker', { vol: 0.9 });
+        break;
+      case 'scare': this.scare(ev); break;
+      case 'cine':
+        if (ev.k === 'heli') this.heliCrash();
+        else this.hud.message(ev.text ?? '', ev.sub ?? '', 5);
+        break;
       case 'blackout':
         this.lighting.blackout = ev.on;
         sfx.play('explosion', { vol: 0.3, rate: 0.5 });
@@ -927,6 +946,62 @@ export class GameScene extends Phaser.Scene {
         if (!this.ended) { this.ended = true; queueMicrotask(() => this.onEnd({ kind: 'gameover', reason: ev.reason })); }
         break;
     }
+  }
+
+  // ------------------------------------------------------------------ D69: horror beats and the cafe helicopter
+  private scare(ev: Extract<SimEvent, { e: 'scare' }>) {
+    const near = dist(ev.x, ev.y, this.px, this.py) < 900;
+    if (ev.k === 'ring') {
+      for (let i = 0; i < 3; i++) this.time.delayedCall(i * 1500, () => sfx.play('phone', { x: ev.x, y: ev.y, vol: 1 }));
+      return;
+    }
+    if (ev.k === 'flicker') { this.lighting.flicker(1.1); sfx.play('spark', { x: ev.x, y: ev.y, vol: 0.9 }); return; }
+    if (ev.k === 'spark') { this.fx.impact('wall', ev.x, ev.y - 40, -Math.PI / 2, 0xffe08a, true); sfx.play('spark', { x: ev.x, y: ev.y, vol: 0.8 }); return; }
+    if (!near) return;
+    if (ev.k === 'scream') { sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1, rate: 0.55 }); this.fx.shake(0.25); return; }
+    // jump: stinger, a red flash at the screen edges, shake, vibration
+    sfx.play('stinger', { vol: 0.9 });
+    sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1, rate: 0.7 });
+    this.fx.shake(0.45);
+    haptic('hurt');
+    if (!settings.reducedFlashes) {
+      const f = document.createElement('div');
+      f.className = 'scare-flash';
+      document.getElementById('ui')!.appendChild(f);
+      setTimeout(() => f.remove(), 700);
+    }
+  }
+
+  /** Cafe, floor 12: a smoking helicopter crosses the panoramic windows and falls into the street. */
+  private heliCrash() {
+    const win = this.session.map.objects.find(o => o.type === 'zone' && o.name === 'windows');
+    if (!win) return;
+    const y0 = win.y + win.h * 0.45;
+    const heli = this.add.image(win.x + win.w + 120, y0, 'office25', 'heli_side').setDepth(worldDepth(win.y + win.h) + 0.0001).setScale(-0.7, 0.7);
+    const mask = this.make.graphics({}, false).fillRect(win.x, win.y, win.w, win.h);
+    heli.setMask(mask.createGeometryMask());
+    let t = 0;
+    const smoke = this.time.addEvent({ delay: 70, loop: true, callback: () => {
+      this.fx.high.emit({ frame: 'smoke', x: heli.x + 50, y: heli.y - 6, vx: 30, vy: -20, life: 1.2, s0: 0.3, s1: 1.1, a0: 0.55, a1: 0, tint: 0x555555, rot: Math.random() * 6 });
+    } });
+    sfx.loop('heli', 'heli', true, 0.5);
+    this.tweens.addCounter({ from: 0, to: 1, duration: 5200, onUpdate: (tw) => {
+      t = tw.getValue() ?? 0;
+      heli.x = win.x + win.w + 120 - t * (win.w * 0.75 + 120);
+      const fall = Math.max(0, t - 0.55) / 0.45;
+      heli.y = y0 + Math.sin(t * 20) * 4 + fall * fall * win.h * 1.3;
+      heli.setRotation(-0.1 - fall * 0.9 + Math.sin(t * 30) * 0.05);
+    }, onComplete: () => {
+      smoke.remove(); heli.destroy(); mask.destroy();
+      sfx.loop('heli', 'heli', false);
+      sfx.play('explosion', { vol: 1, rate: 0.7 });
+      this.fx.shake(0.8);
+      const bx = win.x + win.w * 0.35, by = win.y + win.h;
+      this.fx.light(bx, by, 700, 0xffa040, 1, 1.2);
+      // a smoke column keeps rising behind the glass
+      const col = this.time.addEvent({ delay: 120, repeat: 120, callback: () => this.fx.high.emit({ frame: 'smoke', x: bx + (Math.random() - 0.5) * 60, y: by - 10, vx: 10, vy: -60, life: 2.2, s0: 0.5, s1: 1.8, a0: 0.4, a1: 0, tint: 0x3a3a3a, rot: Math.random() * 6 }) });
+      this.events.once('shutdown', () => col.remove());
+    } });
   }
 
   // ------------------------------------------------------------------ speech bubbles & hints

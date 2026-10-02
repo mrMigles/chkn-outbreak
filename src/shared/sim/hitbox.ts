@@ -12,12 +12,16 @@ export const ENEMY_SCALE: Record<EnemyType, number> = { normal: 2, fast: 1.85, f
 
 export interface BodyBox { hw: number; h: number; head: number }
 
+/** D69: elite chickens (scripted bosses made from a named survivor) are drawn larger than their base type. */
+export const ELITE_SCALE: Record<string, number> = { valera: 2.45, director: 2.9 };
+export const enemyScale = (e: { type: EnemyType; appearance?: { npcId: string } }) => (e.appearance && ELITE_SCALE[e.appearance.npcId]) || ENEMY_SCALE[e.type];
+
 /** Humans (players, NPCs): LPC body ×2, head top ≈ 100 above the feet. */
 export const HUMAN_BOX: BodyBox = { hw: 17, h: 100, head: 30 };
 
-export function enemyBox(t: EnemyType): BodyBox {
+export function enemyBox(t: EnemyType, scale?: number): BodyBox {
   if (t === 'chick') return { hw: 15, h: 30, head: 0 };
-  const s = ENEMY_SCALE[t];
+  const s = scale ?? ENEMY_SCALE[t];
   const h = 51 * s; // feet (row 62) to the comb (row ~11)
   return { hw: Math.max(ENEMIES[t].radius + 3, s * 10), h, head: h * 0.3 };
 }

@@ -21,6 +21,9 @@ export class Lighting {
   ambient = 0;
   target = 0;
   base = 0;
+  /** the map's own darkness; scripts may override `base` (D69) */
+  mapBase = 0;
+  private flickerT = 0;
   blackout = false;
   alarm = false;
   statics: StaticLight[] = [];
@@ -32,7 +35,7 @@ export class Lighting {
   constructor(private scene: Phaser.Scene, map: GameMap) {
     this.g = scene.add.graphics().setDepth(30);
     this.map = map;
-    this.base = Number(map.props.ambient ?? 0);
+    this.base = this.mapBase = Number(map.props.ambient ?? 0);
     this.ambient = this.target = this.base;
     this.zones = map.objects.filter((o) => o.type === 'zone' && o.props.dark !== undefined);
     for (const o of map.objects) {
@@ -52,6 +55,14 @@ export class Lighting {
 
   resize(_w: number, _h: number) { /* grid follows the camera; nothing to reallocate */ }
 
+  /** D69: a scripted override of the map's darkness (−1 = back to the map's own). */
+  setOverride(v: number | undefined, snap = false) {
+    this.base = v !== undefined && v >= 0 ? v : this.mapBase;
+    if (snap) this.ambient = this.blackout ? Math.max(0.9, this.base) : this.base;
+  }
+  /** D69: lamps stutter for a moment and show the room (floor-8 scares). */
+  flicker(t = 0.9) { this.flickerT = t; }
+
   update(cam: Phaser.Cameras.Scene2D.Camera, dt: number, dyn: Light[], flashlights: { x: number; y: number; a: number }[]) {
     this.t += dt;
     let tgt = this.blackout ? Math.max(0.9, this.base) : this.base;
@@ -59,6 +70,11 @@ export class Lighting {
     for (const z of this.zones) if (cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) tgt = Number(z.props.dark);
     this.target = tgt;
     this.ambient += (this.target - this.ambient) * Math.min(1, dt * 3);
+    if (this.flickerT > 0) {
+      this.flickerT -= dt;
+      const lit = Math.sin(this.flickerT * 38) + Math.sin(this.flickerT * 11) > 0.6;
+      if (lit) this.ambient = Math.min(this.ambient, settings.reducedFlashes ? 0.5 : 0.18);
+    }
 
     for (const s of this.statics) {
       let on = 1;

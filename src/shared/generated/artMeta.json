@@ -55,7 +55,11 @@
    "office",
    "lab",
    "industrial",
-   "office7"
+   "office7",
+   "dark",
+   "exec",
+   "street",
+   "cafe"
   ]
  },
  "weapons": {
@@ -524,6 +528,266 @@
   "table_tennis": [
    160,
    112
+  ],
+  "chair_0_180": [
+   64,
+   48
+  ],
+  "chair_0_90": [
+   64,
+   48
+  ],
+  "chair_0_270": [
+   64,
+   48
+  ],
+  "chair_1_180": [
+   64,
+   48
+  ],
+  "chair_1_90": [
+   64,
+   48
+  ],
+  "chair_1_270": [
+   64,
+   48
+  ],
+  "chair_2_180": [
+   64,
+   48
+  ],
+  "chair_2_90": [
+   64,
+   48
+  ],
+  "chair_2_270": [
+   64,
+   48
+  ],
+  "chair_3_180": [
+   64,
+   48
+  ],
+  "chair_3_90": [
+   64,
+   48
+  ],
+  "chair_3_270": [
+   64,
+   48
+  ],
+  "vending_b": [
+   92,
+   48
+  ],
+  "car_taxi": [
+   230,
+   74
+  ],
+  "car_taxi_l": [
+   230,
+   74
+  ],
+  "car_taxi_v": [
+   118,
+   196
+  ],
+  "car_red": [
+   230,
+   74
+  ],
+  "car_red_l": [
+   230,
+   74
+  ],
+  "car_red_v": [
+   118,
+   196
+  ],
+  "car_blue": [
+   230,
+   74
+  ],
+  "car_blue_l": [
+   230,
+   74
+  ],
+  "car_blue_v": [
+   118,
+   196
+  ],
+  "car_white": [
+   230,
+   74
+  ],
+  "car_white_l": [
+   230,
+   74
+  ],
+  "car_white_v": [
+   118,
+   196
+  ],
+  "car_green": [
+   230,
+   74
+  ],
+  "car_green_l": [
+   230,
+   74
+  ],
+  "car_green_v": [
+   118,
+   196
+  ],
+  "car_grey": [
+   244,
+   70
+  ],
+  "car_grey_l": [
+   244,
+   70
+  ],
+  "car_grey_v": [
+   112,
+   178
+  ],
+  "car_burnt": [
+   244,
+   70
+  ],
+  "tree_round": [
+   44,
+   28
+  ],
+  "tree_oak": [
+   48,
+   28
+  ],
+  "tree_pine": [
+   36,
+   24
+  ],
+  "tree_big": [
+   60,
+   30
+  ],
+  "hedge": [
+   118,
+   40
+  ],
+  "street_lamp": [
+   18,
+   18
+  ],
+  "trash_can": [
+   32,
+   20
+  ],
+  "fountain": [
+   116,
+   62
+  ],
+  "shopping_cart": [
+   44,
+   24
+  ],
+  "fence": [
+   148,
+   16
+  ],
+  "flowers_0": [
+   32,
+   12
+  ],
+  "flowers_1": [
+   32,
+   12
+  ],
+  "flowers_2": [
+   32,
+   12
+  ],
+  "bench": [
+   100,
+   20
+  ],
+  "cone": [
+   20,
+   14
+  ],
+  "hydrant": [
+   22,
+   16
+  ],
+  "kiosk": [
+   150,
+   56
+  ],
+  "stall": [
+   170,
+   52
+  ],
+  "bus_stop": [
+   180,
+   30
+  ],
+  "billboard": [
+   150,
+   16
+  ],
+  "heli_side": [
+   292,
+   48
+  ],
+  "heli_wreck": [
+   250,
+   60
+  ],
+  "breaker": [
+   52,
+   48
+  ],
+  "desk_phone": [
+   30,
+   26
+  ],
+  "bar_stool": [
+   48,
+   48
+  ],
+  "portrait_ceo": [
+   58,
+   48
+  ],
+  "painting_wide": [
+   162,
+   48
+  ],
+  "painting_sea": [
+   78,
+   48
+  ],
+  "chicken_plate": [
+   44,
+   28
+  ],
+  "coffee_cup": [
+   32,
+   32
+  ],
+  "pano_0": [
+   128,
+   48
+  ],
+  "pano_1": [
+   128,
+   48
+  ],
+  "pano_2": [
+   128,
+   48
   ]
  },
  "office25": {
@@ -844,6 +1108,381 @@
   "lamp": {
    "feetX": 8,
    "feetY": 18
+  },
+  "car_taxi": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_taxi_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_taxi_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_red": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_red_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_red_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_blue": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_blue_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_blue_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_white": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_white_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_white_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_green": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_green_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_green_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_grey": {
+   "feetX": 136,
+   "feetY": 125,
+   "foot": [
+    244,
+    70
+   ]
+  },
+  "car_grey_l": {
+   "feetX": 136,
+   "feetY": 125,
+   "foot": [
+    244,
+    70
+   ]
+  },
+  "car_grey_v": {
+   "feetX": 66,
+   "feetY": 198,
+   "foot": [
+    112,
+    178
+   ]
+  },
+  "car_burnt": {
+   "feetX": 136,
+   "feetY": 125,
+   "foot": [
+    244,
+    70
+   ]
+  },
+  "tree_round": {
+   "feetX": 94,
+   "feetY": 256,
+   "foot": [
+    44,
+    28
+   ]
+  },
+  "tree_oak": {
+   "feetX": 104,
+   "feetY": 260,
+   "foot": [
+    48,
+    28
+   ]
+  },
+  "tree_pine": {
+   "feetX": 63,
+   "feetY": 284,
+   "foot": [
+    36,
+    24
+   ]
+  },
+  "tree_big": {
+   "feetX": 125,
+   "feetY": 282,
+   "foot": [
+    60,
+    30
+   ]
+  },
+  "hedge": {
+   "feetX": 70.5,
+   "feetY": 110,
+   "foot": [
+    118,
+    40
+   ]
+  },
+  "street_lamp": {
+   "feetX": 28,
+   "feetY": 178,
+   "foot": [
+    18,
+    18
+   ]
+  },
+  "trash_can": {
+   "feetX": 20,
+   "feetY": 52,
+   "foot": [
+    32,
+    20
+   ]
+  },
+  "fountain": {
+   "feetX": 64,
+   "feetY": 150,
+   "foot": [
+    116,
+    62
+   ]
+  },
+  "shopping_cart": {
+   "feetX": 30,
+   "feetY": 56,
+   "foot": [
+    44,
+    24
+   ]
+  },
+  "fence": {
+   "feetX": 74,
+   "feetY": 58,
+   "foot": [
+    148,
+    16
+   ]
+  },
+  "flowers_0": {
+   "feetX": 19,
+   "feetY": 28,
+   "foot": [
+    32,
+    12
+   ]
+  },
+  "flowers_1": {
+   "feetX": 19,
+   "feetY": 28,
+   "foot": [
+    32,
+    12
+   ]
+  },
+  "flowers_2": {
+   "feetX": 19,
+   "feetY": 28,
+   "foot": [
+    32,
+    12
+   ]
+  },
+  "bench": {
+   "feetX": 56,
+   "feetY": 48,
+   "foot": [
+    100,
+    20
+   ]
+  },
+  "cone": {
+   "feetX": 14,
+   "feetY": 34,
+   "foot": [
+    20,
+    14
+   ]
+  },
+  "hydrant": {
+   "feetX": 14,
+   "feetY": 38,
+   "foot": [
+    22,
+    16
+   ]
+  },
+  "kiosk": {
+   "feetX": 80,
+   "feetY": 146,
+   "foot": [
+    150,
+    56
+   ]
+  },
+  "stall": {
+   "feetX": 88,
+   "feetY": 124,
+   "foot": [
+    170,
+    52
+   ]
+  },
+  "bus_stop": {
+   "feetX": 96,
+   "feetY": 132,
+   "foot": [
+    180,
+    30
+   ]
+  },
+  "billboard": {
+   "feetX": 96,
+   "feetY": 112,
+   "foot": [
+    150,
+    16
+   ]
+  },
+  "heli_side": {
+   "feetX": 146,
+   "feetY": 110
+  },
+  "heli_wreck": {
+   "feetX": 146,
+   "feetY": 108,
+   "foot": [
+    250,
+    60
+   ]
+  },
+  "breaker": {
+   "feetX": 26,
+   "feetY": 64,
+   "wall": true
+  },
+  "desk_phone": {
+   "feetX": 15,
+   "feetY": 26
+  },
+  "bar_stool": {
+   "feetX": 24,
+   "feetY": 58
+  },
+  "portrait_ceo": {
+   "feetX": 29,
+   "feetY": 96,
+   "wall": true
+  },
+  "painting_wide": {
+   "feetX": 81,
+   "feetY": 50,
+   "wall": true
+  },
+  "painting_sea": {
+   "feetX": 39,
+   "feetY": 62,
+   "wall": true
+  },
+  "chicken_plate": {
+   "feetX": 22,
+   "feetY": 26
+  },
+  "coffee_cup": {
+   "feetX": 16,
+   "feetY": 28
+  },
+  "pano_0": {
+   "feetX": 64,
+   "feetY": 100,
+   "wall": true
+  },
+  "pano_1": {
+   "feetX": 64,
+   "feetY": 100,
+   "wall": true
+  },
+  "pano_2": {
+   "feetX": 64,
+   "feetY": 100,
+   "wall": true
   }
  },
  "guns": {

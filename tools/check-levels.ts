@@ -11,6 +11,12 @@ import { PLAYER } from '../src/shared/enemies';
 const STORY: Record<string, { unlock: { by: string; lock: string }[]; goal: string[] }> = {
   office: { unlock: [{ by: 'npc:marat', lock: 'blue' }, { by: 'trigger:security_in', lock: 'server' }, { by: 'use:reboot', lock: 'script' }], goal: ['trigger:elevator'] },
   office7: { unlock: [{ by: 'trigger:siege7+npc:elena', lock: 'f7_pass' }], goal: ['npc:andrey', 'npc:sergey', 'npc:vlad', 'npc:stas', 'npc:pasha', 'trigger:evacuation'] },
+  // D69
+  office8: { unlock: [{ by: 'use:lock_w+use:lock_e', lock: 'script' }], goal: ['use:breaker', 'npc:valera', 'trigger:lift8'] },
+  office11: { unlock: [{ by: 'npc:zhanna+npc:boris+npc:irina+npc:punktovich+use:form1+use:form2+use:form3', lock: 'script' }], goal: ['npc:director', 'trigger:lift11'] },
+  cafe12: { unlock: [], goal: ['use:lunch', 'trigger:exit12'] },
+  street1: { unlock: [], goal: ['npc:pilot', 'npc:ashot', 'npc:babushka', 'npc:courier', 'trigger:south_exit'] },
+  street2: { unlock: [{ by: 'npc:valya', lock: 'script' }], goal: ['npc:semyonych', 'use:gate_panel', 'trigger:exit2'] },
   lab: { unlock: [{ by: 'npc:omletov', lock: 'lab' }, { by: 'use:generator', lock: 'script' }], goal: ['trigger:freight'] },
   factory: { unlock: [{ by: 'use:valve1+use:valve2+use:valve3', lock: 'script' }], goal: ['trigger:exit'] },
   boss: { unlock: [], goal: ['spawner:boss_spawn'] },

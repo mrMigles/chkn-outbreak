@@ -11,7 +11,7 @@ import type {
   Player, Enemy, Npc, Projectile, Pickup, Door, Barrel, Pod, SimEvent, PlayerInput, Team, WorldView, PickupKind, ProjKind,
 } from './types';
 import { updateEnemy } from './enemyAI';
-import { rayBody, enemyBox, HUMAN_BOX, type BodyBox } from './hitbox';
+import { rayBody, enemyBox, enemyScale, HUMAN_BOX, type BodyBox } from './hitbox';
 import { updateNpc } from './npcAI';
 import { SupportController, bleedoutFor, RULES } from './support';
 import type { LevelScript } from '../levels/types';
@@ -551,6 +551,8 @@ export class World implements WorldView {
     if (n.mode === 'dead' || n.mode === 'gone') return false;
     // Waiting story characters cannot die; don't strand waves at their closed rooms.
     if (this.script.id === 'office7' && n.props?.essential && n.mode !== 'follow') return false;
+    // D69: story helpers walking on their own (Неля) or waiting their scene are not a chicken target
+    if (n.props?.untargetable && n.mode !== 'follow') return false;
     if (n.mode === 'cower') return this.players.some((p) => p.state === 'alive' && dist(p.x, p.y, n.x, n.y) < 420);
     return true;
   }
@@ -748,7 +750,7 @@ export class World implements WorldView {
   private victims(team: Team) {
     const list: { kind: 'enemy' | 'player' | 'npc' | 'barrel' | 'pod' | 'dprop'; ref: any; x: number; y: number; r: number; box: BodyBox }[] = [];
     if (team === 'human') {
-      for (const e of this.enemies) if (e.state !== 'rise') list.push({ kind: 'enemy', ref: e, x: e.x, y: e.y, r: ENEMIES[e.type].radius + 3, box: enemyBox(e.type) });
+      for (const e of this.enemies) if (e.state !== 'rise') list.push({ kind: 'enemy', ref: e, x: e.x, y: e.y, r: ENEMIES[e.type].radius + 3, box: enemyBox(e.type, enemyScale(e)) });
       for (const p of this.players) if (p.state === 'chicken') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 4, box: HUMAN_BOX });
     } else {
       for (const p of this.players) if (p.state === 'alive') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 2, box: HUMAN_BOX });
@@ -864,7 +866,7 @@ export class World implements WorldView {
     // D69 floor 8: a sleeping chicken caught unawares takes heavy damage; a flashlight-blinded elite too
     const asleep = this.stealth && e.dormant && !e.aggro;
     if (asleep && kind !== 'fire') dmg *= 2.5;
-    if ((e.blindT ?? 0) > 0) dmg *= 1.6;
+    if ((e.blindT ?? 0) > 0) dmg *= 1.25;
     e.hp -= dmg;
     e.flashT = 0.09;
     e.aggro = true;
@@ -1142,9 +1144,12 @@ export class World implements WorldView {
     for (const d of this.doors) {
       if (d.locked) continue;
       const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+      // D69 (rules 5): wide doors also open for someone walking through their far end
+      const wide = this.rules >= 5 ? Math.max(d.w, d.h) / 2 + 50 : 0;
+      const rp = Math.max(110, wide), rn = Math.max(100, wide);
       let near = false;
-      for (const p of this.players) if ((p.state === 'alive' || p.state === 'chicken') && dist2(p.x, p.y, cx, cy) < 110 * 110) near = true;
-      if (!near) for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone' && dist2(n.x, n.y, cx, cy) < 100 * 100) near = true;
+      for (const p of this.players) if ((p.state === 'alive' || p.state === 'chicken') && dist2(p.x, p.y, cx, cy) < rp * rp) near = true;
+      if (!near) for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone' && dist2(n.x, n.y, cx, cy) < rn * rn) near = true;
       if (!near) for (const e of this.enemies) if (e.aggro && dist2(e.x, e.y, cx, cy) < 90 * 90) near = true;
       if (near !== d.open) {
         d.open = near;
@@ -1244,7 +1249,7 @@ export function pickupReach(map: GameMap, x: number, y: number) {
 function inRect(x: number, y: number, o: MapObject) { return x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h; }
 
 export function keyName(k: string) {
-  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной', f7_pass: 'Елены' } as Record<string, string>)[k] ?? k;
+  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной', f7_pass: 'Елены', visa_fin: 'виза финдиректора', visa_hr: 'виза HR', visa_law: 'виза юриста', f12: 'директора на 12 этаж', gate: 'проходной «Провансаля»' } as Record<string, string>)[k] ?? k;
 }
 
 export { TILE };

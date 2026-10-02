@@ -3,13 +3,14 @@ import type { EnemyType } from '../enemies';
 
 const factory: LevelScript = {
   id: 'factory',
-  title: 'Завод «Курникс-Агро»',
-  subtitle: 'Сто тысяч банок КУКАРЕКСА в день. Сегодня — ноль',
-  next: 'boss',
+  title: 'Завод «Провансаль»',
+  subtitle: 'Майонез, кетчуп и сто тысяч банок КУКАРЕКСА в день. Эпицентр',
+  chapter: 'Глава 3 · «Провансаль»',
+  next: 'lab',
 
   onStart(w) {
     w.setObjective('Добраться до цеха розлива (юг)', 'hall');
-    w.after(2, () => w.say('radio', 'Проф. Омлетов: В цехе розлива три вентиля синтеза. Откройте все — и линия начнёт выпускать антидот вместо КУКАРЕКСА.', 6));
+    w.after(2, () => w.say('radio', 'Капитан Крылов: Штаб передаёт — в цехе розлива три вентиля. Откройте все, и линия погонит антидот вместо КУКАРЕКСА. Рецепт… из лаборатории под заводом.', 7));
   },
 
   onTrigger(w, id, by) {
@@ -29,8 +30,8 @@ const factory: LevelScript = {
         w.spawnWave('hall', ['normal', 'fast', 'spitter', 'normal'], 12, 0.4, true, 'hall');
         break;
       case 'exit':
-        w.msg('АНГАР', 'Там, где стоит вертолёт директора…', 2.5);
-        w.completeLevel('boss');
+        w.msg('ГРУЗОВОЙ ЛИФТ', 'Вниз: лаборатория −3 под заводом. Источник КУКАРЕКСА', 3);
+        w.completeLevel('lab');
         break;
     }
   },
@@ -73,7 +74,7 @@ const factory: LevelScript = {
       // the antidote mist cures every chicken player
       for (const p of w.players) if (p.state === 'chicken' || p.state === 'dead' || p.state === 'downed') w.cure(p);
       w.msg('АНТИДОТ ГОТОВ', 'Курицы-игроки снова люди. Склад открыт', 3.5);
-      w.setObjective('Через склад — к ангару (юг)', 'exit');
+      w.setObjective('Через склад — к грузовому лифту в лабораторию (юг)', 'exit');
     });
   },
 

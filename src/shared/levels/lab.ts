@@ -22,8 +22,8 @@ function labObjective(w: World) {
 const lab: LevelScript = {
   id: 'lab',
   title: 'Уровень −3. Лаборатория проекта «ЯЙЦО»',
-  subtitle: 'Электричества нет. Фонарик есть. Удачи',
-  next: 'factory',
+  subtitle: 'Под заводом «Провансаль». Электричества нет. Фонарик есть',
+  next: 'boss',
 
   onStart(w) {
     labObjective(w);
@@ -62,8 +62,8 @@ const lab: LevelScript = {
         if (!w.flags.generator && w.flags.omletov) w.setObjective('Запустить генератор (пульт в центре)', 'generator');
         break;
       case 'freight':
-        w.msg('ГРУЗОВОЙ ЛИФТ', 'Наверх, на завод «Курникс-Агро»', 2.5);
-        w.completeLevel('factory');
+        w.msg('ГРУЗОВОЙ ЛИФТ', 'Наверх, в ангар «Провансаля». Совет директоров ждёт', 3);
+        w.completeLevel('boss');
         break;
     }
   },
@@ -76,7 +76,7 @@ const lab: LevelScript = {
   onRescue(w, n, by) {
     if (n.id !== 'omletov') return;
     w.flags.omletov = true;
-    w.say(n.id, 'Спасены! КУКАРЕКС — это мы. Простите. Антидот можно сварить на заводе, в цехе розлива. Пропуск в оружейную — держите. И я иду с вами!', 6);
+    w.say(n.id, 'Спасены! КУКАРЕКС — это мы. Простите. Антидот наверху уже льётся, но источник — Генеральный: он пьёт КУКАРЕКС литрами. Пропуск в оружейную — держите. И я иду с вами!', 7);
     const card = w.addPickup('keycard', n.x - 40, n.y, { key: 'lab', ttl: -1 });
     n.mode = 'follow'; n.follow = by.id;
     void card;

@@ -9,8 +9,13 @@ export const WALL_THEMES = {
   lab: { rim: '#a6c9cb', dark: '#648587', bevel: '#94b4b6' },
   industrial: { rim: '#e86a17', dark: '#a64a0f', bevel: '#565656' },
   office7: { rim: '#bfc2bb', dark: '#727b7c', bevel: '#d9dbd2', top: '#939891' },
+  // D69
+  dark: { rim: '#3d4554', dark: '#1d2129', bevel: '#4c5566', top: '#16181d' },
+  exec: { rim: '#8a5a3a', dark: '#4a3022', bevel: '#b07a4e', top: '#3a2a22' },
+  street: { rim: '#9a5240', dark: '#5e2f24', bevel: '#b8735a', top: '#55524f' },
+  cafe: { rim: '#cdbb98', dark: '#7a6a52', bevel: '#e6d8bc', top: '#6a5a48' },
 };
-export const THEME_ORDER = ['office', 'lab', 'industrial', 'office7'];
+export const THEME_ORDER = ['office', 'lab', 'industrial', 'office7', 'dark', 'exec', 'street', 'cafe'];
 
 // bits: N=1 E=2 S=4 W=8 NE=16 SE=32 SW=64 NW=128  (bit set = neighbour is wall)
 export function canonical(mask) {

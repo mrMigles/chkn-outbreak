@@ -2,7 +2,7 @@ import type { LevelScript } from './types';
 
 const boss: LevelScript = {
   id: 'boss',
-  title: 'Ангар. Совет директоров',
+  title: 'Ангар «Провансаля». Совет директоров',
   subtitle: 'Генеральный директор хочет обсудить ваши KPI',
 
   onStart(w) {

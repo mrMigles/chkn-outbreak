@@ -99,6 +99,8 @@ export interface Enemy {
   blindT?: number;
   /** D69: hit-and-run elites retreat into the dark for this long after a bite. Sim only. */
   fleeT?: number;
+  /** D69: how long the elite has been held in a flashlight beam. Sim only. */
+  litT?: number;
   appearance?: { npcId: string; kind: string; name: string };
 }
 

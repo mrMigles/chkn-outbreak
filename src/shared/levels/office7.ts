@@ -40,7 +40,7 @@ function objective(w: World) {
 }
 const level: LevelScript = {
   id: 'office7', title: 'Этаж 7. Пятеро на одного петуха',
-  subtitle: 'Capella · Castor · Phoenix. Эвакуация без записи в календаре', next: 'lab', enemyDamage: .8,
+  subtitle: 'Capella · Castor · Phoenix. Эвакуация без записи в календаре', next: 'office8', enemyDamage: .8,
   onStart(w) {
     objective(w);
     w.flags.escortWaveAt = w.time + 10;
@@ -93,9 +93,9 @@ const level: LevelScript = {
       for (const id of FRIENDS) w.npc(id)!.mode = 'gone';
       // Earlier office survivors evacuate too; nobody is dragged into the lab against the story.
       for (const n of w.npcs) if (n.mode === 'follow') n.mode = 'gone';
-      w.say('radio', 'Андрей: Мы в лифте, едем к выходу. Омлетов ответил: заражение идёт из лаборатории −3, без антидота весь город станет курятником. Ты знаешь, что делать.', 8);
-      w.msg('ДРУЗЬЯ СПАСЕНЫ', 'Пятеро едут к выходу. Вы — в лабораторию за антидотом.', 5);
-      w.completeLevel('lab');
+      w.say('radio', 'Андрей: Мы в лифте, едем к выходу! А ваш лифт… кнопку «вниз» заклевали. Он едет только вверх. Держитесь там!', 8);
+      w.msg('ДРУЗЬЯ СПАСЕНЫ', 'Пятеро едут к выходу. Ваш лифт — только вверх: на восьмой.', 5);
+      w.completeLevel('office8');
     }
   },
   onTrigger(w, id, by) {

@@ -243,6 +243,7 @@ export class Hud {
     const boss = view.bossId >= 0 ? view.enemies.find((e) => e.id === view.bossId) : undefined;
     toggle(this.q('.hud-boss'), 'hidden', !!(!boss));
     if (boss) setStyle(this.q('.boss-fill'), 'width', (100 * boss.hp / boss.maxHp).toFixed(1) + '%');
+    if (boss) setText(this.q('.boss-name'), view.bossName || 'ГЕНЕРАЛЬНЫЙ ПЕТУХ');
     // team (multiplayer)
     if (!solo) {
       setHtml(this.q('.hud-team'), view.players.filter((p) => p.id !== me.id).map((p) => {

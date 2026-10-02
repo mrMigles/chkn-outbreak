@@ -181,6 +181,17 @@ const RECIPES: Record<string, { dur: number; vars: number; fn: Recipe }> = {
     tone(c, { dur: 1.2, type: 'sawtooth', f: 260, f2: 120, gain: 0.6, dest: bp, vib: 14 });
     tone(c, { dur: 1.3, type: 'sawtooth', f: 130, f2: 70, gain: 0.5, dest: d, vib: 9 });
   } },
+  // D69: floor 8 horror beats, the breaker, the phone, the cafe helicopter
+  stinger: { dur: 1.4, vars: 2, fn: (c, v) => {
+    const d = drive(c, 3);
+    for (let i = 0; i < 4; i++) tone(c, { dur: 1.1, type: 'sawtooth', f: 180 * (1 + i * 0.059) * (v ? 1.06 : 1), f2: 90, gain: 0.22, dest: d, vib: 7 + i });
+    noise(c, { dur: 0.5, type: 'highpass', f: 2500, gain: 0.5, seed: 200 + v });
+  } },
+  phone: { dur: 1.2, vars: 1, fn: (c) => { for (let i = 0; i < 18; i++) { tone(c, { t: i * 0.025, dur: 0.02, type: 'square', f: 1100, gain: 0.12 }); tone(c, { t: 0.6 + i * 0.025, dur: 0.02, type: 'square', f: 1100, gain: 0.12 }); } } },
+  spark: { dur: 0.5, vars: 3, fn: (c, v) => { for (let i = 0; i < 6; i++) noise(c, { t: i * 0.05 + v * 0.01, dur: 0.03, type: 'highpass', f: 3500, gain: 0.5, seed: 210 + i + v }); } },
+  breaker: { dur: 0.7, vars: 1, fn: (c) => { noise(c, { dur: 0.08, type: 'lowpass', f: 900, gain: 0.9, seed: 230 }); tone(c, { dur: 0.25, f: 90, f2: 40, gain: 0.8 }); noise(c, { t: 0.1, dur: 0.5, type: 'bandpass', f: 120, q: 2, gain: 0.3, seed: 231 }); } },
+  heli: { dur: 0.5, vars: 1, fn: (c) => { for (let i = 0; i < 4; i++) noise(c, { t: i * 0.12, dur: 0.08, type: 'lowpass', f: 260, gain: 0.6, seed: 240 + i }); } },
+  chomp: { dur: 0.4, vars: 2, fn: (c, v) => { noise(c, { dur: 0.06, type: 'bandpass', f: 700, q: 2, gain: 0.6, seed: 250 + v }); noise(c, { t: 0.16, dur: 0.06, type: 'bandpass', f: 600, q: 2, gain: 0.5, seed: 252 + v }); } },
 };
 
 export class Sfx {

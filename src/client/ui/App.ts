@@ -333,14 +333,20 @@ export class App {
     };
     this.wakeRenderer();
     this.game.scene.start('game', data);
-    this.titleCard(lvl?.title ?? '', lvl?.subtitle ?? '');
+    this.titleCard(lvl?.title ?? '', lvl?.subtitle ?? '', lvl?.chapter);
   }
 
-  titleCard(title: string, sub: string) {
+  /** D69: «Глава 1 «Офис» пройдена» on the result panel of a chapter's last floor. */
+  private chapterBanner(levelId: string | undefined) {
+    const end = levelId ? LEVELS[levelId]?.chapterEnd : undefined;
+    return end ? `<div class="chapter-banner"><b>${escapeHtml(end.title)}</b><span>${escapeHtml(end.text)}</span></div>` : '';
+  }
+
+  titleCard(title: string, sub: string, chapter?: string) {
     this.ui.querySelectorAll('.title-card').forEach(card => card.remove());
     const d = document.createElement('div');
     d.className = 'title-card';
-    d.innerHTML = `<div class="tc-title">${escapeHtml(title)}</div><div class="tc-sub">${escapeHtml(sub)}</div>`;
+    d.innerHTML = `${chapter ? `<div class="tc-chapter">${escapeHtml(chapter)}</div>` : ''}<div class="tc-title">${escapeHtml(title)}</div><div class="tc-sub">${escapeHtml(sub)}</div>`;
     this.ui.appendChild(d);
     setTimeout(() => d.remove(), 3600);
   }
@@ -351,6 +357,7 @@ export class App {
     if (session.solo) { if (win || !next || !LEVELS[next]) clearSolo(); else saveSolo(next, carry); }
     const d = this.show(`<div class="panel center">
       <h2>${win ? 'ПОБЕДА!' : 'ЭТАП ПРОЙДЕН'}</h2>
+      ${this.chapterBanner(session.levelId)}
       <div class="stats"><div><b>${me?.kills ?? 0}</b><span>куриц оптимизировано</span></div><div><b>${Math.floor(me?.score ?? 0)}</b><span>KPI</span></div></div>
       ${win ? '<p class="flavor">Вы выбрались из «Курятника». Понедельник отменяется навсегда.</p>' : ''}
       <button class="btn primary" data-a="${win || !next || !LEVELS[next] ? 'menu' : 'next'}">${win || !next || !LEVELS[next] ? 'В главное меню' : 'Дальше'}</button></div>`);
@@ -693,10 +700,14 @@ export class App {
     setActiveRoom(room.roomId);
     const net = new NetSession(room, level, json);
     this.net = net;
+    this.lastNetLevel = level;
     this.runSession(net);
   }
 
+  /** level the last networked game ran (chapter banner on its result panel) */
+  private lastNetLevel = '';
   private netEnd(m: NetEnd) {
+    const ended = this.net?.levelId ?? this.lastNetLevel;
     const rows = [...m.stats].sort((a, b) => b.score - a.score).map((p) => {
       const col = '#' + PLAYER_COLORS[p.slot % 4].toString(16).padStart(6, '0');
       return `<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}</b><span class="st">☠ ${p.kills} · ★ ${p.score}</span></div>`;
@@ -709,6 +720,7 @@ export class App {
     this.stopGame();
     this.net = null; this.netResult = true;
     const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
+      ${m.kind !== 'gameover' ? this.chapterBanner(ended) : ''}
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
       ${m.kind !== 'gameover' ? this.shareButtons(!!(this.room?.state as any)?.summon) : ''}
       ${m.kind === 'win' && isHost ? '<button class="btn primary" data-a="lobby">В лобби</button>' : ''}

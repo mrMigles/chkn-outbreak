@@ -12,7 +12,7 @@ import { WalkingCycle } from './WalkingCycle';
 export const PLAYER_COLORS = [0x4fc3f7, 0xff6b6b, 0xffd54f, 0x81c784];
 const GUNS = (artMeta as any).guns as Record<string, { gripX: number; gripY: number; muzzle: number; w: number; h: number }>;
 
-import { HAND_H, ENEMY_SCALE } from '../../shared/sim/hitbox';
+import { HAND_H, ENEMY_SCALE, enemyScale } from '../../shared/sim/hitbox';
 /** Height of the gun (hand) above the feet, world units. Bullets, tracers and impacts render at this height. */
 export { HAND_H };
 /** Kept for imports: everything is 2.5D now. */
@@ -172,14 +172,16 @@ export class EnemyView {
   tex: string;
   lookKey: string;
   type: EnemyType;
+  scale: number;
 
   constructor(scene: Phaser.Scene, e: Enemy) {
     this.type = e.type;
+    this.scale = enemyScale(e);
     this.bird = e.type === 'chick';
     this.lookKey = enemyLookKey(e);
     this.tex = this.bird ? 'office25' : lookTexture(scene, this.lookKey, true);
-    this.shadow = scene.add.ellipse(e.x, e.y, this.bird ? 22 : 30 * ENEMY_SCALE[e.type] / 2, this.bird ? 8 : 10 * ENEMY_SCALE[e.type] / 2, 0x000000, 0.28).setDepth(6);
-    this.spr = scene.add.sprite(e.x, e.y, this.tex, this.bird ? 'chick_s_0' : 's_0').setOrigin(0.5, this.bird ? 0.9 : FEET).setScale(ENEMY_SCALE[e.type]);
+    this.shadow = scene.add.ellipse(e.x, e.y, this.bird ? 22 : 30 * this.scale / 2, this.bird ? 8 : 10 * this.scale / 2, 0x000000, 0.28).setDepth(6);
+    this.spr = scene.add.sprite(e.x, e.y, this.tex, this.bird ? 'chick_s_0' : 's_0').setOrigin(0.5, this.bird ? 0.9 : FEET).setScale(this.scale);
     if (e.appearance) this.label = scene.add.text(e.x, e.y, e.appearance.name, { fontFamily: 'Rubik, sans-serif', fontSize: '11px', color: '#ffad73', stroke: '#151515', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(40).setResolution(TEXT_RES());
     this.lastX = this.dispX = e.x; this.lastY = this.dispY = e.y;
   }
@@ -197,13 +199,13 @@ export class EnemyView {
     if (e.state === 'windup' || (e.state === 'charge' && e.ability === 'charge_wind')) { lunge = 6; if (!this.bird) frame = `${dir}_${Math.floor(time * 18) % 2 ? 3 : 7}`; }
     this.spr.setFrame(frame);
     this.punch *= Math.exp(-dt * 14);
-    let s = ENEMY_SCALE[e.type] * (1 + this.punch);
+    let s = this.scale * (1 + this.punch);
     if (e.state === 'rise') s *= 0.5 + 0.5 * (1 - Math.max(0, e.t) / 0.55);
     if (this.fuse || e.state === 'fuse') s *= 1 + Math.abs(Math.sin(time * 22)) * 0.12;
     const lx = Math.cos(e.angle) * lunge, ly = Math.sin(e.angle) * lunge * 0.6;
     this.spr.setPosition(x + lx, y + ly).setScale(s).setDepth(worldDepth(y));
     this.shadow.setPosition(x, y);
-    this.label?.setPosition(x, y - enemyHeight(e.type) - 14);
+    this.label?.setPosition(x, y - this.scale * 48 - 14);
     this.flashT -= dt;
     if (this.flashT > 0) this.spr.setTintFill(0xffffff);
     else if (e.state === 'fuse' || (e.type === 'boss' && e.state === 'charge')) this.spr.setTint(Math.sin(time * 30) > 0 ? 0xff4040 : 0xffffff);
@@ -220,7 +222,31 @@ export class EnemyView {
   }
 
   hit() { this.flashT = 0.06; this.punch = 0.12; }
-  destroy() { this.spr.destroy(); this.shadow.destroy(); this.label?.destroy(); }
+
+  /** D69 floor 8: glowing red eyes drawn above the darkness (depth 31); dim while asleep, blink now and then. */
+  private eyeL?: Phaser.GameObjects.Rectangle;
+  private eyeR?: Phaser.GameObjects.Rectangle;
+  private eyeGlow?: Phaser.GameObjects.Image;
+  eyes(scene: Phaser.Scene, e: Enemy, dark: number, time: number) {
+    if (this.bird || dark < 0.35) { this.eyeL?.setVisible(false); this.eyeR?.setVisible(false); this.eyeGlow?.setVisible(false); return; }
+    if (!this.eyeL) {
+      this.eyeL = scene.add.rectangle(0, 0, 4, 3, 0xff2a1a).setDepth(31);
+      this.eyeR = scene.add.rectangle(0, 0, 4, 3, 0xff2a1a).setDepth(31);
+      this.eyeGlow = scene.add.image(0, 0, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff2010).setDepth(31).setScale(0.35);
+    }
+    const S = this.scale, dir = direction(e.angle);
+    const awake = e.state !== 'idle';
+    const blink = Math.sin(time * 1.3 + e.id * 1.7) > 0.97;
+    const a = (awake ? 1 : 0.45) * Math.min(1, (dark - 0.35) * 3) * (blink ? 0 : 1);
+    const x = this.spr.x, y = this.spr.y - 41 * S, sz = Math.max(1.5, S * 1.6);
+    const show = dir !== 'n' && a > 0.02;
+    this.eyeL!.setVisible(show).setAlpha(a).setSize(sz * 1.4, sz);
+    this.eyeR!.setVisible(show && dir === 's').setAlpha(a).setSize(sz * 1.4, sz);
+    if (dir === 's') { this.eyeL!.setPosition(x - 4 * S, y); this.eyeR!.setPosition(x + 4 * S, y); }
+    else this.eyeL!.setPosition(x + (dir === 'e' ? 5 : -5) * S, y);
+    this.eyeGlow!.setVisible(show).setAlpha(a * 0.6).setPosition(x, y).setScale(0.25 * S);
+  }
+  destroy() { this.spr.destroy(); this.shadow.destroy(); this.label?.destroy(); this.eyeL?.destroy(); this.eyeR?.destroy(); this.eyeGlow?.destroy(); }
 }
 
 export class NpcView {
