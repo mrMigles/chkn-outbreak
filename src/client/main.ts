@@ -22,7 +22,8 @@ const game = new Phaser.Game({
   render: { antialias: false, pixelArt: true },
   input: { activePointers: 4 },
   // ?loop=timeout keeps the game ticking in hidden tabs (automated testing)
-  fps: { target: 60, forceSetTimeOut: location.search.includes('loop=timeout') },
+  // D67: 120 Hz phones would draw every frame twice for nothing — the game is capped at 60
+  fps: { target: 60, limit: location.search.includes('loop=timeout') ? 0 : 60, forceSetTimeOut: location.search.includes('loop=timeout') },
   scene: [BootScene, GameScene],
   disableContextMenu: true,
 });

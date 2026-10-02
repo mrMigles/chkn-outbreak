@@ -1,16 +1,26 @@
 import { dist } from '../math';
 import { WEAPONS } from '../weapons';
+import { PLAYER } from '../enemies';
 import type { GameMap } from '../map';
 import type { Player, WorldView } from './types';
 import type { World } from './World';
 
 export const HELP_RADIUS = 80;
+/**
+ * D66 rules: a downed teammate can be picked up from 110 units (80 was barely more than a body width on a
+ * phone) and bleeds out in 15 s. Earlier room saves replay with their own rules (RoomCheckpoint.rules).
+ */
+export const RULES = 4;
+const rulesOf = (v: unknown) => ((v as { rules?: number }).rules ?? RULES);
+export const helpRadius = (v: unknown) => (rulesOf(v) >= 4 ? 110 : HELP_RADIUS);
+export const BLEEDOUT = 15;
+export const bleedoutFor = (v: unknown) => (rulesOf(v) >= 4 ? BLEEDOUT : PLAYER.bleedout);
 const TAP_TIME = 0.22;
 
 /** The HUD and authority use the same selection and line-of-sight rules. */
 export function supportTarget(view: WorldView, map: GameMap, p: Player): Player | null {
   const candidates = view.players.filter(q => q !== p && q.id !== p.id && q.connected &&
-    (q.state === 'alive' || q.state === 'downed') && dist(p.x, p.y, q.x, q.y) <= HELP_RADIUS &&
+    (q.state === 'alive' || q.state === 'downed') && dist(p.x, p.y, q.x, q.y) <= helpRadius(view) &&
     map.lineOfSight(p.x, p.y, q.x, q.y, false) && (q.state === 'downed' ||
       (q.hp < q.maxHp && p.supplies.medkit > 0) ||
       (p.supplies.ammo > 0 && q.ammo[q.weapons[q.cur]] && q.ammo[q.weapons[q.cur]]!.reserve >= 0 &&
@@ -48,7 +58,7 @@ export class SupportController {
 
   private valid(p: Player, target: Player | undefined, w: World) {
     return target && p.connected && p.state === 'alive' && target.connected &&
-      dist(p.x, p.y, target.x, target.y) <= HELP_RADIUS &&
+      dist(p.x, p.y, target.x, target.y) <= helpRadius(w) &&
       w.map.lineOfSight(p.x, p.y, target.x, target.y, false);
   }
 

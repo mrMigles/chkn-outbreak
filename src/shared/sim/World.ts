@@ -13,7 +13,7 @@ import type {
 import { updateEnemy } from './enemyAI';
 import { rayBody, enemyBox, HUMAN_BOX, type BodyBox } from './hitbox';
 import { updateNpc } from './npcAI';
-import { SupportController } from './support';
+import { SupportController, bleedoutFor, RULES } from './support';
 import type { LevelScript } from '../levels/types';
 import { ACHIEVEMENTS, type AchievementKey } from '../achievements';
 import { Bonus } from './Bonus';
@@ -29,6 +29,8 @@ export interface WorldOptions {
   carry?: Carry;
   difficulty?: number;
   seed?: number;
+  /** D66: simulation rules version (RULES); saves recorded earlier replay with their own rules. */
+  rules?: number;
 }
 
 interface Timer { t: number; fn: () => void; every?: number }
@@ -240,8 +242,20 @@ export class World implements WorldView {
   setBlackout(on: boolean) { this.blackout = on; this.emit({ e: 'blackout', on }); }
   setAlarm(on: boolean) { this.alarm = on; this.emit({ e: 'alarm', on }); }
   npc(id: string) { return this.npcs.find((n) => n.id === id); }
+  /** A survivor placed by a script (D66: corridor and lift-hall scenes). Deterministic: no RNG. */
+  addNpc(id: string, kind: string, name: string, x: number, y: number, o: { angle?: number; tag?: string; lines?: string[]; turn?: EnemyType } = {}) {
+    const n: Npc = {
+      id, kind, name, x, y, angle: (o.angle ?? 90) * Math.PI / 180, hp: 80, maxHp: 80, mode: 'idle', weapon: null, fireCd: 0, follow: null, goal: null,
+      lines: o.lines ?? [], talkCd: 3, tag: o.tag ?? id, rescued: false, vx: 0, vy: 0, hurtT: 0, props: { turn: o.turn ?? 'normal' },
+    };
+    this.npcs.push(n);
+    return n;
+  }
+  /** Let a one-shot trigger fire again (a condition was not met yet). */
+  rearmTrigger(name: string) { this.firedTriggers.delete(name); }
   object(name: string) { return this.map.objects.find((o) => o.name === name); }
   objects(type: string, name?: string) { return this.map.objects.filter((o) => o.type === type && (name === undefined || o.name === name)); }
+  get rules() { return this.opts.rules ?? RULES; }
   get humanPlayers() { return this.players.filter((p) => p.state === 'alive'); }
   get anyPlayer() { return this.humanPlayers[0] ?? this.players[0]; }
 
@@ -690,7 +704,7 @@ export class World implements WorldView {
       this.after(1.6, () => this.gameOver('Вас заклевали. Корпорация выражает соболезнования.'));
       return;
     }
-    p.state = 'downed'; p.downT = PLAYER.bleedout; p.reviveT = 0;
+    p.state = 'downed'; p.downT = bleedoutFor(this); p.reviveT = 0;
     this.emit({ e: 'down', id: p.id });
     this.say(p.id, 'Я ранен! Поднимите меня, пока не закукарекал!');
   }

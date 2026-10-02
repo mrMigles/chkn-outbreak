@@ -1,0 +1,25 @@
+{
+  "renderer": "hardware WebGL",
+  "viewport": "832x384 @2.8",
+  "menu": {
+    "cpuPct": 0.1,
+    "scriptPct": 0,
+    "stylePerSec": 0,
+    "layoutPerSec": 0,
+    "rafPerSec": 0
+  },
+  "lobby": {
+    "cpuPct": 0.2,
+    "scriptPct": 0,
+    "stylePerSec": 0,
+    "layoutPerSec": 0,
+    "rafPerSec": 0
+  },
+  "fight": {
+    "cpuPct": 20,
+    "scriptPct": 15.9,
+    "stylePerSec": 55.1,
+    "layoutPerSec": 20.8,
+    "rafPerSec": 60
+  }
+}

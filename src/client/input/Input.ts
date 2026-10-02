@@ -102,7 +102,7 @@ export class Input {
         if (d > R * 1.6) { s.ox += dx * (1 - (R * 1.6) / d); s.oy += dy * (1 - (R * 1.6) / d); s.base.style.left = s.ox + 'px'; s.base.style.top = s.oy + 'px'; dx = s.x - s.ox; dy = s.y - s.oy; }
         const k = Math.min(1, R / Math.max(1, Math.hypot(dx, dy)));
         s.knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
-        if (s.side === 'R') s.base.classList.toggle('fire', Math.hypot(dx, dy) / R >= FIRE_EDGE);
+        if (s.side === 'R') { const f = Math.hypot(dx, dy) / R >= FIRE_EDGE; if (s.base.classList.contains('fire') !== f) s.base.classList.toggle('fire', f); }
       }
     };
     const onEnd = (ev: TouchEvent) => {
@@ -146,8 +146,9 @@ export class Input {
 
   showInteract(text: string | null) {
     if (!this.interactLabel) return;
-    this.interactLabel.classList.toggle('hidden', !text);
-    if (text) this.interactLabel.textContent = text;
+    // every frame: touch the DOM only on a change (D67)
+    if (this.interactLabel.classList.contains('hidden') !== !text) this.interactLabel.classList.toggle('hidden', !text);
+    if (text && this.interactLabel.textContent !== text) this.interactLabel.textContent = text;
   }
 
   /** Call once per frame before reading state. */

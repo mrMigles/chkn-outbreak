@@ -14,6 +14,8 @@ export interface RoomCheckpoint {
   seats?: Member[];
   /** slot → persistent player id: whoever returns (closed tab, new device) reclaims their own seat. */
   pids?: Record<number, string>;
+  /** D66: rules version the frames were recorded with (absent = 3). */
+  rules?: number;
 }
 const members = (w: World): Member[] => w.players.map(p => ({ id: p.id, name: p.name, slot: p.slot, look: p.look, connected: p.connected }));
 const compact = (id: string, p: PlayerInput): Input => [id, p.x, p.y, p.aim, Number(p.fire) | (Number(p.reload) << 1) | (Number(p.interact) << 2), p.weapon];
@@ -27,7 +29,7 @@ export class RoomRecording {
   private framesJson = '';
   private serialized = 0;
   constructor(public world: World, previous?: RoomCheckpoint) {
-    this.data = previous ?? { version: 3, level: world.mapId, seed: world.opts.seed!, carry: world.opts.carry, difficulty: world.opts.difficulty, members: members(world), frames: [] };
+    this.data = previous ?? { version: 3, level: world.mapId, seed: world.opts.seed!, carry: world.opts.carry, difficulty: world.opts.difficulty, rules: world.rules, members: members(world), frames: [] };
     this.lastMembers = JSON.stringify(members(world));
     this.safeLength = this.data.frames.length;
   }
@@ -64,7 +66,7 @@ export class RoomRecording {
   }
   static restore(map: TiledMap, save: RoomCheckpoint) {
     if (save.version !== 3 || !LEVELS[save.level]) throw new Error('Unsupported room checkpoint');
-    const world = new World(new GameMap(save.level, map), LEVELS[save.level], { solo: false, seed: save.seed, carry: save.carry, difficulty: save.difficulty });
+    const world = new World(new GameMap(save.level, map), LEVELS[save.level], { solo: false, seed: save.seed, carry: save.carry, difficulty: save.difficulty, rules: save.rules ?? 3 });
     const sync = (roster: Member[]) => {
       for (const p of [...world.players]) if (!roster.some(q => q.id === p.id)) world.removePlayer(p.id);
       for (const m of roster) {

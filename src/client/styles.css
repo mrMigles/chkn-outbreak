@@ -581,3 +581,6 @@ kbd { font-family: var(--head); font-size: 12px; background: #121418; border: 1p
   /* alert and radio at once: the incident line gives way instead of showing a clipped sliver */
   .hud.touch .hud-feed:has(.hud-notice.show):has(.hud-radio.show) .hud-incident { display: none; }
 }
+/* D66: while watching a teammate the label sits low and small, the teammate stays in view */
+.hud-state.watch { top: auto; bottom: calc(var(--sb) + 96px); font-size: 14px; padding: 6px 12px; max-width: min(560px, 92vw); }
+.hud.touch .hud-state.watch { top: auto; bottom: calc(var(--sb) + 130px); font-size: 11.5px; }

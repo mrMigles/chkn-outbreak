@@ -1,5 +1,7 @@
 # CHKN OUTBREAK
 
+![CHKN Outbreak — Петушковая угроза!](docs/cover.webp)
+
 Arcade shooter in the spirit of *Alien Shooter* — but your coworkers are turning into chicken-people. Three-quarter-view 2.5D on every level.
 Phaser 3 · TypeScript · Vite · Tiled · Colyseus · HTML/CSS menus. Works in desktop and mobile browsers and inside Telegram, 1–4 players.
 
@@ -82,6 +84,9 @@ optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/se
 | `npm run check:lobby-ui` | real browsers on the production build (own server): lobby portraits, look change, reopen-to-seat, pause achievements, Telegram desktop → browser hand-over, install page/service worker, phone lobby |
 | `npm run bench:net -- office7 10` | snapshot traffic full vs delta and room-save cost on a long floor |
 | `npm run icons` | PWA icons from the LPC chicken-person |
+| `npm run check:floor6` | floor-6 corridor/lift-hall scenes, lift gate, revive rules, rules-3 saves unchanged, exact replay |
+| `npm run check:mp-ui` | two real browsers online: no traces after mutations, own shots after a pickup, downed alert/arrow/ring/revive, spectating |
+| `npm run qa:battery` | phone emulation: CPU, style recalcs, layouts and frames per second in menu, lobby and a fight |
 | `npm run qa:perf -- 120` | production build performance: time to menu (local and 4G-throttled, bytes), frame times, client/server memory over a fight |
 | `npm run smoke` | short fights in all six scenes |
 | `node tools/qa-campaign.mjs <dir> [levels] [mobile]` | E2E autopilot through the campaign via the real UI (objective arrow, E, «Дальше») |

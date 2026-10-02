@@ -2,6 +2,10 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 11 (2026-10-03, Claude) — fixes from online play, floor 6, battery
+
+D66: no traces after online mutations; own shots no longer vanish after a gun pickup online (event/snapshot order) and sound voices cannot get stuck; downed teammates have a 15 s ring, alert, arrow and a 110 pick-up radius; dead players spectate; floor 6 has corridor mutations, strays, bigger waves and a comic lift-hall meeting (rules version 4; older saves replay unchanged). D67: battery — change-only HUD writes, sleeping renderer in menus, 60 FPS cap. New checks: `check:floor6` (CI), `check:mp-ui`, `qa:battery`, `node tools/qa-floor6.mjs` (screenshots). Cover art in `docs/cover.webp`, link preview `public/og.jpg`.
+
 ## Iteration 10 (2026-10-02, Claude) — phone shooting, phone texts, performance
 
 D63: right stick aims inside the circle and fires at the edge, regardless of targets. D64: on phones all pop-up texts (incident, alerts, radio, tips) live in one small feed in the free corner (portrait bottom-left, landscape top-right), smaller, one pop-up at a time. D65: `qa:perf` found no leaks and steady 60 FPS; start-up made faster (brotli, immutable versioned assets, Phaser chunk, music after first touch): 4G cold start 5.8 → 4.0 s, half the bytes.

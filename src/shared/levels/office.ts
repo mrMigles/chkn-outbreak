@@ -5,6 +5,22 @@ import type { EnemyType } from '../enemies';
 const hasKey = (w: World, k: string) => w.players.some((p) => p.keys.includes(k));
 const giveKey = (w: World, k: string) => { for (const p of w.players) if (!p.keys.includes(k)) p.keys.push(k); };
 
+// D66 (rules ≥ 4; older room saves replay the floor as it was): more chickens, coworkers turning in the
+// corridor and a comic lift-hall «планёрка» that turns when the power comes back.
+const fresh = (w: World) => w.rules >= 4;
+const T = 64;
+const CORRIDOR: [string, string, string, number, EnemyType, string, string][] = [
+  ['courier', 'manBlue', 'Гена, курьер с пиццей', 27, 'fast', 'Кто заказывал «Четыре сыра»? Ко?..', 'Пицца… с перьями… КО-КО!'],
+  ['zina', 'womanGreen', 'Зина, бухгалтерия', 38, 'normal', 'Я только за степлером вышла!', 'Квартальный отчёт… кудах-тах-тах!'],
+  ['vitya', 'manBrown', 'Витя, сисадмин', 47, 'normal', 'Вы перезагрузить пробовали?', 'Синий экран… синий гребешок… КО!'],
+];
+const MEETING: [string, string, string, number, number, EnemyType, string][] = [
+  ['coach', 'hitman', 'Вадим, коуч', 0, 0, 'fat', 'Итак, коллеги, планёрка в лифте — наш новый формат!'],
+  ['sales1', 'manBlue', 'Отдел продаж', -1.5, 0.9, 'normal', 'А можно я уже домой? Пятница же…'],
+  ['sales2', 'womanGreen', 'Отдел продаж', 1.5, 0.9, 'fast', 'Предлагаю закукарекать этот вопрос.'],
+  ['intern', 'manBrown', 'Стажёр Петя', 0, 1.8, 'normal', 'Я веду протокол: «ко», «ко», «ко-ко»…'],
+];
+
 const office: LevelScript = {
   id: 'office',
   title: 'Этаж 6. Офис «Курникс Групп»',
@@ -45,11 +61,25 @@ const office: LevelScript = {
   onTrigger(w, id, by) {
     switch (id) {
       case 'kitchen_enter':
-        w.spawnWave('kitchen', ['normal', 'normal', 'fast'], 4, 0.8, true, 'kitchen');
+        w.spawnWave('kitchen', ['normal', 'normal', 'fast'], fresh(w) ? 6 : 4, 0.8, true, 'kitchen');
         w.after(0.3, () => w.say(by.id, 'Они в холодильнике!!'));
         break;
       case 'corridor':
         if (w.flags.power) break;
+        if (fresh(w)) {
+          // coworkers in the corridor who also had the free КУКАРЕКС
+          const cy = 15.5 * T;
+          CORRIDOR.forEach(([id, kind, name, tx, turn, say1, say2], i) => {
+            const n = w.addNpc(id, kind, name, tx * T, cy, { angle: 180, tag: 'corr', turn });
+            w.after(1.2 + i * 1.6, () => w.say(n.id, say1, 2.4));
+            w.after(3.6 + i * 1.6, () => { w.say(n.id, say2, 1.6); w.infect(n, turn, 'corr'); });
+          });
+          // and a few strays keep coming down the corridor until the server reboot
+          w.every(18, () => {
+            if (w.flags.rebooted || w.countTag('patrol6') >= 5) return;
+            w.spawnWave('corridor', ['normal', 'normal', 'fast'], 3, 0.8, true, 'patrol6');
+          });
+        }
         w.say('pa', 'Внимание! Из-за перегрузки лифты обесточены. Перезагрузите сервер. Или не перезагружайте. Нам уже всё равно.', 5);
         w.setObjective('Лифты обесточены. Перезагрузить сервер (серверная — у лифтов)', 'reboot');
         break;
@@ -87,15 +117,21 @@ const office: LevelScript = {
         break;
       case 'cafeteria':
         w.msg('СТОЛОВАЯ «НАСЕСТ»', 'Обед начался раньше', 2.5);
-        w.spawnWave('caf', ['normal', 'normal', 'normal', 'fast', 'spitter'], 10, 0.7, true, 'caf');
+        w.spawnWave('caf', ['normal', 'normal', 'normal', 'fast', 'spitter'], fresh(w) ? 14 : 10, 0.7, true, 'caf');
         break;
       case 'lobby':
         if (!w.flags.galina) {
           w.say('galina', 'Помогите!!! Они ломятся через главный вход!', 3);
-          w.spawnWave('entrance', ['normal', 'fast', 'normal', 'normal'], 9, 0.7, true, 'lobby');
+          w.spawnWave('entrance', ['normal', 'fast', 'normal', 'normal'], fresh(w) ? 12 : 9, 0.7, true, 'lobby');
         }
         break;
       case 'elevator': {
+        // the lift-hall meeting must be over before anyone rides down… up
+        if (fresh(w) && (w.countTag('meeting') > 0 || !w.flags.meetingDone)) {
+          w.rearmTrigger('elevator');
+          if (!w.flags.meetingNag) { w.flags.meetingNag = true; w.say(by.id, 'Сначала разгоним планёрку. Потом лифт.'); }
+          break;
+        }
         const g = w.npc('galina');
         const pt = w.npc('petrovich');
         const saved = [g, pt].filter((n) => n && n.mode === 'follow').map((n) => n!.name);
@@ -161,6 +197,24 @@ const office: LevelScript = {
         w.openDoor('elevator');
         w.say('pa', 'Сервер перезагружен. Лифты снова работают. Хороших выходных!', 4);
         w.setObjective('К лифтам!', 'elevator');
+        if (fresh(w)) {
+          // D66: behind the lift doors — a meeting nobody could leave during the blackout
+          const hall = w.objects('trigger', 'elevator')[0];
+          const cx = hall ? hall.x + hall.w / 2 : 53.5 * T, cy = hall ? hall.y + hall.h + 1.6 * T : 7.6 * T;
+          const team = MEETING.map(([id, kind, name, dx, dy, turn, line]) => ({ n: w.addNpc(id, kind, name, cx + dx * T, cy + dy * T, { angle: dy > 0 ? -90 : 90, tag: 'meeting', turn }), turn, line }));
+          w.setObjective('Лифтовый холл: там… планёрка?', 'coach');
+          team.forEach(({ n, line }, i) => w.after(1 + i * 1.7, () => w.say(n.id, line, 2.6)));
+          const t0 = 1 + team.length * 1.7 + 0.6;
+          w.after(t0, () => w.say('coach', 'И последний пункт повестки… КО-КО-КО-КУКАРЕКУ!', 2.6));
+          w.after(t0 + 0.4, () => w.say('pa', 'Напоминаем: совещания в лифтах запрещены регламентом. Нарушители будут ощипаны.', 4.5));
+          team.forEach(({ n, turn }, i) => w.after(t0 + 0.8 + i * 0.35, () => w.infect(n, turn, 'meeting')));
+          w.after(t0 + 2.4, () => {
+            const p = w.anyPlayer;
+            if (p) w.say(p.id, 'Даже в лифте планёрка. Даже сейчас.', 2.8);
+            w.setObjective('Разогнать планёрку и к лифтам!', 'elevator');
+          });
+          w.after(t0 + 1, () => { w.flags.meetingDone = true; });
+        }
         if (!w.flags.galina) w.after(5, () => w.say('radio', 'Галина (ресепшн): Кто-нибудь! Я на ресепшене, их тут очень много!', 5));
       });
     });

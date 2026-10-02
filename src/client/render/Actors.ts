@@ -1,3 +1,4 @@
+import { BLEEDOUT } from '../../shared/sim/support';
 import Phaser from 'phaser';
 import { TEXT_RES } from '../settings';
 import artMeta from '../../shared/generated/artMeta.json';
@@ -103,6 +104,8 @@ export class PlayerView {
   rig: Rig;
   ring: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
+  /** D66: bleed-out countdown around a downed player (shrinking red arc) and revive progress (green) */
+  timer: Phaser.GameObjects.Graphics;
   lastState = '';
   dispX = 0; dispY = 0; dispA = 0;
   showName: boolean;
@@ -114,6 +117,7 @@ export class PlayerView {
     this.rig = new Rig(scene, p.look || LOOK_PRESETS['p' + (p.slot % 4)]);
     this.label = scene.add.text(0, 0, p.name, { fontFamily: 'Rubik, sans-serif', fontSize: '12px', fontStyle: '600', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5, 1).setDepth(40).setVisible(showName).setResolution(TEXT_RES());
+    this.timer = scene.add.graphics().setDepth(8);
     this.dispX = p.x; this.dispY = p.y;
   }
 
@@ -135,9 +139,17 @@ export class PlayerView {
     }
     this.ring.setPosition(x, y + 2).setTint((p.buffs?.invincible ?? 0) > 0 ? 0xffd65c : PLAYER_COLORS[p.slot % 4]);
     this.label.setPosition(x, y - 104).setText(p.state === 'downed' ? `${p.name} ✚ ${Math.ceil(p.downT)}` : p.name);
+    const g = this.timer.clear();
+    if (p.state === 'downed') {
+      const left = Math.max(0, Math.min(1, p.downT / BLEEDOUT)), r = 34, cy = y - 4;
+      const top = -Math.PI / 2;
+      g.lineStyle(7, 0x000000, 0.45).strokeCircle(x, cy, r);
+      g.lineStyle(5, left < 0.3 ? 0xff3b2f : 0xff8a4a, 0.95).beginPath().arc(x, cy, r, top, top + left * Math.PI * 2, false).strokePath();
+      if (p.reviveT > 0) g.lineStyle(3, 0x6dff7a, 1).beginPath().arc(x, cy, r - 7, top, top + Math.min(1, p.reviveT) * Math.PI * 2, false).strokePath();
+    }
   }
 
-  destroy() { this.rig.destroy(); this.ring.destroy(); this.label.destroy(); }
+  destroy() { this.rig.destroy(); this.ring.destroy(); this.label.destroy(); this.timer.destroy(); }
 }
 
 /** Visual height of the body (world units) for aiming at the torso and placing labels. */

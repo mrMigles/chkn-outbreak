@@ -187,7 +187,7 @@ export class Sfx {
   ctx: AudioContext | null = null;
   master!: GainNode;
   private buffers = new Map<string, AudioBuffer[]>();
-  private playing = new Map<string, number>();
+  private playing = new Map<string, number[]>();
   volume = 0.8;
   listenerX = 0; listenerY = 0;
   private loops = new Map<string, { src: AudioBufferSourceNode; gain: GainNode }>();
@@ -223,8 +223,11 @@ export class Sfx {
     const list = this.buffers.get(name);
     if (!list) return;
     const max = o.max ?? 6;
-    const cur = this.playing.get(name) ?? 0;
-    if (cur >= max) return;
+    // D66: voices are counted by their scheduled end, not by onended: sources started while the context
+    // was suspended (app in background) never fire onended, and the shot sound used to vanish for good
+    const wall = performance.now() / 1000;
+    const ends = (this.playing.get(name) ?? []).filter((t) => t > wall);
+    if (ends.length >= max) { this.playing.set(name, ends); return; }
     let vol = o.vol ?? 1, pan = 0;
     if (o.x !== undefined && o.y !== undefined) {
       const dx = o.x - this.listenerX, dy = o.y - this.listenerY;
@@ -242,8 +245,8 @@ export class Sfx {
     p.pan.value = pan;
     src.connect(g).connect(p).connect(this.master);
     src.start();
-    this.playing.set(name, cur + 1);
-    src.onended = () => this.playing.set(name, (this.playing.get(name) ?? 1) - 1);
+    ends.push(wall + src.buffer!.duration / src.playbackRate.value + 0.02);
+    this.playing.set(name, ends);
   }
 
   /** Looping sound (flamethrower). */

@@ -8,9 +8,19 @@ import { rememberAchievements } from './AchievementProfile';
 
 const hex = (c: number) => '#' + c.toString(16).padStart(6, '0');
 
+// D67: the HUD runs every frame; writing unchanged text/classes/styles still invalidated style and layout
+// twice a frame on phones. These only touch the DOM when the value really changes.
+const shown = new WeakMap<Element, string>();
+function setText(el: Element, v: string) { if (el.textContent !== v) el.textContent = v; }
+function setHtml(el: Element, v: string) { if (shown.get(el) !== v) { shown.set(el, v); el.innerHTML = v; } }
+function toggle(el: Element, c: string, on: boolean) { if (el.classList.contains(c) !== on) el.classList.toggle(c, on); }
+function setStyle(el: HTMLElement, k: string, v: string) { if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); }
+function setClass(el: Element, v: string) { if (el.className !== v) el.className = v; }
+
 export class Hud {
   el: HTMLDivElement;
-  private q = <T extends HTMLElement = HTMLDivElement>(s: string) => this.el.querySelector(s) as T;
+  private found = new Map<string, HTMLElement>();
+  private q = <T extends HTMLElement = HTMLDivElement>(s: string) => { let e = this.found.get(s); if (!e) { e = this.el.querySelector(s) as HTMLElement; if (e) this.found.set(s, e); } return e as T; };
   private msgTimer = 0;
   private toastTimer = 0;
   private lastSlots = '';
@@ -19,6 +29,11 @@ export class Hud {
   private noticeTimer = 0;
   private popupAchievements = new Set<string>();
   private profileKeys = '';
+  private watching = '';
+  /** D66: whom a dead player is watching (and how to switch). */
+  spectate(name: string | null, more = false, touch = false) {
+    this.watching = name ? ` · следим за ${name}${more ? (touch ? ' (тап — следующий)' : ' (клик — следующий)') : ''}` : '';
+  }
   icons: Record<string, string> = {};
 
   constructor(touch = false) {
@@ -98,108 +113,108 @@ export class Hud {
   private advanceNotice() {
     if (this.noticeTimer > 0) return;
     const el = this.q('.hud-notice'), next = this.noticeQueue.shift();
-    if (!next) { el.classList.remove('show'); return; }
-    this.q('.hud-notice b').textContent = next.text;
-    this.q('.hud-notice span').textContent = next.sub;
+    if (!next) { toggle(el, 'show', false); return; }
+    setText(this.q('.hud-notice b'), next.text);
+    setText(this.q('.hud-notice span'), next.sub);
     el.dataset.tone = next.tone;
     el.classList.add('show');
     this.noticeTimer = next.tone === 'danger' ? 4 : 3.6;
   }
 
   message(title: string, sub = '', d = 3) {
-    this.q('.msg-title').textContent = title;
-    this.q('.msg-sub').textContent = sub;
+    setText(this.q('.msg-title'), title);
+    setText(this.q('.msg-sub'), sub);
     const m = this.q('.hud-msg');
-    m.classList.remove('show'); void m.offsetWidth; m.classList.add('show');
+    toggle(m, 'show', false); void m.offsetWidth; m.classList.add('show');
     this.msgTimer = d;
   }
   toast(text: string) {
     const t = this.q('.hud-toast');
-    t.textContent = text;
-    t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    setText(t, text);
+    toggle(t, 'show', false); void t.offsetWidth; t.classList.add('show');
     this.toastTimer = 1.8;
   }
   /** Direction (screen angle) and distance in metres to the objective; null hides it. */
   guide(angle: number | null, metres = 0) {
     const el = this.el.querySelector<HTMLElement>('.obj-dir')!;
-    el.classList.toggle('hidden', angle === null);
+    toggle(el, 'hidden', !!(angle === null));
     if (angle === null) return;
-    el.querySelector<HTMLElement>('i')!.style.transform = `rotate(${angle}rad)`;
-    el.querySelector('b')!.textContent = metres + ' м';
+    setStyle(el.querySelector<HTMLElement>('i')!, 'transform', `rotate(${Math.round(angle * 57.3 / 3) * 3}deg)`);
+    setText(el.querySelector('b')!, metres + ' м');
   }
 
   objective(text: string) {
-    this.q('.obj-text').textContent = text;
+    setText(this.q('.obj-text'), text);
     const o = this.q('.hud-obj');
-    o.classList.toggle('hidden', !text);
+    toggle(o, 'hidden', !!(!text));
     o.classList.remove('flash');
     if (!settings.reducedFlashes) { void o.offsetWidth; o.classList.add('flash'); }
   }
   private radioTimer = 0;
   radio(who: string, text: string, d = 4) {
-    this.q('.hud-radio b').textContent = who;
-    this.q('.hud-radio span').textContent = text;
+    setText(this.q('.hud-radio b'), who);
+    setText(this.q('.hud-radio span'), text);
     const r = this.q('.hud-radio');
-    r.classList.remove('show'); void r.offsetWidth; r.classList.add('show');
+    toggle(r, 'show', false); void r.offsetWidth; r.classList.add('show');
     this.radioTimer = d;
   }
   hint(text: string | null) {
     const h = this.q('.hud-hint');
-    h.textContent = text ?? '';
-    h.classList.toggle('show', !!text);
+    setText(h, text ?? '');
+    toggle(h, 'show', !!(!!text));
   }
   damage(amount: number) {
     if (settings.reducedFlashes) return;
     const v = this.q('.hud-vignette');
-    v.style.opacity = String(Math.min(0.85, 0.3 + amount / 40));
+    setStyle(v, 'opacity', String(Math.min(0.85, 0.3 + amount / 40)));
     v.classList.remove('fade'); void v.offsetWidth; v.classList.add('fade');
   }
 
   update(dt: number, view: WorldView, me: Player | undefined, solo: boolean) {
-    this.el.classList.toggle('reduced-flashes', settings.reducedFlashes);
+    toggle(this.el, 'reduced-flashes', !!(settings.reducedFlashes));
     this.noticeTimer -= dt;
     this.advanceNotice();
     this.msgTimer -= dt;
-    if (this.msgTimer <= 0) this.q('.hud-msg').classList.remove('show');
+    if (this.msgTimer <= 0) toggle(this.q('.hud-msg'), 'show', false);
     this.toastTimer -= dt;
-    if (this.toastTimer <= 0) this.q('.hud-toast').classList.remove('show');
+    if (this.toastTimer <= 0) toggle(this.q('.hud-toast'), 'show', false);
     this.radioTimer -= dt;
-    if (this.radioTimer <= 0) this.q('.hud-radio').classList.remove('show');
+    if (this.radioTimer <= 0) toggle(this.q('.hud-radio'), 'show', false);
     if (!me) return;
     const keys = [...new Set(me.achievements ?? [])].sort().join(',');
     if (keys !== this.profileKeys) { this.profileKeys = keys; rememberAchievements(me.achievements ?? []); }
     this.updateIncident(view, me);
     this.updateBonus(dt, view);
-    this.q('.hud-supplies').innerHTML = `<span title="Аптечки">✚ ${me.supplies?.medkit ?? 0}</span><span title="Патроны для друзей">▣ ${me.supplies?.ammo ?? 0}</span>`;
+    setHtml(this.q('.hud-supplies'), `<span title="Аптечки">✚ ${me.supplies?.medkit ?? 0}</span><span title="Патроны для друзей">▣ ${me.supplies?.ammo ?? 0}</span>`);
     const action = me.support;
     const helping = !!action && !action.cancelled && !action.completed && action.kind !== 'ammo';
-    this.q('.hud-support').classList.toggle('show', helping);
+    toggle(this.q('.hud-support'), 'show', !!(helping));
     if (helping) {
       const name = view.players.find(p => p.id === action!.target)?.name ?? '';
-      this.q('.hud-support span').textContent = (action!.kind === 'revive' ? 'Поднимаем ' : 'Лечим ') + name;
-      this.q('.hud-support i').style.width = `${action!.progress * 100}%`;
+      setText(this.q('.hud-support span'), (action!.kind === 'revive' ? 'Поднимаем ' : 'Лечим ') + name);
+      setStyle(this.q('.hud-support i'), 'width', `${Math.round(action!.progress * 100)}%`);
     }
     // hp
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
-    this.q('.hp-fill').style.width = hpPct + '%';
-    this.q('.hp-fill').classList.toggle('low', hpPct < 30);
-    this.q('.hp-fill').classList.toggle('chicken', me.state === 'chicken');
-    this.q('.hp-armor').style.width = Math.min(100, me.armor) + '%';
-    this.q('.hp-text').textContent = `${Math.ceil(me.hp)}${me.armor > 0 ? '  ◈' + Math.ceil(me.armor) : ''}`;
+    setStyle(this.q('.hp-fill'), 'width', hpPct.toFixed(1) + '%');
+    toggle(this.q('.hp-fill'), 'low', !!(hpPct < 30));
+    toggle(this.q('.hp-fill'), 'chicken', !!(me.state === 'chicken'));
+    setStyle(this.q('.hp-armor'), 'width', Math.min(100, me.armor) + '%');
+    setText(this.q('.hp-text'), `${Math.ceil(me.hp)}${me.armor > 0 ? '  ◈' + Math.ceil(me.armor) : ''}`);
     // weapon
     const w = me.weapons[me.cur] as WeaponId | undefined;
     if (w) {
       const def = WEAPONS[w];
       const a = me.ammo[w];
-      this.q('.w-name').textContent = def.name;
-      this.q('.mag').textContent = String(a?.mag ?? 0);
-      this.q('.res').textContent = a && a.reserve >= 0 ? ' / ' + a.reserve : ' / ∞';
-      this.q('.mag').classList.toggle('empty', (a?.mag ?? 0) === 0);
+      setText(this.q('.w-name'), def.name);
+      setText(this.q('.mag'), String(a?.mag ?? 0));
+      setText(this.q('.res'), a && a.reserve >= 0 ? ' / ' + a.reserve : ' / ∞');
+      toggle(this.q('.mag'), 'empty', !!((a?.mag ?? 0) === 0));
       const ic = this.q('.w-icon');
       if (ic.dataset.w !== w && this.icons['w_' + w]) { ic.dataset.w = w; ic.style.backgroundImage = `url(${this.icons['w_' + w]})`; }
       const rl = this.q('.w-reload');
-      rl.classList.toggle('show', me.reloadT > 0);
-      if (me.reloadT > 0) (rl.firstElementChild as HTMLElement).style.width = (100 * (1 - me.reloadT / def.reload)) + '%';
+      toggle(rl, 'show', !!(me.reloadT > 0));
+      if (me.reloadT > 0) setStyle(rl.firstElementChild as HTMLElement, 'width', Math.round(100 * (1 - me.reloadT / def.reload)) + '%');
     }
     const slotsKey = me.weapons.join(',') + ':' + me.cur;
     if (slotsKey !== this.lastSlots) {
@@ -213,34 +228,34 @@ export class Hud {
     if (combo >= 5) {
       c.classList.add('show');
       if (combo !== this.comboShown) {
-        this.q('.combo-n').textContent = 'x' + combo;
+        setText(this.q('.combo-n'), 'x' + combo);
         c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
         c.style.setProperty('--heat', String(Math.min(1, combo / 60)));
       }
-    } else c.classList.remove('show');
+    } else toggle(c, 'show', false);
     this.comboShown = combo;
-    this.q('.hud-score').textContent = `☠ ${me.kills}   ★ ${Math.floor(me.score)}`;
-    this.q('.hud-buffs').innerHTML = (Object.entries(me.buffs ?? {}) as [BuffKind, number][]).filter(([, t]) => t > 0).map(([k, t]) => `<span style="--buff:${hex(BUFFS[k].color)}">${BUFFS[k].icon} ${BUFFS[k].label} <b>${Math.ceil(t)}с</b></span>`).join('');
+    setText(this.q('.hud-score'), `☠ ${me.kills}   ★ ${Math.floor(me.score)}`);
+    setHtml(this.q('.hud-buffs'), (Object.entries(me.buffs ?? {}) as [BuffKind, number][]).filter(([, t]) => t > 0).map(([k, t]) => `<span style="--buff:${hex(BUFFS[k].color)}">${BUFFS[k].icon} ${BUFFS[k].label} <b>${Math.ceil(t)}с</b></span>`).join(''));
     const earned = (me.achievements ?? []).filter((key): key is AchievementKey => Object.prototype.hasOwnProperty.call(ACHIEVEMENTS, key));
     const latest = earned.at(-1);
-    this.q('.hud-achievements').textContent = latest ? `🏅 ${earned.length} · ${ACHIEVEMENTS[latest].name}` : '';
+    setText(this.q('.hud-achievements'), latest ? `🏅 ${earned.length} · ${ACHIEVEMENTS[latest].name}` : '');
     // boss
     const boss = view.bossId >= 0 ? view.enemies.find((e) => e.id === view.bossId) : undefined;
-    this.q('.hud-boss').classList.toggle('hidden', !boss);
-    if (boss) this.q('.boss-fill').style.width = (100 * boss.hp / boss.maxHp) + '%';
+    toggle(this.q('.hud-boss'), 'hidden', !!(!boss));
+    if (boss) setStyle(this.q('.boss-fill'), 'width', (100 * boss.hp / boss.maxHp).toFixed(1) + '%');
     // team (multiplayer)
     if (!solo) {
-      this.q('.hud-team').innerHTML = view.players.filter((p) => p.id !== me.id).map((p) => {
+      setHtml(this.q('.hud-team'), view.players.filter((p) => p.id !== me.id).map((p) => {
         const st = p.state === 'chicken' ? '🐔' : p.state === 'downed' ? '✚' : p.state === 'dead' ? '…' : '';
-        return `<div class="mate" style="--c:${hex(PLAYER_COLORS[p.slot % 4])}"><b>${escapeHtml(p.name)}</b> ${st}<i style="width:${Math.max(0, p.hp / p.maxHp * 100)}%"></i></div>`;
-      }).join('');
+        return `<div class="mate" style="--c:${hex(PLAYER_COLORS[p.slot % 4])}"><b>${escapeHtml(p.name)}</b> ${st}<i style="width:${Math.round(Math.max(0, p.hp / p.maxHp * 100))}%"></i></div>`;
+      }).join(''));
     }
     const st = this.q('.hud-state');
-    if (me.state === 'downed') { st.textContent = `ВЫ РАНЕНЫ — ждите помощи (${Math.ceil(me.downT)})`; st.className = 'hud-state show downed'; }
-    else if (me.state === 'chicken') { st.textContent = 'ВЫ — КУРИЦА. Заклюйте бывших коллег!'; st.className = 'hud-state show chicken'; }
-    else if (me.state === 'dead' && !solo && me.benched) { st.textContent = 'НАБЛЮДЕНИЕ · вы вернулись к погибшему персонажу — оживёте на следующем этаже'; st.className = 'hud-state show'; }
-    else if (me.state === 'dead' && !solo) { st.textContent = 'НАБЛЮДЕНИЕ · вернётесь к команде в передышку'; st.className = 'hud-state show'; }
-    else st.className = 'hud-state';
+    if (me.state === 'downed') { setText(st, `ВЫ РАНЕНЫ — ждите помощи (${Math.ceil(me.downT)})`); setClass(st, 'hud-state show downed'); }
+    else if (me.state === 'chicken') { setText(st, 'ВЫ — КУРИЦА. Заклюйте бывших коллег!'); setClass(st, 'hud-state show chicken'); }
+    else if (me.state === 'dead' && !solo && me.benched) { setText(st, `НАБЛЮДЕНИЕ${this.watching} · вы вернулись к погибшему персонажу — оживёте на следующем этаже`); setClass(st, 'hud-state show watch'); }
+    else if (me.state === 'dead' && !solo) { setText(st, `НАБЛЮДЕНИЕ${this.watching} · вернётесь к команде в передышку`); setClass(st, 'hud-state show watch'); }
+    else setClass(st, 'hud-state');
   }
 
   private bonusShownDone = 0;
@@ -248,16 +263,16 @@ export class Hud {
   /** D57 floor bonus: a quiet line under the objective; disappears a few seconds after success. */
   private updateBonus(dt: number, view: WorldView) {
     const b = view.bonus, el = this.q('.hud-bonus');
-    if (!b || !settings.bonusGoals) { el.classList.add('hidden'); return; }
+    if (!b || !settings.bonusGoals) { toggle(el, 'hidden', true); return; }
     if (b.done) this.bonusShownDone += dt; else this.bonusShownDone = 0;
-    el.classList.toggle('hidden', b.done && this.bonusShownDone > 6);
-    el.classList.toggle('done', b.done);
+    toggle(el, 'hidden', !!(b.done && this.bonusShownDone > 6));
+    toggle(el, 'done', !!(b.done));
     const key = `${b.id}:${b.n}:${b.done}`;
     if (key === this.bonusKey) return;
     if (this.bonusKey && !b.done) { el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
     this.bonusKey = key;
-    this.q('.hud-bonus span').textContent = b.done ? 'Бонус этажа выполнен' : b.text;
-    this.q('.hud-bonus b').textContent = b.done ? '✓' : `${b.n}/${b.goal}`;
+    setText(this.q('.hud-bonus span'), b.done ? 'Бонус этажа выполнен' : b.text);
+    setText(this.q('.hud-bonus b'), b.done ? '✓' : `${b.n}/${b.goal}`);
   }
 
   private updateIncident(view: WorldView, me: Player) {
@@ -270,12 +285,12 @@ export class Hud {
       .sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))[0];
     const incident = urgent ?? nearby;
     const el = this.q('.hud-incident');
-    el.classList.toggle('hidden', !incident);
-    this.el.classList.toggle('has-incident', !!incident);
-    this.el.classList.toggle('incident-urgent', !!urgent);
+    toggle(el, 'hidden', !!(!incident));
+    toggle(this.el, 'has-incident', !!(!!incident));
+    toggle(this.el, 'incident-urgent', !!(!!urgent));
     if (!incident) return;
-    el.dataset.kind = incident.kind;
-    el.dataset.phase = incident.phase;
+    if (el.dataset.kind !== incident.kind) el.dataset.kind = incident.kind;
+    if (el.dataset.phase !== incident.phase) el.dataset.phase = incident.phase;
     const seconds = `${Math.ceil(Math.max(0, incident.seconds))}с`;
     const active = incident.phase === 'active', warning = incident.phase === 'warning';
     const title = incident.kind === 'alarm' ? warning ? `🚨 Стая через ${seconds}` : active ? '🚨 Учебная тревога' : '🔕 Сигналка на пути'
@@ -284,8 +299,8 @@ export class Hud {
     const hint = incident.kind === 'alarm' ? warning ? 'E у пульта — отменить вызов' : active ? `Петушков осталось: ${incident.left}` : 'E у пульта — отключить · выстрелы включат тревогу'
       : incident.kind === 'coffee' ? active ? 'Кофе лечит. Передохните перед следующим боем.' : 'E у автомата — +15 здоровья и 10с бодрости'
       : active ? incident.paused ? 'Вернитесь к терминалу — загрузка на паузе' : 'Держитесь рядом: припасы за удержание' : 'E у терминала — 12с обороны за припасы';
-    this.q('.hud-incident b').textContent = title;
-    this.q('.hud-incident span').textContent = hint;
+    setText(this.q('.hud-incident b'), title);
+    setText(this.q('.hud-incident span'), hint);
   }
 
   destroy() { this.el.remove(); }

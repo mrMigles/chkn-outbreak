@@ -72,6 +72,8 @@ export class GameScene extends Phaser.Scene {
   lastTp = -1;
   seq = 0;
   desiredWeapon = 0;
+  /** a picked-up gun the snapshot has not listed yet (D66) */
+  private pendingWeapon: WeaponId | null = null;
   camX = 0; camY = 0;
   baseZoom = 1;
   ended = false;
@@ -319,7 +321,8 @@ export class GameScene extends Phaser.Scene {
       if (inp.weaponDelta && me.weapons.length) this.desiredWeapon = (me.cur + inp.weaponDelta + me.weapons.length) % me.weapons.length;
       if (inp.weaponSlot >= 0 && inp.weaponSlot < me.weapons.length) this.desiredWeapon = inp.weaponSlot;
       if (this.desiredWeapon !== me.cur && (inp.weaponDelta || inp.weaponSlot >= 0)) sfx.play('switch', { vol: 0.6 });
-      if (this.desiredWeapon >= me.weapons.length) this.desiredWeapon = me.cur;
+      if (this.pendingWeapon && me.weapons.includes(this.pendingWeapon)) { this.desiredWeapon = me.weapons.indexOf(this.pendingWeapon); this.pendingWeapon = null; }
+      if (this.desiredWeapon < 0 || this.desiredWeapon >= me.weapons.length) this.desiredWeapon = me.cur;
       if (fire && w && (me.ammo[w]?.mag ?? 0) === 0 && (me.ammo[w]?.reserve ?? 0) === 0 && Math.random() < 0.08) sfx.play('empty', { vol: 0.5 });
       s.send({ seq: ++this.seq, x: this.px, y: this.py, aim: this.aim, fire, reload: inp.reload, interact: inp.interact, weapon: this.desiredWeapon });
       if (!s.solo) this.predictFire(dt, me, fire && !(inp.interact && (supportTarget(view0, s.map, me)?.state === 'downed' || me.support?.kind === 'heal')));
@@ -335,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     for (const wall of this.wallFaces) wall.setAlpha(this.py < wall.y && wall.y - this.py < 155 && Math.abs(this.px - wall.x) < 72 ? 0.28 : 1);
 
     // ---- camera
+    this.updateSpectate(inp);
     this.updateCamera(dt, inp);
     sfx.listenerX = this.px; sfx.listenerY = this.py;
 
@@ -365,7 +369,10 @@ export class GameScene extends Phaser.Scene {
     this.updateHints(me2);
     this.updateCrosshair(dt, inp, me2);
     this.updateBubbles(dt);
-    if (me2 && me2.state === 'alive') this.guide.update(dt, s.view, this.px, this.py, this.time.now / 1000, this.cameras.main);
+    // D66: a downed teammate outranks the objective: the arrow leads to them while they can still be saved
+    const downed = me2?.state === 'alive' && !s.solo ? s.view.players.filter(p => p.id !== me2.id && p.state === 'downed' && p.connected).sort((a, b) => dist(a.x, a.y, this.px, this.py) - dist(b.x, b.y, this.px, this.py))[0] : undefined;
+    if (downed) this.guide.update(dt, { ...s.view, objectiveTarget: [`@${Math.round(downed.x)},${Math.round(downed.y)}`] } as any, this.px, this.py, this.time.now / 1000, this.cameras.main);
+    else if (me2 && me2.state === 'alive') this.guide.update(dt, s.view, this.px, this.py, this.time.now / 1000, this.cameras.main);
     else this.guide.update(dt, { ...s.view, objectiveTarget: [] } as any, this.px, this.py, this.time.now / 1000, this.cameras.main);
     this.hud.guide(this.guide.hud?.angle ?? null, this.guide.hud?.metres);
     this.input2.consume();
@@ -533,13 +540,30 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** D66: a dead player watches a living teammate; click / tap / Space switches to the next one. */
+  spectating: Player | null = null;
+  private spectatePress = false;
+  private updateSpectate(inp: ReturnType<Input['poll']>) {
+    const s = this.session, me = s.view.players.find((p) => p.id === s.myId);
+    if (s.solo || !me || me.state !== 'dead') { this.spectating = null; this.hud.spectate(null); return; }
+    const team = s.view.players.filter((p) => p.id !== me.id && p.connected && (p.state === 'alive' || p.state === 'downed')).sort((a, b) => a.slot - b.slot);
+    const press = inp.fire || inp.aimMode === 'stick' || inp.interact;
+    let cur = team.find((p) => p.id === this.spectating?.id) ?? team[0] ?? null;
+    if (press && !this.spectatePress && team.length > 1 && cur) cur = team[(team.indexOf(cur) + 1) % team.length];
+    this.spectatePress = press;
+    this.spectating = cur;
+    this.hud.spectate(cur ? cur.name : null, team.length > 1, this.input2.touch);
+  }
+
   private updateCamera(dt: number, inp: ReturnType<Input['poll']>) {
     const cam = this.cameras.main;
     // look ahead towards aim
-    const lead = inp.aimMode === 'mouse'
+    const sp = this.spectating, watch = sp ? this.players.get(sp.id) : undefined;
+    const lead = sp ? 0 : inp.aimMode === 'mouse'
       ? Math.min(220, dist(this.px, this.py, inp.aimWX, inp.aimWY) * 0.28)
       : inp.aimMode === 'stick' ? 110 : 40;
-    const tx = this.px + Math.cos(this.aim) * lead, ty = this.py + Math.sin(this.aim) * lead;
+    const fx = watch ? watch.dispX : sp ? sp.x : this.px, fy = watch ? watch.dispY : sp ? sp.y : this.py;
+    const tx = fx + Math.cos(this.aim) * lead, ty = fy + Math.sin(this.aim) * lead;
     const k = 1 - Math.exp(-dt * 7);
     this.camX = lerp(this.camX, tx, k); this.camY = lerp(this.camY, ty, k);
     const tr = this.fx.trauma * this.fx.trauma;
@@ -598,11 +622,16 @@ export class GameScene extends Phaser.Scene {
     for (const [id, ev] of this.enemies) if (!seenE.has(id)) { ev.destroy(); this.enemies.delete(id); }
 
     // npcs
+    const seenN = new Set<string>();
     for (const n of v.npcs) {
+      seenN.add(n.id);
       let nv = this.npcs.get(n.id);
       if (!nv) { nv = new NpcView(this, n); this.npcs.set(n.id, nv); }
       nv.sync(n, n.x, n.y, dt, time, dist(n.x, n.y, this.px, this.py) < 260);
     }
+    // D66: a converted survivor leaves the network snapshot (solo keeps it as 'gone'); drop its body,
+    // warning ring and bar instead of leaving a dark silhouette where the mutation happened
+    for (const [id, nv] of this.npcs) if (!seenN.has(id)) { nv.destroy(); this.npcs.delete(id); }
 
     // pickups
     if (this.pingPong) {
@@ -807,7 +836,10 @@ export class GameScene extends Phaser.Scene {
           sfx.play(ev.k === 'weapon' ? 'weapon_pick' : 'pickup', { vol: 0.8 });
           if (ev.k === 'weapon' && ev.w) {
             const me = this.session.view.players.find((p) => p.id === this.session.myId);
-            if (me) this.desiredWeapon = me.weapons.indexOf(ev.w);
+            // D66: online the event can arrive before the snapshot that lists the new gun: an index of −1
+            // made the client think another gun was selected and stop drawing/playing its own shots
+            if (me && me.weapons.includes(ev.w)) this.desiredWeapon = me.weapons.indexOf(ev.w);
+            else this.pendingWeapon = ev.w;
           }
         }
         break;
@@ -816,7 +848,11 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'down':
         if (ev.id === this.session.myId) haptic('down');
-        if (ev.id === this.session.myId) this.hud.message(this.session.solo ? 'ВАС ЗАКЛЕВАЛИ' : 'ВЫ РАНЕНЫ', this.session.solo ? '' : 'Попросите друга поднять вас (E)', 3);
+        if (ev.id === this.session.myId) this.hud.message(this.session.solo ? 'ВАС ЗАКЛЕВАЛИ' : 'ВЫ РАНЕНЫ', this.session.solo ? '' : 'Ползите к друзьям — они поднимут вас', 3);
+        else if (!this.session.solo) {
+          const who = this.session.view.players.find(p => p.id === ev.id)?.name ?? 'Коллега';
+          this.hud.notice(`✚ ${who} ранен!`, this.input2.touch ? 'Бегите по стрелке, у раненого жмите и держите кнопку «Поднять» — 15 секунд' : 'Бегите по стрелке, у раненого держите E — 15 секунд', 'danger');
+        }
         break;
       case 'revived': this.hud.toast('Игрок поднят!'); break;
       case 'help':

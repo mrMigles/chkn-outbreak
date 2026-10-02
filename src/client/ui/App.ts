@@ -298,7 +298,12 @@ export class App {
 
   private stopGame() {
     if (this.game.scene.isActive('game')) this.game.scene.stop('game');
+    // D67: menus and lobbies are HTML: let the renderer sleep instead of drawing an empty scene 60 times a second
+    clearTimeout(this.sleepTimer);
+    this.sleepTimer = setTimeout(() => { if (this.booted && !this.game.scene.isActive('game') && this.game.loop.running) this.game.loop.sleep(); }, 250);
   }
+  private sleepTimer: ReturnType<typeof setTimeout> | undefined;
+  private wakeRenderer() { clearTimeout(this.sleepTimer); if (!this.game.loop.running) this.game.loop.wake(); }
 
   startSolo(levelId: string, carry?: Carry) {
     this.currentLevel = levelId;
@@ -326,6 +331,7 @@ export class App {
         else this.gameOver(ev.reason ?? '');
       },
     };
+    this.wakeRenderer();
     this.game.scene.start('game', data);
     this.titleCard(lvl?.title ?? '', lvl?.subtitle ?? '');
   }

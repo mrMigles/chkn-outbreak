@@ -1,0 +1,10 @@
+{
+  "renderer": "Chromium hardware WebGL",
+  "results": [
+    "converted survivors leave no silhouette, ring or bar on either client",
+    "after a gun pickup online, own shots stay visible and audible (19 drawn in 1.2 s)",
+    "downed teammate: alert, arrow, «поднять» hint at 85 units, 15 s ring, revived with E",
+    "a dead player follows a living teammate with the camera («следим за …»)"
+  ],
+  "errors": []
+}

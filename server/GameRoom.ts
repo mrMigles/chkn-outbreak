@@ -163,10 +163,14 @@ export class GameRoom extends Room<RoomState> {
       if (!process.argv.includes('--debug') || !this.world) return;
       const p = this.world.players.find((q) => q.id === client.sessionId);
       if (!p) return;
-      if (m?.cmd === 'down') this.world.damagePlayer(p, 999, p.x + 10, p.y);
+      // QA god mode must not block the scripted wounds
+      const wound = () => { const god = this.world!.god; this.world!.god = false; this.world!.damagePlayer(p, 999, p.x + 10, p.y); this.world!.god = god; };
+      if (m?.cmd === 'down') wound();
       if (m?.cmd === 'bleed') p.downT = 0.1;
       if (m?.cmd === 'god') this.world.god = true;
-      if (m?.cmd === 'dead') { this.world.damagePlayer(p, 999, p.x + 10, p.y); p.downT = 0.01; }
+      if (m?.cmd === 'give' && m.level) this.world.giveWeapon(p, m.level as never, true);
+      if (m?.cmd === 'tp' && m.level) { const [x, y] = m.level.split(',').map(Number); p.x = p.input.x = x; p.y = p.input.y = y; p.tp++; }
+      if (m?.cmd === 'dead') { wound(); p.downT = 0.01; }
       if (m?.cmd === 'award') this.world.award((m.level ?? 'combo_master') as AchievementKey, p.id);
       if (m?.cmd === 'finish') this.world.emit({ e: 'level', next: LEVELS[this.world.mapId]?.next ?? '', win: !LEVELS[this.world.mapId]?.next });
     });

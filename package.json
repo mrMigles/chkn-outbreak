@@ -20,9 +20,11 @@
     "check:network-ui": "node tools/check-network-ui.mjs",
     "check:lobby": "tsx tools/check-lobby.ts",
     "check:lobby-ui": "node --import tsx tools/check-lobby-ui.mjs",
+    "check:mp-ui": "node --import tsx tools/check-mp-ui.mjs",
     "check:art": "node tools/check-art.mjs",
     "check:office": "node tools/office-sample.mjs",
     "check:levels": "tsx tools/check-levels.ts",
+    "check:floor6": "tsx tools/check-floor6.ts",
     "check:combat": "tsx tools/check-combat.ts",
     "check:telegram": "tsx tools/check-telegram.ts",
     "check:campaign": "tsx tools/check-campaign.ts",
@@ -36,7 +38,8 @@
     "art:fetch": "node tools/art/lpc-fetch.mjs",
     "icons": "tsx tools/build-icons.ts",
     "bench:net": "tsx tools/bench-net.ts",
-    "qa:perf": "node --import tsx tools/qa-perf.mjs"
+    "qa:perf": "node --import tsx tools/qa-perf.mjs",
+    "qa:battery": "node --import tsx tools/qa-battery.mjs"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",
