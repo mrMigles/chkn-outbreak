@@ -322,3 +322,29 @@ Each entry: what was decided, why, and consequences. Newest at the bottom.
 
 - Each build has an id (`BUILD_ID` or a timestamp) compiled into the client and written to `dist/version.json`. The server sends `index.html`/`version.json` with `no-store`, content-hashed bundles as immutable, everything else `no-cache` + ETag (304 on revalidation). Atlases, maps, LPC data and music are requested with `?v=<build>`.
 - On start, and when a menu tab becomes visible again, the client compares its id with `version.json`; on mismatch it reloads once with `?v=<new>` (sessionStorage guard against loops). Covers browser heuristics, Telegram WebView and proxies. Never reloads mid-game or inside a room.
+
+## D57 — Small reasons to play better: floor bonuses, nudges, threat arrows, phone comfort (2026-10-02)
+
+Design pass with the game-director / gameplay-systems / game-UI checklists (`~/.agents/skills/threejs-*`), building on Codex's engagement brief (`docs/design/engagement.md`: alarms, coffee, caches, achievements, preferences — kept as is).
+
+**Brief.** The fantasy stays «вытащить коллег из корпоративного курятника». Gaps found by the fun-factor tests: a good player was not rewarded for *how* they play (headshots, combos, explosions were invisible past the score), phones lost threats outside the narrower view, the invisible floating sticks had no affordance, and quiet stretches had no voice. Non-goals: no new mandatory steps, no changes to story order, floor-6 geometry or difficulty multipliers.
+
+**Floor bonus (`shared/sim/Bonus.ts`).** One optional skill goal per floor, always shown as a quiet line under the objective (`★ … n/goal`, hides 6 s after success), never blocks or punishes. Each teaches one mechanic the floor already has:
+| Floor | Goal | Teaches |
+| --- | --- | --- |
+| 6 office | 25 kills during the server reboot | holding the server room (D55 waves) |
+| 7 | 20 headshot kills | aiming at heads (×2) |
+| lab | 10 kills by explosions | barrels and chemists |
+| factory | combo ×30 | keeping momentum on the conveyor |
+| boss | 15 head hits on the director | precision under pressure |
+Payout once: +300 KPI to every player, +1 medkit and +1 ammo supply to the living (capped at 3), an achievement. Only player-caused progress counts. Driven by sim events → identical in solo, rooms and checkpoint replay; sent in snapshots (`bn`). Tutorial card «★ Бонус этажа» explains it the first time.
+
+**Achievements** (15 total): the five floor bonuses + «Эффективный менеджер» (combo ×50 anywhere) + «На волоске» (survive a hit at ≤10 HP).
+
+**Nudges (`client/ui/Coach.ts`, client-only flavour, never rules).** «ОКРУЖАЮТ!» alert when ≥6 attackers are within ~4 m (40 s cooldown) with advice to retreat into a corridor; first headshot kill explains ×2; low HP with a medkit tells how to heal (touch vs keyboard wording); an emptied non-pistol weapon points to the infinite pistol; combo banners ×10/×25/×40; hero quips (combo, fat manager, low HP, reload, being surrounded, boss) and companion office jokes after 12 s of calm — all behind «Шутки над петушками», with cooldowns. Phones vibrate on damage/going down (setting «Вибрация»).
+
+**Threat arrows (`client/render/Threats.ts`).** Up to six edge arrows toward attacking chickens outside the view within ~23 m; red and pulsing when close. Setting «Стрелки угроз».
+
+**Phone comfort.** Dashed «БЕГ / ПРИЦЕЛ» ghost circles show where the invisible sticks live for the first three levels (fade on first use or after 14 s). «Левша» swaps the halves. Sticks and the action button release on app switch/blur/touchcancel (no stuck input). «Размер HUD» (compact/normal/large) zooms HUD and buttons; HUD widths are zoom-aware. In portrait only one popup at a time: a tutorial card yields to an alert and returns after it.
+
+**Verification.** `check:campaign` (bonuses: tagged/headshot/combo progress, single payout, achievements, snapshot), all sim checks, engagement/polish/network UI, `tools/qa-phone.mjs` now also runs large-HUD portrait/landscape and asserts a threat arrow and the bonus line are visible without overlaps.

@@ -27,6 +27,7 @@ export interface Snapshot {
   br: number[];         // barrels: id, x, y
   pd: number[];         // pods: id, x, y, broken
   incidents?: WorldView['incidents'];
+  bn?: WorldView['bonus'];
 }
 export const E_STRIDE = 11;
 
@@ -46,6 +47,7 @@ export function encodeSnapshot(w: WorldView): Snapshot {
   for (const pk of w.pickups) k.push(pk.id, KKINDS.indexOf(pk.kind), pk.weapon ? WEAPON_IDS.indexOf(pk.weapon) : -1, r1(pk.x), r1(pk.y), r1(pk.ttl * 10));
   return {
     t: Math.round(w.time * 1000) / 1000,
+    bn: w.bonus ? { ...w.bonus } : null,
     incidents: w.incidents?.map(({ id, kind, x, y, phase, seconds, left, paused }) => ({ id, kind, x: r1(x), y: r1(y), phase, seconds: Math.ceil(seconds * 10) / 10, left, paused })),
     o: w.objective, ot: w.objectiveTarget.join('|'), bk: w.broken, bo: w.blackout ? 1 : 0, al: w.alarm ? 1 : 0, b: w.bossId,
     p: w.players.map((p) => ({

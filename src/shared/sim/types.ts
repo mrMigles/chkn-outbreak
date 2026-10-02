@@ -187,6 +187,8 @@ export type SimEvent =
 /** Render-facing view of the world (identical for local sim and network snapshots). */
 export interface WorldView {
   incidents?: IncidentView[];
+  /** D57 floor bonus goal (null on floors without one). */
+  bonus?: import('./Bonus').BonusView | null;
   mapId: string;
   time: number;
   players: Player[];

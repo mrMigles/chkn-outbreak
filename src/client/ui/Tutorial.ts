@@ -21,7 +21,8 @@ export const TIPS: Record<string, Tip> = {
   chick: { title: 'Цыплята', text: 'Быстрые и слабые. Не дайте стае окружить вас.' },
   barrel: { title: 'Опасные бочки', text: 'Красные бочки взрываются от выстрела. Заманите к ним толпу.' },
   dark: { title: 'Темнота', text: 'Фонарик светит туда, куда вы целитесь. Куры в темноте видны хуже — слушайте их.' },
-  downed: { title: 'Друг ранен', text: '<b>Удерживайте E</b> рядом с лежащим другом 2,6 с, чтобы поднять его. Коротко E — передать магазин.', touch: 'Удерживайте кнопку действия рядом с раненым другом.' },
+  bonus: { title: '★ Бонус этажа', text: 'Необязательная задача под целью. Выполните — команда получит +300 KPI, аптечку, патроны и ачивку. Провал ничего не стоит.' },
+    downed: { title: 'Друг ранен', text: '<b>Удерживайте E</b> рядом с лежащим другом 2,6 с, чтобы поднять его. Коротко E — передать магазин.', touch: 'Удерживайте кнопку действия рядом с раненым другом.' },
 };
 
 export class Tutorial {
@@ -29,6 +30,7 @@ export class Tutorial {
   private el: HTMLDivElement | null = null;
   private t = 0;
   private gap = 1.5;
+  private cur = '';
 
   constructor(private touch: boolean) {}
 
@@ -43,6 +45,8 @@ export class Tutorial {
   update(dt: number) {
     // nothing over pause/result panels
     if (document.querySelector('.overlay.screen, .pause-menu:not(.hidden)')) { if (this.el) this.close(); return; }
+    const crowded = this.touch && innerHeight > innerWidth && !!document.querySelector('.hud-notice.show');
+    if (this.el && crowded && this.cur) { this.queue.unshift(this.cur); this.close(); return; }
     if (this.el) {
       this.t -= dt;
       if (this.t <= 0) this.close();
@@ -50,7 +54,10 @@ export class Tutorial {
     }
     this.gap -= dt;
     if (this.gap > 0 || !this.queue.length) return;
-    const tip = TIPS[this.queue.shift()!];
+    // D57: on a phone in portrait one popup at a time — a tip waits for the current alert to go
+    if (crowded) return;
+    this.cur = this.queue.shift()!;
+    const tip = TIPS[this.cur];
     const d = document.createElement('div');
     d.className = 'tip-card';
     d.innerHTML = `<small>ПОДСКАЗКА</small><b>${tip.title}</b><p>${this.touch && tip.touch ? tip.touch : tip.text}</p><i>✕</i>`;

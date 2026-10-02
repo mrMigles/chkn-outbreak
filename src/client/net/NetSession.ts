@@ -54,6 +54,7 @@ export class NetSession implements Session {
     const v = this.view;
     v.time = s.t;
     v.incidents = s.incidents ?? [];
+    v.bonus = s.bn ?? null;
     v.broken = s.bk ?? [];
     v.objective = s.o; v.objectiveTarget = s.ot ? s.ot.split('|') : []; v.blackout = !!s.bo; v.alarm = !!s.al; v.bossId = s.b;
     // players

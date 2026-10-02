@@ -16,6 +16,7 @@ import { updateNpc } from './npcAI';
 import { SupportController } from './support';
 import type { LevelScript } from '../levels/types';
 import { ACHIEVEMENTS, type AchievementKey } from '../achievements';
+import { Bonus } from './Bonus';
 import { Incidents } from './Incidents';
 
 export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation']; props?: Npc['props'] }
@@ -82,6 +83,8 @@ export class World implements WorldView {
   private supportController = new SupportController();
   private hadCombat = false;
   private incidentSystem: Incidents;
+  private bonusSystem: Bonus;
+  get bonus() { return this.bonusSystem.view; }
   get incidents() { return this.incidentSystem.views; }
   private betrayals = 0;
   private lastBetrayal = -30;
@@ -105,6 +108,7 @@ export class World implements WorldView {
     this.flow = new FlowField(map);
     this.spawnPoints = map.objects.filter((o) => o.type === 'spawn');
     this.incidentSystem = new Incidents(this);
+    this.bonusSystem = new Bonus(this);
   }
 
   // ------------------------------------------------------------------ setup
@@ -672,7 +676,7 @@ export class World implements WorldView {
     p.hp -= dmg;
     p.hurtT = 0.25;
     this.emit({ e: 'pdmg', id: p.id, d: dmg, x: fx, y: fy });
-    if (p.hp > 0) return;
+    if (p.hp > 0) { if (p.hp <= 10 && p.state === 'alive') this.award('close_call', p.id); return; }
     p.hp = 0;
     p.deaths++;
     if (p.state === 'chicken') {
@@ -826,7 +830,11 @@ export class World implements WorldView {
       e.vx += Math.cos(a) * k; e.vy += Math.sin(a) * k;
       this.emit({ e: 'hit', x: Math.round(hx), y: Math.round(hy), a, k: armored ? 'armor' : 'flesh', d: Math.round(dmg), id: e.id, big: kind === 'explosion', o: by, ...(head ? { hs: true } : {}) });
     }
-    if (e.hp <= 0) this.killEnemy(e, a, by, kind === 'explosion' || dmg > 60, kind === 'fire', head);
+    if (head && e.type === 'boss') this.bonusSystem.onBossHead(by);
+    if (e.hp <= 0) {
+      this.bonusSystem.onKill(e, by, this.enemyTags.get(e.id), kind, head);
+      this.killEnemy(e, a, by, kind === 'explosion' || dmg > 60, kind === 'fire', head);
+    }
   }
 
   killEnemy(e: Enemy, a: number, by: string, gib: boolean, burn: boolean, head = false) {
@@ -840,6 +848,8 @@ export class World implements WorldView {
     if (p) {
       p.kills++;
       p.combo++; p.comboT = 2.2;
+      this.bonusSystem.onCombo(p.combo);
+      if (p.combo >= 50) this.award('combo_master', p.id);
       p.score += ENEMIES[e.type].score * (1 + Math.min(p.combo, 50) * 0.05);
     }
     // drops

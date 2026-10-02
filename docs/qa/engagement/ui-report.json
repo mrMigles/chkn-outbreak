@@ -39,7 +39,7 @@
       },
       "goalBox": {
         "x": 435,
-        "y": 68,
+        "y": 96,
         "width": 410,
         "height": 47.03125,
         "scrollWidth": 407,
@@ -78,7 +78,7 @@
       },
       "goalBox": {
         "x": 213.3125,
-        "y": 54,
+        "y": 78,
         "width": 371.359375,
         "height": 38.34375,
         "scrollWidth": 368,
@@ -109,7 +109,7 @@
       },
       "alertBox": {
         "x": 14,
-        "y": 140.34375,
+        "y": 165.34375,
         "width": 320,
         "height": 47.359375,
         "scrollWidth": 315,
@@ -117,7 +117,7 @@
       },
       "goalBox": {
         "x": 10,
-        "y": 97,
+        "y": 122,
         "width": 324,
         "height": 38.34375,
         "scrollWidth": 321,
@@ -125,7 +125,7 @@
       },
       "storyBox": {
         "x": 10,
-        "y": 51,
+        "y": 52,
         "width": 324,
         "height": 40,
         "scrollWidth": 322,

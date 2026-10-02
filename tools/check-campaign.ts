@@ -121,6 +121,27 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   assert.equal(w.blackout, false); assert.equal(w.flags.power, true);
   console.log(`PASS server reboot: ${ids.size} attackers over 40 s, power restored`);
 }
+{
+  // D57: floor bonuses pay out once and only for player-caused progress
+  const w = make('office'); w.god = true; w.enemies = [];
+  const p = w.players[0]; p.supplies.medkit = 0; p.supplies.ammo = 0;
+  assert.equal(w.bonus?.goal, 25);
+  const e0 = w.spawnEnemy('normal', p.x + 300, p.y, { aggro: false }); w.damageEnemy(e0, 9999, 0, 0, 'npc-x', 'bullet');
+  assert.equal(w.bonus?.n, 0, 'untagged / non-player kills do not count');
+  for (let i = 0; i < 25; i++) { const e = w.spawnEnemy('normal', p.x + 300, p.y, { aggro: false, tag: 'blackout' }); w.damageEnemy(e, 9999, 0, 0, 'me', 'bullet'); }
+  assert.equal(w.bonus?.done, true); assert.ok(p.achievements?.includes('sysadmin_day'));
+  assert.equal(p.supplies.medkit, 1); assert.equal(p.supplies.ammo, 1);
+  const score = p.score; const e1 = w.spawnEnemy('normal', p.x + 300, p.y, { aggro: false, tag: 'blackout' }); w.damageEnemy(e1, 9999, 0, 0, 'me', 'bullet');
+  assert.ok(p.score - score < 300, 'bonus pays once');
+  const w7 = make('office7'); w7.god = true; const q = w7.players[0];
+  for (let i = 0; i < 20; i++) { const e = w7.spawnEnemy('normal', q.x + 300, q.y, { aggro: false }); w7.damageEnemy(e, 9999, 0, 0, 'me', 'bullet', e.x, e.y, true); }
+  assert.ok(w7.bonus?.done && q.achievements?.includes('headhunter'));
+  assert.equal(encodeSnapshot(w7).bn?.done, true, 'bonus travels in snapshots');
+  const wf = make('factory'); wf.god = true; const f = wf.players[0];
+  for (let i = 0; i < 50; i++) { const e = wf.spawnEnemy('chick', f.x + 300, f.y, { aggro: false }); wf.damageEnemy(e, 9999, 0, 0, 'me', 'bullet'); }
+  assert.ok(wf.bonus?.done && f.achievements?.includes('conveyor') && f.achievements?.includes('combo_master'));
+  console.log('PASS floor bonuses: tagged/headshot/combo goals, one payout, achievements, snapshot');
+}
 const state = (w: World) => JSON.stringify({
   view: encodeSnapshot(w), flags: w.flags, rng: w.rng.state,
   enemies: w.enemies, npcs: w.npcs, tags: [...w.enemyTags],

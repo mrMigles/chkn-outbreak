@@ -2,6 +2,10 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 8 (2026-10-02, Claude) — floor bonuses, nudges, threat arrows
+
+D57: an optional «★ Бонус этажа» per floor (sim-side, one payout, 5 new achievements + 2 skill achievements), situational alerts/quips/companion jokes (`ui/Coach.ts`), off-screen threat arrows, ghost stick hints, left-handed mode, vibration, HUD size, release of stuck touches, one-popup-at-a-time in portrait. Builds on Codex's `docs/design/engagement.md`. All checks + `qa-phone` (5 viewports incl. large HUD) pass. Not tried on a real phone.
+
 ## Iteration 7 (2026-10-02, Claude) — phones first, continue, controls, cache
 
 Decisions D55–D56. Menu has Continue/New game for solo and rooms with the floor caption; solo resumes the floor where you died. HUD rebuilt as a top grid + bottom stack; on phones everything sits in the corners (weapon panel = switch weapon), checked at Galaxy S25 portrait/landscape by `node tools/qa-phone.mjs` (screens in `docs/qa/phone/`). First-run «Как управлять» popup, also in pause and menu; pause has Settings/Controls pages; rotate hint only occasionally. Server reboot on floor 6 is a much bigger defence. Deploys can no longer leave a stale cached page (build id, cache headers, one-time auto reload).

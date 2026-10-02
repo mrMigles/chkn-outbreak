@@ -84,14 +84,14 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
   --st: max(8px, env(safe-area-inset-top)); --sb: max(8px, env(safe-area-inset-bottom));
   --buff: #ffd65c;
 }
-.hud { position: fixed; inset: 0; pointer-events: none !important; font-family: var(--body); }
+.hud { --vw: calc(1vw / var(--hud-scale, 1)); position: fixed; inset: 0; pointer-events: none !important; font-family: var(--body); }
 .hud * { pointer-events: none; }
 .hud-vignette { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(200,0,0,0.75) 100%); }
 .hud-vignette.fade { transition: opacity 0.6s ease-out; opacity: 0 !important; transition-delay: 0.05s; }
 .hud-score, .hp-text, .w-ammo, .hud-incident, .hud-supplies { font-variant-numeric: tabular-nums; }
 
 .hud-top { position: absolute; top: var(--st); left: var(--sl); right: var(--sr); display: grid; column-gap: 14px; row-gap: 6px; align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(0, min(560px, 46vw)) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(560px, calc(46 * var(--vw)))) minmax(0, 1fr);
   grid-template-areas: "hp mid score" "left mid right"; grid-template-rows: auto 1fr; }
 .top-hp { grid-area: hp; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .top-score { grid-area: score; justify-self: end; }
@@ -174,7 +174,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .slot i { position: absolute; inset: 5px 6px 4px 12px; background: no-repeat center / contain; }
 
 /* bottom-centre stack: radio, support progress, toast, hint (column, newest closest to the bottom) */
-.hud-bottom { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); width: min(620px, 60vw); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hud-bottom { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); width: min(620px, calc(60 * var(--vw))); display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .hud-radio { width: 100%; background: rgba(14,16,20,0.88); border: 2px solid #4a5260; border-left: 6px solid var(--accent2); border-radius: 10px; padding: 9px 14px; font-size: 15px; line-height: 1.4; display: none; }
 .hud-radio.show { display: block; animation: fadein .25s; }
 .hud-radio b { font-family: var(--head); font-weight: 400; font-size: 11px; letter-spacing: 1.5px; color: var(--accent2); display: block; }
@@ -192,7 +192,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .hud-msg.show { opacity: 1; transform: none; }
 .msg-title { font-family: var(--head); font-size: clamp(22px, 4.4vw, 48px); color: #fff; text-shadow: 0 4px 0 #a64a0f, 0 10px 24px rgba(0,0,0,0.7); letter-spacing: 2px; }
 .msg-sub { font-size: clamp(12px, 1.8vw, 18px); color: var(--accent2); text-shadow: 0 2px 6px #000; margin-top: 4px; }
-.hud-state { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-family: var(--head); font-size: 22px; padding: 10px 18px; border-radius: 12px; background: rgba(10,10,12,0.7); opacity: 0; text-align: center; max-width: calc(100vw - 32px); }
+.hud-state { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-family: var(--head); font-size: 22px; padding: 10px 18px; border-radius: 12px; background: rgba(10,10,12,0.7); opacity: 0; text-align: center; max-width: calc(100 * var(--vw) - 32px); }
 .hud-state.show { opacity: 1; }
 .hud-state.downed { color: #ff8a80; }
 .hud-state.chicken { color: var(--accent2); top: auto; bottom: 120px; font-size: 16px; }
@@ -241,10 +241,10 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .t-interact { right: calc(var(--sr) + 62px); bottom: calc(var(--sb) + 62px); width: auto; min-width: 84px; max-width: min(150px, 40vw); padding: 0 14px; border-radius: 27px; font-family: var(--body); font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(232,106,23,0.85); border-color: #ffb347; }
 
 /* ---------- phones: everything in the corners, the middle stays for the fight */
-.hud.touch .hud-top { right: calc(var(--sr) + 46px); column-gap: 10px; row-gap: 5px; grid-template-columns: minmax(0, 1fr) minmax(0, 44vw) minmax(0, 1fr); }
+.hud.touch .hud-top { right: calc(var(--sr) + 46px); column-gap: 10px; row-gap: 5px; grid-template-columns: minmax(0, 1fr) minmax(0, calc(44 * var(--vw))) minmax(0, 1fr); }
 .hud.touch .top-hp { gap: 4px 10px; }
 .hud.touch .hp-wrap { gap: 6px; }
-.hud.touch .hp-bar { width: clamp(90px, 18vw, 170px); height: 14px; border-width: 1.5px; }
+.hud.touch .hp-bar { width: clamp(90px, calc(18 * var(--vw)), 170px); height: 14px; border-width: 1.5px; }
 .hud.touch .hp-armor { height: 3px; }
 .hud.touch .hp-text { font-size: 15px; }
 .hud.touch .hud-supplies { font-size: 13px; gap: 8px; }
@@ -277,7 +277,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .hud.touch .w-ammo .mag { font-size: 22px; }
 .hud.touch .w-ammo .res { font-size: 13px; }
 .hud.touch .hud-slots { display: none; }
-.hud.touch .hud-bottom { bottom: var(--sb); width: min(420px, calc(100vw - 2 * 250px)); gap: 5px; }
+.hud.touch .hud-bottom { bottom: var(--sb); width: min(420px, calc(100 * var(--vw) - 2 * 250px)); gap: 5px; }
 .hud.touch .hud-radio { font-size: 12px; padding: 5px 9px; border-width: 1.5px; border-left-width: 4px; line-height: 1.3; }
 .hud.touch .hud-radio b { font-size: 9px; }
 .hud.touch .hud-hint { font-size: 12px; padding: 5px 10px; }
@@ -291,14 +291,15 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 
 /* phone, portrait: corners on the first row, the objective under them, alerts under that */
 @media (orientation: portrait) {
-  .hud.touch .hud-top { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "hp score" "mid mid" "right right" "left left"; grid-template-rows: auto; }
+  .hud.touch .hud-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "hp score" "mid mid" "right right" "left left"; grid-template-rows: auto; }
+  .hud.touch .hud-effects { flex-direction: row; flex-wrap: wrap; align-items: center; max-width: 100%; }
   .hud.touch .top-mid { align-items: stretch; }
   .hud.touch .hud-obj { justify-content: space-between; }
   .hud.touch .hud-incident { width: 100%; }
-  .hud.touch .hp-bar { width: clamp(90px, 34vw, 170px); }
+  .hud.touch .hp-bar { width: clamp(90px, calc(34 * var(--vw)), 170px); }
   .hud.touch .hud-notice { width: min(320px, 100%); }
   .hud.touch .tip-card { width: min(300px, 100%); }
-  .hud.touch .hud-bottom { bottom: calc(var(--sb) + 128px); width: calc(100vw - 2 * var(--sl)); }
+  .hud.touch .hud-bottom { bottom: calc(var(--sb) + 128px); width: calc(100 * var(--vw) - 2 * var(--sl)); }
   .hud.touch .hud-radio { width: auto; max-width: 100%; }
 }
 /* very short landscape (browser bars visible): tighter top grid */
@@ -455,3 +456,37 @@ kbd { font-family: var(--head); font-size: 12px; background: #121418; border: 1p
   .me-fields { flex-direction: row; align-items: center; }
   .me-fields .field > span { display: none; }
 }
+/* D57: interface size preference (zoom on fixed full-screen layers keeps them viewport-sized) */
+.hud, .tbtn { zoom: var(--hud-scale, 1); }
+/* D57: where the invisible sticks live (first three levels on a phone) */
+.ghost-stick { position: fixed; bottom: calc(var(--sb) + 70px); width: 96px; height: 96px; margin-left: -48px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; color: #fff; text-shadow: 0 1px 3px #000; transition: opacity .4s; }
+.ghost-stick i { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.25); animation: ctlstick 2.4s ease-in-out infinite; }
+.ghost-stick b { font-family: var(--head); font-weight: 400; font-size: 12px; letter-spacing: 1px; position: relative; }
+.ghost-stick span { font-size: 9.5px; position: relative; opacity: .85; }
+.ghost-stick.move { left: 22%; }
+.ghost-stick.aim { left: 62%; border-color: rgba(255,140,90,0.6); }
+.ghost-stick.aim i { background: rgba(255,140,90,0.35); animation-delay: -1.2s; }
+.left-handed .ghost-stick.move { left: 62%; }
+.left-handed .ghost-stick.aim { left: 22%; }
+.touch-root.ghosts .ghost-stick { display: flex; }
+.ghost-stick.used { opacity: 0; }
+@media (orientation: portrait) { .ghost-stick { bottom: calc(var(--sb) + 240px); } .ghost-stick.move { left: 25%; } .ghost-stick.aim, .left-handed .ghost-stick.move { left: 72%; } .left-handed .ghost-stick.aim { left: 25%; } }
+/* D57 floor bonus line */
+.hud-bonus { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 10px; border-radius: 8px; background: rgba(10,10,12,0.5); font-size: 12px; color: #e8d9b5; white-space: nowrap; }
+.hud-bonus i { font-style: normal; color: #ffd65c; }
+.hud-bonus span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud-bonus b { font-family: var(--head); font-weight: 400; color: #ffd65c; font-variant-numeric: tabular-nums; }
+.hud-bonus.tick b { animation: pop .25s ease-out; display: inline-block; }
+.hud-bonus.done { color: #b5f5d5; background: rgba(20,60,40,0.6); }
+.hud-bonus.done b { color: #7ee36f; }
+.hud.touch .hud-bonus { font-size: 10.5px; padding: 2px 8px; }
+/* D57 off-screen threat arrows */
+.threats { position: fixed; inset: 0; pointer-events: none !important; }
+.threat { position: absolute; left: -9px; top: -9px; width: 0; height: 0; border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-left: 16px solid #ff8a5c; filter: drop-shadow(0 0 3px rgba(0,0,0,.9)); display: none; }
+.threat.near { border-left-color: #ff3b30; animation: threatpulse .6s ease-in-out infinite alternate; }
+@keyframes threatpulse { to { filter: drop-shadow(0 0 6px rgba(255,60,40,.9)); } }
+.hud.reduced-flashes ~ .threats .threat.near, #ui:has(.hud.reduced-flashes) .threat.near { animation: none; }
+/* portrait phones: tutorial cards keep the normal size even with a large HUD, so the player stays clear */
+@media (orientation: portrait) { .hud.touch .tip-card { zoom: calc(1 / var(--hud-scale, 1)); } }
+.preference-slider select { font: inherit; font-size: 14px; background: #121418; color: var(--text); border: 2px solid var(--line); border-radius: 8px; padding: 6px 8px; min-height: 36px; }
+.preferences-panel > .btn.primary { box-shadow: 0 -10px 16px var(--panel), 0 4px 0 #a64a0f; }

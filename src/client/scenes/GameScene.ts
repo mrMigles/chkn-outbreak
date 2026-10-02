@@ -11,6 +11,8 @@ import { Input } from '../input/Input';
 import { Hud } from '../ui/Hud';
 import { preferencesMarkup, bindPreferences } from '../ui/Preferences';
 import { controlsMarkup } from '../ui/ControlsHelp';
+import { Coach } from '../ui/Coach';
+import { Threats } from '../render/Threats';
 import { sfx } from '../audio/Sfx';
 import type { Session } from '../net/Session';
 import { WEAPONS, WeaponId } from '../../shared/weapons';
@@ -81,6 +83,8 @@ export class GameScene extends Phaser.Scene {
   wallFaces: Phaser.GameObjects.Image[] = [];
   get elevation() { return HAND_H; }
   tutorial!: Tutorial;
+  coach!: Coach;
+  threats!: Threats;
   private warmup: Phaser.GameObjects.Image[] = [];
   private warmFrames = 0;
   private incidentMarkers = new Map<string, { icon: Phaser.GameObjects.Text; zone: Phaser.GameObjects.Graphics }>();
@@ -169,6 +173,8 @@ export class GameScene extends Phaser.Scene {
     this.hud = new Hud(this.input2.touch);
     for (const k of Object.keys(this.textures.get('office25').frames)) if (k.startsWith('gun_')) this.hud.icons['w_' + k.slice(4)] = this.textures.getBase64('office25', k);
     this.tutorial = new Tutorial(this.input2.touch);
+    this.coach = new Coach(this.hud, s.myId, (who, text, d) => this.say(who, text, d), this.input2.touch);
+    this.threats = new Threats();
     this.prewarmLooks();
     this.hud.objective(s.view.objective);
     if (!this.input2.touch) {
@@ -257,6 +263,7 @@ export class GameScene extends Phaser.Scene {
   private cleanup() {
     this.input2?.destroy();
     this.tutorial?.destroy();
+    this.threats?.destroy();
     document.getElementById('game')!.classList.remove('ingame');
     this.crosshair = null;
     this.hud?.destroy();
@@ -319,7 +326,7 @@ export class GameScene extends Phaser.Scene {
 
     // ---- simulation / network
     const events = s.poll(dt);
-    for (const ev of events) this.handle(ev);
+    for (const ev of events) { this.handle(ev); this.coach.event(ev); }
 
     // ---- sync views
     this.syncWorld(dt);
@@ -351,6 +358,8 @@ export class GameScene extends Phaser.Scene {
     // ---- hud
     const me2 = s.view.players.find((p) => p.id === s.myId);
     this.hud.update(dt, s.view, me2, s.solo);
+    this.coach.update(dt, s.view, me2);
+    this.threats.update(s.view, this.px, this.py, this.cameras.main, (this.game as any).dprScale ?? 1, settings.threatArrows && me2?.state === 'alive');
     this.updateHints(me2);
     this.updateCrosshair(dt, inp, me2);
     this.updateBubbles(dt);
@@ -396,6 +405,7 @@ export class GameScene extends Phaser.Scene {
     const t = (this.time.now - this.time0) / 1000;
     if (t > 1) tut.show('move');
     if (t > 9) tut.show('objective');
+    if (t > 20 && v.bonus && settings.bonusGoals) tut.show('bonus');
     const near = (x: number, y: number, r: number) => Math.abs(x - this.px) < r && Math.abs(y - this.py) < r * 0.8;
     for (const e of v.enemies) {
       if (e.state === 'rise' || !near(e.x, e.y, 620)) continue;

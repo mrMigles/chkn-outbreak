@@ -3,6 +3,9 @@ import './styles.css';
 import { BootScene } from './scenes/BootScene';
 import { GameScene, GameSceneData } from './scenes/GameScene';
 import { App } from './ui/App';
+import { settings } from './settings';
+
+document.documentElement.style.setProperty('--hud-scale', String(settings.hudScale || 1));
 
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 

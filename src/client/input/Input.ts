@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { settings, saveSettings } from '../settings';
 
 export interface InputState {
   mx: number; my: number;          // movement vector (-1..1)
@@ -55,7 +56,13 @@ export class Input {
       <div class="touch-zone left"></div><div class="touch-zone right"></div>
       <div class="tbtn t-interact hidden" data-b="interact">E</div>
       <div class="tbtn t-reload" data-b="reload">⟳</div>
-      <div class="tbtn t-pause" data-b="pause">❚❚</div>`;
+      <div class="tbtn t-pause" data-b="pause">❚❚</div>
+      <div class="ghost-stick move"><i></i><b>БЕГ</b><span>тяните здесь</span></div>
+      <div class="ghost-stick aim"><i></i><b>ПРИЦЕЛ</b><span>огонь сам</span></div>`;
+    // D57: run on one half, aim on the other — swapped for left-handed players
+    if (settings.leftHanded) root.classList.add('left-handed');
+    // the floating sticks are invisible until touched: show where they live for the first levels
+    if (settings.ghostSticks < 3) { root.classList.add('ghosts'); settings.ghostSticks++; saveSettings(); setTimeout(() => root.classList.remove('ghosts'), 14000); }
     document.getElementById('ui')!.appendChild(root);
     this.root = root;
     this.interactLabel = root.querySelector('.t-interact');
@@ -74,10 +81,12 @@ export class Input {
         base.style.left = t.clientX + 'px'; base.style.top = t.clientY + 'px';
         base.classList.add(side === 'L' ? 'move' : 'aim');
         this.sticks.push(s);
+        root.querySelector(side === 'L' ? '.ghost-stick.move' : '.ghost-stick.aim')?.classList.add('used');
       }
     };
-    root.querySelector('.left')!.addEventListener('touchstart', onStart('L') as EventListener, { passive: false });
-    root.querySelector('.right')!.addEventListener('touchstart', onStart('R') as EventListener, { passive: false });
+    const [leftSide, rightSide]: ('L' | 'R')[] = settings.leftHanded ? ['R', 'L'] : ['L', 'R'];
+    root.querySelector('.left')!.addEventListener('touchstart', onStart(leftSide) as EventListener, { passive: false });
+    root.querySelector('.right')!.addEventListener('touchstart', onStart(rightSide) as EventListener, { passive: false });
     const onMove = (ev: TouchEvent) => {
       for (const t of Array.from(ev.changedTouches)) {
         const s = this.sticks.find((q) => q.id === t.identifier);
@@ -100,10 +109,17 @@ export class Input {
         this.sticks = this.sticks.filter((q) => q !== s);
       }
     };
+    // a call, a notification shade or an app switch never leaves a stick or the action button held
+    const release = () => { for (const s of this.sticks) s.base.remove(); this.sticks = []; this.btnInteract = false; root.querySelectorAll('.tbtn.down').forEach(b => b.classList.remove('down')); };
+    const onVisibility = () => { if (document.visibilityState !== 'visible') release(); };
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onEnd);
     window.addEventListener('touchcancel', onEnd);
+    window.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', onVisibility);
     this.cleanup = () => {
+      window.removeEventListener('blur', release);
+      document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
       window.removeEventListener('touchcancel', onEnd);
@@ -118,7 +134,9 @@ export class Input {
         if (kind === 'switch') this.state.weaponDelta = 1;
         if (kind === 'pause') this.state.pause = true;
       }, { passive: false });
-      b.addEventListener('touchend', (ev) => { ev.preventDefault(); b.classList.remove('down'); if (kind === 'interact') this.btnInteract = false; });
+      const up = (ev: Event) => { ev.preventDefault(); b.classList.remove('down'); if (kind === 'interact') this.btnInteract = false; };
+      b.addEventListener('touchend', up);
+      b.addEventListener('touchcancel', up);
     });
   }
 

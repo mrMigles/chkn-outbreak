@@ -36,6 +36,7 @@ export class Hud {
         <div class="top-score"><div class="hud-score"></div></div>
         <div class="top-mid">
           <div class="hud-obj"><span class="obj-label">ЗАДАЧА</span><span class="obj-text"></span><span class="obj-dir hidden"><i>➤</i><b></b></span></div>
+          <div class="hud-bonus hidden"><i>★</i><span></span><b></b></div>
           <div class="hud-boss hidden"><div class="boss-name">ГЕНЕРАЛЬНЫЙ ПЕТУХ</div><div class="boss-bar"><div class="boss-fill"></div></div></div>
           <div class="hud-incident hidden"><b></b><span></span></div>
         </div>
@@ -160,6 +161,7 @@ export class Hud {
     const keys = [...new Set(me.achievements ?? [])].sort().join(',');
     if (keys !== this.profileKeys) { this.profileKeys = keys; rememberAchievements(me.achievements ?? []); }
     this.updateIncident(view, me);
+    this.updateBonus(dt, view);
     this.q('.hud-supplies').innerHTML = `<span title="Аптечки">✚ ${me.supplies?.medkit ?? 0}</span><span title="Патроны для друзей">▣ ${me.supplies?.ammo ?? 0}</span>`;
     const action = me.support;
     const helping = !!action && !action.cancelled && !action.completed && action.kind !== 'ammo';
@@ -230,6 +232,23 @@ export class Hud {
     else if (me.state === 'chicken') { st.textContent = 'ВЫ — КУРИЦА. Заклюйте бывших коллег!'; st.className = 'hud-state show chicken'; }
     else if (me.state === 'dead' && !solo) { st.textContent = 'НАБЛЮДЕНИЕ · вернётесь к команде в передышку'; st.className = 'hud-state show'; }
     else st.className = 'hud-state';
+  }
+
+  private bonusShownDone = 0;
+  private bonusKey = '';
+  /** D57 floor bonus: a quiet line under the objective; disappears a few seconds after success. */
+  private updateBonus(dt: number, view: WorldView) {
+    const b = view.bonus, el = this.q('.hud-bonus');
+    if (!b || !settings.bonusGoals) { el.classList.add('hidden'); return; }
+    if (b.done) this.bonusShownDone += dt; else this.bonusShownDone = 0;
+    el.classList.toggle('hidden', b.done && this.bonusShownDone > 6);
+    el.classList.toggle('done', b.done);
+    const key = `${b.id}:${b.n}:${b.done}`;
+    if (key === this.bonusKey) return;
+    if (this.bonusKey && !b.done) { el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
+    this.bonusKey = key;
+    this.q('.hud-bonus span').textContent = b.done ? 'Бонус этажа выполнен' : b.text;
+    this.q('.hud-bonus b').textContent = b.done ? '✓' : `${b.n}/${b.goal}`;
   }
 
   private updateIncident(view: WorldView, me: Player) {

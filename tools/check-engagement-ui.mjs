@@ -33,7 +33,7 @@ try {
     await shot(page,name+'-settings');
     await page.locator('[data-a="back"]').click();
     await page.locator('[data-a="achievements"]').click();
-    assert.equal(await page.locator('.achievement-entry').count(),8);
+    assert.equal(await page.locator('.achievement-entry').count(),15);
     assert.equal(await page.locator('.achievement-entry.earned').count(),0);
     await shot(page,name+'-achievements');
     await page.goto(base+'/?level=office7&loop=timeout');

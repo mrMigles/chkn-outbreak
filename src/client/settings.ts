@@ -11,6 +11,13 @@ export const settings = {
   combatText: true,
   achievementPopups: true,
   reducedFlashes: false,
+  // D57
+  hudScale: 1,            // 0.85 compact · 1 normal · 1.15 large
+  leftHanded: false,      // touch: aim on the left half, run on the right
+  vibration: true,        // navigator.vibrate on hurt / heavy hits (Android)
+  threatArrows: true,     // arrows at the screen edge for chickens out of view
+  bonusGoals: true,       // show the floor bonus line
+  ghostSticks: 0,         // how many levels showed the touch stick hints
   seenTips: [] as string[],
   // developer mode (?dev=1 or five taps on the logo): level select, god mode, full arsenal, hotkeys
   dev: false,
