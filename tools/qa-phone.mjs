@@ -39,24 +39,32 @@ for (const [name, width, height, scale] of sizes) {
     const show = s.input2.showInteract.bind(s.input2);
     s.input2.showInteract = () => show('Петрович, за мной');
   });
-  if (height > width) {
-    // portrait: a tip never shares the screen with an alert; it shows after the alert ends
-    await page.waitForTimeout(1500);
-    if (await page.locator('.tip-card.in').count()) problems.push(`${name}: tip shown together with an alert`);
-    await page.waitForFunction(() => !document.querySelector('.hud-notice.show'), null, { timeout: 15000 });
-  }
+  // D64: phase 1 — alert + radio + incident share the phone feed; a tip waits for them
+  const measure = () => page.evaluate(() => {
+    const sel = ['.hud-bonus', '.top-hp', '.top-score', '.hud-obj', '.hud-incident', '.hud-notice', '.hud-radio', '.tip-card', '.hud-effects', '.hud-weapon', '.hud-bottom', '.t-reload', '.t-interact', '.t-pause'];
+    return sel.map((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
+      if (cs.display === 'none' || r.width === 0 || r.height === 0) return null;
+      // the phone feed clips what does not fit (D64): only the visible part counts
+      const f = e.closest('.hud-feed')?.getBoundingClientRect();
+      const y0 = f ? Math.max(r.y, f.y) : r.y, y1 = f ? Math.min(r.y + r.height, f.y + f.height) : r.y + r.height;
+      return y1 - y0 < 2 ? null : { s, x: r.x, y: y0, w: r.width, h: y1 - y0 }; }).filter(Boolean);
+  });
+  await page.waitForTimeout(1500);
+  if (await page.locator('.tip-card.in').count()) problems.push(`${name}: tip shown together with an alert/radio`);
+  const phases = [await measure()];
+  await page.screenshot({ path: `${out}/${name}-alerts.png` });
+  // phase 2 — the alert and the radio end, the tip takes the feed
+  await page.waitForFunction(() => !document.querySelector('.hud-notice.show'), null, { timeout: 15000 });
+  await page.evaluate(() => { window.__game.scene.getScene('game').hud.radioTimer = 0; });
   await page.waitForSelector('.tip-card.in', { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/${name}-game.png` });
-  const boxes = await page.evaluate(() => {
-    const sel = ['.hud-bonus', '.top-hp', '.top-score', '.hud-obj', '.hud-incident', '.hud-notice', '.tip-card', '.hud-effects', '.hud-weapon', '.hud-bottom', '.t-reload', '.t-interact', '.t-pause'];
-    return sel.map((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
-      return cs.display === 'none' || r.width === 0 || r.height === 0 ? null : { s, x: r.x, y: r.y, w: r.width, h: r.height }; }).filter(Boolean);
-  });
+  phases.push(await measure());
+  const boxes = phases.flat();
   const vis = new Set(boxes.map((b) => b.s));
-  for (const must of ['.hud-bonus', '.hud-obj', '.hud-incident', ...(height > width ? [] : ['.hud-notice']), '.tip-card', '.hud-weapon', '.hud-bottom', '.t-interact']) if (!vis.has(must)) problems.push(`${name}: ${must} not visible`);
-  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-    const a = boxes[i], b = boxes[j];
+  for (const must of ['.hud-bonus', '.hud-obj', '.hud-incident', '.hud-radio', '.tip-card', '.hud-weapon', '.t-interact']) if (!vis.has(must)) problems.push(`${name}: ${must} not visible`);
+  for (const ph of phases) for (let i = 0; i < ph.length; i++) for (let j = i + 1; j < ph.length; j++) {
+    const a = ph[i], b = ph[j];
     const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
     if (ox > 1 && oy > 1) problems.push(`${name}: ${a.s} overlaps ${b.s} (${Math.round(ox)}×${Math.round(oy)})`);
   }

@@ -7,7 +7,7 @@ import { EnemyView, NpcView, PlayerView, muzzleOf, ejectOf, HAND_H, worldDepth, 
 import { lookTexture } from '../render/Looks';
 import { music } from '../audio/Music';
 import { Tutorial } from '../ui/Tutorial';
-import { Input } from '../input/Input';
+import { Input, FIRE_EDGE } from '../input/Input';
 import { Hud } from '../ui/Hud';
 import { preferencesMarkup, bindPreferences } from '../ui/Preferences';
 import { achievementsMarkup, earnedAchievements } from '../ui/AchievementProfile';
@@ -306,14 +306,14 @@ export class GameScene extends Phaser.Scene {
       // the shot leaves the hand and flies through the pointer; bodies are hit where they are drawn (shared/sim/hitbox)
       if (inp.aimMode === 'mouse') this.aim = Math.atan2(inp.aimWY - (this.py - this.elevation), inp.aimWX - this.px);
       else {
-        // touch: right stick aims, auto-fire when a chicken is under the aim cone
-        const target = this.findAutoTarget(inp.aimMode === 'stick' ? inp.stickA : this.aim, inp.aimMode === 'stick' ? 0.32 : Math.PI, me);
+        // touch (D63): the right stick aims inside its circle and fires at its edge — always, in that
+        // direction, whether a chicken is there or not. Predictable instead of «sometimes it shoots».
         if (inp.aimMode === 'stick' && inp.stickMag > 0.25) {
           let a = inp.stickA;
-          if (target) a += clamp(angleDiff(a, target.a), -0.18, 0.18); // soft aim assist
+          const target = this.findAutoTarget(a, 0.3, me);
+          if (target) a += clamp(angleDiff(a, target.a), -0.12, 0.12); // gentle aim assist
           this.aim = a;
-          fire = !!target && Math.abs(angleDiff(this.aim, target.a)) < 0.2;
-          if (inp.stickMag > 0.92) fire = true; // full deflection = fire anyway
+          fire = inp.stickMag >= FIRE_EDGE;
         } else if (Math.hypot(inp.mx, inp.my) > 0.2) this.aim = Math.atan2(inp.my, inp.mx);
       }
       if (inp.weaponDelta && me.weapons.length) this.desiredWeapon = (me.cur + inp.weaponDelta + me.weapons.length) % me.weapons.length;

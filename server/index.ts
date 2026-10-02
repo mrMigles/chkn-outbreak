@@ -2,6 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { GameRoom, activeRooms } from './GameRoom';
@@ -16,6 +17,40 @@ const TYPES: Record<string, string> = {
   '.json': 'application/json', '.tmj': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.webmanifest': 'application/manifest+json', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.webp': 'image/webp', '.woff2': 'font/woff2',
 };
+
+// ---------------------------------------------------------------- D65: static files fast
+let buildCache = { at: 0, id: '' };
+/** Build id of dist/version.json (re-read at most every 10 s, so a redeploy without restart is noticed). */
+function deployedBuild() {
+  if (Date.now() - buildCache.at > 10000) {
+    let id = '';
+    try { id = JSON.parse(fs.readFileSync(path.join(DIST, 'version.json'), 'utf8')).build ?? ''; } catch { /* no build */ }
+    buildCache = { at: Date.now(), id };
+  }
+  return buildCache.id;
+}
+const pickEncoding = (accept: string) => /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : '';
+const packed = new Map<string, { mtime: number; buf: Promise<Buffer> }>();
+/** Compressed copy, made once per file version on libuv's thread pool: never blocks the game rooms. */
+function compressed(file: string, mtime: number, enc: string): Promise<Buffer> {
+  const key = enc + ':' + file, hit = packed.get(key);
+  if (hit && hit.mtime === mtime) return hit.buf;
+  const buf = fs.promises.readFile(file).then((raw) => new Promise<Buffer>((ok, fail) => {
+    const done = (e: Error | null, b: Buffer) => (e ? fail(e) : ok(b));
+    if (enc === 'br') zlib.brotliCompress(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length } }, done);
+    else zlib.gzip(raw, { level: 9 }, done);
+  }));
+  buf.catch(() => packed.delete(key));
+  packed.set(key, { mtime, buf });
+  return buf;
+}
+/** After start: compress the build's text files in the background, so the first player waits for nothing. */
+function warmCompression() {
+  const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  try {
+    for (const f of walk(DIST)) if (/\.(js|css|html|json|tmj|svg|webmanifest)$/.test(f)) { const st = fs.statSync(f); if (st.size > 1024) for (const enc of ['br', 'gzip']) void compressed(f, st.mtimeMs, enc).catch(() => {}); }
+  } catch { /* no build */ }
+}
 
 /** The chat's room exists (created on first open); one creation at a time per code. */
 const creating = new Map<string, Promise<void>>();
@@ -42,6 +77,11 @@ const json = (res: http.ServerResponse, code: number, body: unknown) => { res.wr
 const httpServer = http.createServer(async (req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
   if (url === '/health' || url === '/healthz') { res.writeHead(200); res.end('ok'); return; }
+  // D65: memory probe for the performance check (QA server only)
+  if (url === '/debug/mem' && process.argv.includes('--debug')) {
+    (globalThis as { gc?: () => void }).gc?.();
+    const m = process.memoryUsage(); json(res, 200, { heapMB: +(m.heapUsed / 1048576).toFixed(1), rssMB: +(m.rss / 1048576).toFixed(1) }); return;
+  }
   if (url === '/version') {
     let build = process.env.BUILD_ID ?? 'dev';
     try { build = JSON.parse(fs.readFileSync(path.join(DIST, 'version.json'), 'utf8')).build ?? build; } catch { /* no client build */ }
@@ -84,20 +124,33 @@ const httpServer = http.createServer(async (req, res) => {
   let file = path.join(DIST, url === '/' ? 'index.html' : url);
   if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(DIST, 'index.html');
   // D56: the page and version.json are never cached; Vite's content-hashed bundles are immutable;
-  // everything else (atlases, maps, music — requested with ?v=<build>) revalidates by ETag.
+  // D65: files requested with ?v=<the deployed build> are immutable too (no revalidation round trips on
+  // every start — the build id changes the URL on the next deploy); other files revalidate by ETag.
   const stat = fs.statSync(file), name = path.basename(file);
   const etag = `"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
+  const v = new URLSearchParams((req.url || '').split('?')[1] ?? '').get('v');
   const cache = name === 'index.html' || name === 'version.json' || name === 'sw.js' ? 'no-store, max-age=0'
     : file.startsWith(path.join(DIST, 'assets')) && /-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(name) ? 'public, max-age=31536000, immutable'
+    : v && v === deployedBuild() ? 'public, max-age=31536000, immutable'
     : 'no-cache';
-  const headers: Record<string, string> = { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'cache-control': cache, etag };
+  const headers: Record<string, string> = { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'cache-control': cache, etag, vary: 'Accept-Encoding' };
   if (cache === 'no-cache' && req.headers['if-none-match'] === etag) { res.writeHead(304, headers); res.end(); return; }
+  // D65: text files go compressed (the game bundle is 1.6 MB raw, ~0.4 MB brotli); compressed once, kept in memory
+  const enc = /\.(js|css|html|json|tmj|svg|webmanifest)$/.test(name) ? pickEncoding(String(req.headers['accept-encoding'] ?? '')) : '';
+  if (enc && stat.size > 1024) {
+    headers['content-encoding'] = enc;
+    try {
+      const body = await compressed(file, stat.mtimeMs, enc);
+      headers['content-length'] = String(body.length);
+      res.writeHead(200, headers); res.end(req.method === 'HEAD' ? undefined : body); return;
+    } catch { delete headers['content-encoding']; }
+  }
   res.writeHead(200, headers);
   fs.createReadStream(file).pipe(res);
 });
 
 const gameServer = new Server({ transport: new WebSocketTransport({ server: httpServer }) });
 gameServer.define('game', GameRoom);
-gameServer.listen(PORT).then(() => { console.log(`CHKN OUTBREAK server on :${PORT}`); startTelegramBot(); });
+gameServer.listen(PORT).then(() => { console.log(`CHKN OUTBREAK server on :${PORT}`); startTelegramBot(); warmCompression(); });
 // docker stop / compose down: close rooms cleanly
 for (const sig of ['SIGTERM', 'SIGINT'] as const) process.once(sig, () => { gameServer.gracefullyShutdown().then(() => process.exit(0)).catch(() => process.exit(0)); });

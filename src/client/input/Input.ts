@@ -17,6 +17,9 @@ export interface InputState {
 
 export const isTouch = () => window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+/** Right stick deflection (0..1) from which it fires (D63): inside = aim only, at the edge = fire. */
+export const FIRE_EDGE = 0.8;
+
 /** Keyboard + mouse + virtual twin sticks (DOM overlay). */
 export class Input {
   state: InputState = { mx: 0, my: 0, aimMode: 'mouse', aimWX: 0, aimWY: 0, stickA: 0, stickMag: 0, fire: false, reload: false, interact: false, interactEdge: false, weaponDelta: 0, weaponSlot: -1, pause: false };
@@ -58,7 +61,7 @@ export class Input {
       <div class="tbtn t-reload" data-b="reload">⟳</div>
       <div class="tbtn t-pause" data-b="pause">❚❚</div>
       <div class="ghost-stick move"><i></i><b>БЕГ</b><span>тяните здесь</span></div>
-      <div class="ghost-stick aim"><i></i><b>ПРИЦЕЛ</b><span>огонь сам</span></div>`;
+      <div class="ghost-stick aim"><i></i><b>ПРИЦЕЛ</b><span>до края — огонь</span></div>`;
     // D57: run on one half, aim on the other — swapped for left-handed players
     if (settings.leftHanded) root.classList.add('left-handed');
     // the floating sticks are invisible until touched: show where they live for the first levels
@@ -99,6 +102,7 @@ export class Input {
         if (d > R * 1.6) { s.ox += dx * (1 - (R * 1.6) / d); s.oy += dy * (1 - (R * 1.6) / d); s.base.style.left = s.ox + 'px'; s.base.style.top = s.oy + 'px'; dx = s.x - s.ox; dy = s.y - s.oy; }
         const k = Math.min(1, R / Math.max(1, Math.hypot(dx, dy)));
         s.knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+        if (s.side === 'R') s.base.classList.toggle('fire', Math.hypot(dx, dy) / R >= FIRE_EDGE);
       }
     };
     const onEnd = (ev: TouchEvent) => {

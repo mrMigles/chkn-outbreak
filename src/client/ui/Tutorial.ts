@@ -4,7 +4,7 @@ import { settings, saveSettings } from '../settings';
 interface Tip { title: string; text: string; touch?: string }
 
 export const TIPS: Record<string, Tip> = {
-  move: { title: 'Управление', text: '<b>WASD</b> — бег · <b>мышь</b> — прицел · <b>ЛКМ</b> — огонь', touch: 'Левый стик — бег · правый стик — прицел и стрельба' },
+  move: { title: 'Управление', text: '<b>WASD</b> — бег · <b>мышь</b> — прицел · <b>ЛКМ</b> — огонь', touch: 'Левый стик — бег · правый стик — прицел, до края круга — огонь' },
   objective: { title: 'Задача', text: 'Текущая цель всегда вверху экрана. Следуйте ей — она меняется по ходу сюжета.' },
   enemy: { title: 'Коллеги-мутанты', text: 'Пули попадают туда, где нарисован враг. <b>В голову — двойной урон.</b> Держите дистанцию: они бьют вблизи.' },
   mutation: { title: 'Заражение', text: 'Люди превращаются в кур-людей. Перед мутацией они дёргаются и роняют перья — даже спасённые спутники.' },
@@ -45,7 +45,8 @@ export class Tutorial {
   update(dt: number) {
     // nothing over pause/result panels
     if (document.querySelector('.overlay.screen, .pause-menu:not(.hidden)')) { if (this.el) this.close(); return; }
-    const crowded = this.touch && innerHeight > innerWidth && !!document.querySelector('.hud-notice.show');
+    // D64: the phone feed is small: a tip waits for the current alert and radio message
+    const crowded = this.touch && !!document.querySelector('.hud-notice.show, .hud-radio.show');
     if (this.el && crowded && this.cur) { this.queue.unshift(this.cur); this.close(); return; }
     if (this.el) {
       this.t -= dt;

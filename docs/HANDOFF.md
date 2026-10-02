@@ -2,6 +2,10 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 10 (2026-10-02, Claude) — phone shooting, phone texts, performance
+
+D63: right stick aims inside the circle and fires at the edge, regardless of targets. D64: on phones all pop-up texts (incident, alerts, radio, tips) live in one small feed in the free corner (portrait bottom-left, landscape top-right), smaller, one pop-up at a time. D65: `qa:perf` found no leaks and steady 60 FPS; start-up made faster (brotli, immutable versioned assets, Phaser chunk, music after first touch): 4G cold start 5.8 → 4.0 s, half the bytes.
+
 ## Iteration 9 (2026-10-02, Claude) — lobby, seats that survive closed tabs, PWA, Telegram summon
 
 User report (11 items), decisions D58–D62. Lobby = main menu with the team (portraits, look/name changes, host by join order with instant transfer, «Продолжить / Новая игра», readiness only a hint). Seats belong to a persistent player id: a closed tab or crash comes back to the same seat/position (reserved for the whole floor), a second window takes the seat over, a dead character stays benched until the next floor, newcomers drop into the running floor. Telegram chat: straight to the lobby, «Призвать чат», rare achievements → chat, «Открыть в браузере» on computers keeps the seat. PWA with `/?install=1` and `/install`. Freezes: delta snapshots (−40 % traffic), incremental async room saves (9 ms → 0.1 ms on the event loop), 100 ms snapshot interpolation on clients.

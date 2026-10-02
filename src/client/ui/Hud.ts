@@ -63,6 +63,14 @@ export class Hud {
       </div>
       <div class="hud-msg"><div class="msg-title"></div><div class="msg-sub"></div></div>
       <div class="hud-state"></div>`;
+    // D64: phones gather every pop-up text (incident, alert, tip, radio) into one small feed in the free
+    // corner — bottom-left in portrait, top-right in landscape — instead of the middle of the fight
+    if (touch) {
+      const feed = document.createElement('div');
+      feed.className = 'hud-feed';
+      for (const sel of ['.hud-incident', '.hud-notice', '.hud-radio', '.tip-slot']) feed.appendChild(this.q(sel));
+      this.el.appendChild(feed);
+    }
     document.getElementById('ui')!.appendChild(this.el);
   }
 

@@ -16,7 +16,7 @@ export function controlsMarkup(touch = isTouch()) {
   return `<div class="controls-help-box">
     <div class="ctl-scheme" aria-hidden="true">
       <div class="ctl-half left"><div class="ctl-stick"><i></i></div><b>БЕГ</b><span>коснитесь в любом месте слева и тяните</span></div>
-      <div class="ctl-half right"><div class="ctl-stick aim"><i></i></div><b>ПРИЦЕЛ</b><span>тяните справа — огонь сам, когда враг на линии</span></div>
+      <div class="ctl-half right"><div class="ctl-stick aim"><i></i></div><b>ПРИЦЕЛ</b><span>тяните справа — внутри круга целитесь, до края — стреляете</span></div>
       <div class="ctl-pause">❚❚</div>
       <div class="ctl-dock"><div class="ctl-act">действие</div><div class="ctl-round">⟳</div><div class="ctl-weapon">⇄ оружие</div></div>
     </div>

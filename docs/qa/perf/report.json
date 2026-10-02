@@ -1,0 +1,38 @@
+{
+  "renderer": "Chromium hardware WebGL (d3d11)",
+  "budget": {
+    "mobile4g_menu_cold_ms": 4004,
+    "mobile4g_cold_KB": 1517,
+    "mobile4g_menu_warm_ms": 791,
+    "mobile4g_warm_KB": 0,
+    "menu_cold_ms": 2254,
+    "menu_warm_ms": 805,
+    "clientHeapGrowthMB": 0,
+    "domGrowth": 0,
+    "serverHeapGrowthMB": 0
+  },
+  "samples": [
+    {
+      "t": 0,
+      "heapMB": 63.1,
+      "dom": 105,
+      "enemies": 0,
+      "p50": 16.7,
+      "p99": 63.8,
+      "frames": 163,
+      "serverHeapMB": 17.4,
+      "serverRssMB": 112.9
+    },
+    {
+      "t": 15,
+      "heapMB": 65.2,
+      "dom": 108,
+      "enemies": 9,
+      "p50": 16.7,
+      "p99": 16.8,
+      "frames": 842,
+      "serverHeapMB": 18.2,
+      "serverRssMB": 111.8
+    }
+  ]
+}

@@ -69,20 +69,20 @@
         "height": 390
       },
       "alertBox": {
-        "x": 594.671875,
-        "y": 52,
-        "width": 193.328125,
-        "height": 61.53125,
-        "scrollWidth": 188,
-        "clientWidth": 188
+        "x": 584,
+        "y": 58,
+        "width": 250,
+        "height": 51.46875,
+        "scrollWidth": 246,
+        "clientWidth": 246
       },
       "goalBox": {
-        "x": 213.3125,
-        "y": 78,
-        "width": 371.359375,
-        "height": 38.34375,
-        "scrollWidth": 368,
-        "clientWidth": 368
+        "x": 584,
+        "y": 164.84375,
+        "width": 250,
+        "height": 20.171875,
+        "scrollWidth": 247,
+        "clientWidth": 247
       },
       "storyBox": {
         "x": 213.3125,
@@ -108,20 +108,20 @@
         "height": 844
       },
       "alertBox": {
-        "x": 14,
-        "y": 165.34375,
-        "width": 320,
-        "height": 47.359375,
-        "scrollWidth": 315,
-        "clientWidth": 315
+        "x": 10,
+        "y": 660.53125,
+        "width": 218.390625,
+        "height": 51.46875,
+        "scrollWidth": 214,
+        "clientWidth": 214
       },
       "goalBox": {
-        "x": 10,
-        "y": 122,
-        "width": 324,
-        "height": 38.34375,
-        "scrollWidth": 321,
-        "clientWidth": 321
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollWidth": 0,
+        "clientWidth": 0
       },
       "storyBox": {
         "x": 10,

@@ -82,6 +82,7 @@ optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/se
 | `npm run check:lobby-ui` | real browsers on the production build (own server): lobby portraits, look change, reopen-to-seat, pause achievements, Telegram desktop → browser hand-over, install page/service worker, phone lobby |
 | `npm run bench:net -- office7 10` | snapshot traffic full vs delta and room-save cost on a long floor |
 | `npm run icons` | PWA icons from the LPC chicken-person |
+| `npm run qa:perf -- 120` | production build performance: time to menu (local and 4G-throttled, bytes), frame times, client/server memory over a fight |
 | `npm run smoke` | short fights in all six scenes |
 | `node tools/qa-campaign.mjs <dir> [levels] [mobile]` | E2E autopilot through the campaign via the real UI (objective arrow, E, «Дальше») |
 | `node tools/qa-gun.mjs <prefix> [look]` | close-ups of the armed pose in 8 directions |

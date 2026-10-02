@@ -379,3 +379,18 @@ Payout once: +300 KPI to every player, +1 medkit and +1 ammo supply to the livin
 - «📣 Призвать чат» (chat rooms with a configured bot): the bot posts «<name> зовёт всех…» with the room state and a play button (Mini App link when `TELEGRAM_APP_URL`, else the game card); once per minute per room. The bot learns code → chat id when Telegram shows both: the game button's callback (chat_instance + message chat), a signed `chat` in Mini App initData, or the `/app` start parameter of a chat where the bot has seen a command. Stored in `<save dir>/_tg-chats.json`. `TELEGRAM_API` can point the bot at a fake API (tests).
 - Nine achievements are `rare`. Earning one in a chat room queues a «→ в чат» button on the floor-complete / victory screen and in the lobby; the server shares only achievements the player really has, rare ones, once per player.
 - Achievements are viewable in the main menu, the lobby and the pause menu (shared `achievementsMarkup`; rare ones are labelled).
+
+## D63 — Phone shooting: aim inside the circle, fire at its edge (2026-10-02)
+
+- User report: «sometimes it shoots, sometimes not» (auto-fire only fired when the aim cone found a chicken). Now the right stick aims while it stays inside the inner dashed ring and fires as soon as it reaches the edge (deflection ≥ 0.8), in that direction, whether a chicken is there or not. A gentle ±0.12 rad aim assist remains. The stick turns red while firing; the ghost hint, controls help and tutorial say «до края — огонь».
+
+## D64 — Phone texts in the free corner, smaller
+
+- Incident card, alerts, radio and tips form one small feed: bottom-left above the action buttons in portrait, top-right under the score in landscape (where the screenshots showed free space). Smaller type (radio 10.5 px, four lines at most, speaker inline); the feed clips instead of reaching the centre or the buttons; with an alert or radio on screen the incident drops its subtitle (and its card in portrait). The support/toast/hint stack moves to the right in portrait.
+- One pop-up at a time on phones in both orientations: a tip waits for the current alert and radio message. `qa-phone` measures both phases (alert + radio, then tip) at all five sizes.
+
+## D65 — Performance pass: no leaks, faster start
+
+- `npm run qa:perf` (production build, own server, hardware WebGL): two minutes of networked fighting with 67 enemies — 60 FPS, p99 16.8 ms; client heap flat (+1.8 MB after GC), DOM nodes constant, server heap +2 MB (the floor's input recording, released with the floor). No leak found.
+- Start-up waste found and fixed: the server sent everything uncompressed (game bundle 1.6 MB raw). Text files now go brotli/gzip, compressed once per build on the thread pool and pre-warmed at start (never blocking rooms). Files requested with the deployed `?v=<build>` are immutable (no 15 revalidation round trips per start). Phaser and the network SDK are separate content-hashed chunks, so game updates do not re-download the engine. Music downloads only after the first touch instead of competing with the start.
+- 4G-throttled (9 Mbit/s, 85 ms): cold start 5.8 s → 3.9–4.0 s, 3061 KB → 1517 KB; warm start 1.18 s → 0.78 s.

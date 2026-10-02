@@ -35,7 +35,8 @@
     "qa:menu": "node tools/qa-menu.mjs",
     "art:fetch": "node tools/art/lpc-fetch.mjs",
     "icons": "tsx tools/build-icons.ts",
-    "bench:net": "tsx tools/bench-net.ts"
+    "bench:net": "tsx tools/bench-net.ts",
+    "qa:perf": "node --import tsx tools/qa-perf.mjs"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",

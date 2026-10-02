@@ -265,7 +265,12 @@ try {
     assert.ok((await fetch(HTTP + '/icons/icon-192.png')).headers.get('content-type') === 'image/png');
     const page = await (await fetch(HTTP + '/')).text();
     assert.ok(page.includes('rel="manifest"'));
-    pass('PWA: manifest (icons, start_url, display), uncached service worker, icons, manifest link');
+    const js = /src="\/(assets\/[^"]+\.js)"/.exec(page)![1];
+    const r = await fetch(HTTP + '/' + js, { headers: { 'accept-encoding': 'br, gzip' } });
+    assert.equal(r.headers.get('content-encoding'), 'br', 'bundles go compressed (D65)');
+    const atlas = await fetch(HTTP + '/assets/gen/chars.json?v=' + (await (await fetch(HTTP + '/version.json')).json() as any).build);
+    assert.match(atlas.headers.get('cache-control') ?? '', /immutable/, 'assets of the deployed build are immutable');
+    pass('PWA: manifest, uncached service worker, icons; brotli bundles and immutable assets of the deployed build');
   } else console.log('SKIP PWA files (run npm run build first)');
   console.log(`${checks} lobby/rejoin/Telegram/PWA checks passed`);
 } catch (error) { console.error(log.slice(-3000)); process.exitCode = 1; console.error(error); }

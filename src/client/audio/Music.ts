@@ -17,10 +17,11 @@ class Music {
     if (this.el.size) return;
     for (const t of TRACKS) {
       const a = new Audio(v(`assets/music/${t}.ogg`));
-      a.loop = true; a.preload = t === 'calm' ? 'auto' : 'metadata'; a.volume = 0;
+      // D65: nothing downloads before the first touch — on mobile data the music competed with the game's own start
+      a.loop = true; a.preload = 'none'; a.volume = 0;
       this.el.set(t, a); this.gain.set(t, 0);
     }
-    const unlock = () => { this.unlocked = true; this.apply(); };
+    const unlock = () => { this.unlocked = true; const calm = this.el.get('calm')!; calm.preload = 'auto'; this.apply(); };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     // runs independently of scenes so menus fade too
