@@ -2,6 +2,19 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 5 (2026-10-02, Codex) — floor 7, room saves, buffs and larger encounters
+
+Current campaign: `office` (floor 6, original layout/balance) → `office7` → `lab` → `factory` → `boss`; `arena` remains separate. Decisions D43–D49 in [DECISIONS.md](DECISIONS.md) supersede historical notes below where applicable.
+
+- Floor 7 follows the user's grey/light-wood office reference in the existing LPC style. All five named friends are physically escorted to lifts. Workers mutate; the returning group triggers a bald manager's large non-boss mutation and finite wave. His trophy awards «Рутовый петушок» to the room. Friends evacuate and the drink's lab address / Омлетов's radio call explain the trip to floor −3.
+- Non-story followers mutate more often; protected story characters do not. Armed body/gun gait is unified and lower-body alpha masking removes leftover hands. Stationary followers no longer walk in place.
+- Generator blackout lasts 35 seconds with more corridor-only attackers and a second approach. Boss phases, summons and recurring reinforcements have more enemies; victory clears pending waves/projectiles and protects the team.
+- Four ten-second buffs drop from stronger chickens. HUD timers and the trophy persist through snapshots; narrow-screen placement keeps effects clear of objectives. Occasional odd coworkers and office jokes use the existing presentation.
+- `server/checkpoints.ts` and `shared/sim/Checkpoint.ts` persist each room by code. Seeded authoritative input replay restores simulation and timers exactly; after a wipe the last living position recovers with ≥60 HP and three seconds of protection. Browser menu remembers the room code, and the server can recreate it after restart. Docker's `chkn-progress` volume retains saves.
+- `check:campaign` and `check:progress` are included in CI. The container repository is now `ghcr.io/mrmigles/chkn-outbreak`.
+
+Verification and screenshots: [rescue-iteration.md](qa/rescue-iteration.md). Build, 18 coop scenarios, 10 combat scenarios, all six maps, art, deterministic replay/buffs/story, actual server restart, SDK networking, six-scene smoke and two-browser keyboard support/reconnection passed. Full floor-7 browser story runs completed in 81 seconds with god mode and 79 seconds with normal damage, no retries/stuck periods/errors; the normal run reached a minimum of 80.8 HP. Real phone and four-human internet play remain untested. Historical multiplayer/performance notes below are not new measurements for this iteration.
+
 ## Iteration 4 (2026-10-02, Claude) — hands, guide arrow, destructibles, Telegram, Docker, e2e
 
 User report (9 items), decisions D34–D42 in [DECISIONS.md](DECISIONS.md):

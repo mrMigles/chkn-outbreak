@@ -1,21 +1,27 @@
 // Phone layout QA: main menu, DEV box, in-game HUD with touch sticks, pause menu (landscape + portrait).
 //   node tools/qa-mobile.mjs <outPrefix>
 import { chromium, devices } from 'playwright';
-const [out = 'mobile'] = process.argv.slice(2);
+const [out = 'mobile', level = 'office'] = process.argv.slice(2);
 const base = process.env.SMOKE_URL ?? 'http://localhost:5280';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const errors = [];
 for (const [name, vp] of [['land', { width: 915, height: 412 }], ['port', { width: 412, height: 915 }], ['small', { width: 740, height: 360 }]]) {
   const ctx = await browser.newContext({ ...devices['Pixel 7'], viewport: vp, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  if (level === 'office7') await page.addInitScript(() => localStorage.setItem('chkn-settings', JSON.stringify({tutorials:false})));
   page.on('pageerror', (e) => errors.push(name + ': ' + e));
   await page.goto(`${base}/?dev=1`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForSelector('.menu', { timeout: 60000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${out}-${name}-menu.png` });
-  await page.goto(`${base}/?level=office&loop=timeout`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.goto(`${base}/?level=${level}&loop=timeout`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForFunction(() => window.__game?.scene?.getScene('game')?.session, null, { timeout: 60000 });
   await page.waitForTimeout(9000);
+  if (level === 'office7') await page.evaluate(() => {
+    const w = window.__game.scene.getScene('game').session.world, p = w.players[0];
+    for (const k of ['invincible', 'damage', 'infinite', 'sprint', 'achievement']) w.addPickup(k, p.x, p.y, { key:'root_rooster' });
+  });
+  if (level === 'office7') await page.waitForTimeout(300);
   await page.screenshot({ path: `${out}-${name}-game.png` });
   // overlap report: HUD elements' boxes
   const boxes = await page.evaluate(() => [...document.querySelectorAll('.hud > div, .touch-ui *, .tut-card, .dev-hud')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0)

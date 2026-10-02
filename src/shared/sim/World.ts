@@ -87,7 +87,8 @@ export class World implements WorldView {
     this.mapId = map.id;
     this.script = script;
     this.opts = opts;
-    this.rng = new Rng(opts.seed ?? Math.floor(Math.random() * 0xffffffff));
+    opts.seed ??= Math.floor(Math.random() * 0xffffffff);
+    this.rng = new Rng(opts.seed);
     for (const o of map.objects) this.loadObject(o);
     for (const o of map.objects) {
       if (o.type !== 'prop') continue;
@@ -112,7 +113,7 @@ export class World implements WorldView {
           id: o.name || 'npc' + o.id, kind: o.props.look || (LOOK_PRESETS[o.name] ? o.name : o.props.kind) || 'manBlue', name: o.props.title || o.name, x: cx, y: cy,
           angle: (o.props.angle ?? 90) * Math.PI / 180, hp: o.props.hp ?? 80, maxHp: o.props.hp ?? 80,
           mode: o.props.mode || 'idle', weapon: o.props.weapon || null, fireCd: 0, follow: null, goal: null,
-          lines: o.props.lines ? String(o.props.lines).split('|') : [], talkCd: 2 + Math.random() * 4, tag: o.props.tag || o.name,
+          lines: o.props.lines ? String(o.props.lines).split('|') : [], talkCd: 2 + this.rng.next() * 4, tag: o.props.tag || o.name,
           rescued: false, vx: 0, vy: 0, hurtT: 0, props: o.props,
         });
         break;
@@ -204,9 +205,12 @@ export class World implements WorldView {
   say(who: string, text: string, d = 3.2) { this.emit({ e: 'say', who, text, d }); }
   /** target: map object / NPC name(s) or a point; empty = no direction (survive/defend). */
   setObjective(text: string, target?: string | string[] | { x: number; y: number }) {
+    const targets = !target ? [] : typeof target === 'string' ? [target] : Array.isArray(target) ? target : [`@${Math.round(target.x)},${Math.round(target.y)}`];
+    if (this.objective === text && this.objectiveTarget.join('|') === targets.join('|')) return;
+    const changedText = this.objective !== text;
     this.objective = text;
-    this.objectiveTarget = !target ? [] : typeof target === 'string' ? [target] : Array.isArray(target) ? target : [`@${Math.round(target.x)},${Math.round(target.y)}`];
-    this.emit({ e: 'obj', text });
+    this.objectiveTarget = targets;
+    if (changedText) this.emit({ e: 'obj', text });
   }
   msg(text: string, sub?: string, d = 3) { this.emit({ e: 'msg', text, sub, d }); }
   after(t: number, fn: () => void) { this.timers.push({ t, fn }); }
@@ -227,6 +231,18 @@ export class World implements WorldView {
 
   spawnWave(group: string, types: EnemyType[], count: number, interval = 0.5, aggro = true, tag = '', corridorOnly = false) {
     this.waves.push({ group, types, left: count, interval, t: 0, aggro, tag: tag || group, waited: 0, corridorOnly });
+  }
+  cancelWaves() { this.waves.length = 0; }
+  rebindPlayer(oldId: string, id: string, name: string, look: string) {
+    const p = this.players.find(p => p.id === oldId);
+    if (!p) return;
+    const trail = this.trails.get(oldId) ?? [];
+    this.trails.delete(oldId); this.trails.set(id, trail);
+    for (const n of this.npcs) if (n.follow === oldId) n.follow = id;
+    for (const pr of this.projectiles) if (pr.owner === oldId) pr.owner = id;
+    p.id = id; p.name = name; p.look = look; p.tp++; p.support = null;
+    this.resetInput(id);
+    return p;
   }
   /** Enemies alive with tag (wave group or map tag) + pending wave spawns. */
   countTag(tag: string) {
@@ -283,6 +299,14 @@ export class World implements WorldView {
       phase: 0, abilityCd: 3, ability: '', dormant: !!o.dormant,
     };
     this.enemies.push(e);
+    if (this.mapId !== 'office' && type !== 'boss' && type !== 'chick' && !o.tag?.startsWith('root') && this.rng.chance(.12)) {
+      const odd: Record<string, [string, string]> = {
+        normal: ['Ко-коуч · требует дейли', 'manBlue'], fast: ['Петух-отпускник · без согласования', 'worker'],
+        fat: ['Директор по корму · всё включено', 'arkady'], armored: ['Служба петушиной безопасности', 'guard'],
+        spitter: ['Бухгалтер · плюётся отчётами', 'scientist'], exploder: ['DevOops · горячий релиз', 'scientist'],
+      };
+      const [name, kind] = odd[type]; e.appearance = { npcId: 'odd_' + e.id, kind, name };
+    }
     if (o.tag) this.enemyTags.set(e.id, o.tag);
     if (type === 'boss') this.bossId = e.id;
     if (o.how) this.emit({ e: 'spawn', id: e.id, x, y, how: o.how });
@@ -344,6 +368,12 @@ export class World implements WorldView {
     this.updateDoors();
     this.updateTriggers();
     this.script.onTick?.(this, dt);
+    if (this.time >= (this.flags.gagAt ?? 12) && this.mapId !== 'office') {
+      this.flags.gagAt = this.time + this.rng.range(18, 28);
+      const odd = this.enemies.find(e => e.appearance?.npcId.startsWith('odd_') && e.aggro && this.onScreen(e.x, e.y));
+      if (odd) this.say(String(odd.id), this.rng.pick(['Ко-ко-ко… у вас микрофон выключен!', 'Это совещание могло быть яйцом!', 'Я не агрессивный, я проактивный!', 'Отпуск согласован. Согласован КЛЮВОМ!', 'Кто выкатил птиц в прод?!']), 2.6);
+      else if (this.rng.chance(.3) && this.enemies.length) this.say('pa', this.rng.pick(['Коллеги, перестаньте клевать кулер. Он на гарантии.', 'Потерянное яйцо можно забрать в отделе кадров.', 'Напоминаем: драка с петухом считается тимбилдингом.']), 4);
+    }
     const combat = this.enemies.length > 0 || this.waves.length > 0 || this.npcs.some(n => n.mutation && n.mode !== 'gone' && n.mode !== 'dead');
     if (this.hadCombat && !combat) this.rallyTeam();
     this.hadCombat = combat;
@@ -680,7 +710,7 @@ export class World implements WorldView {
     if (def.kind === 'grenade') {
       const a = aim + this.rng.range(-def.spread, def.spread);
       const sp = def.projSpeed!;
-      const pr = this.addProjectile('grenade', x + Math.cos(a) * 30, y + Math.sin(a) * 30, Math.cos(a) * sp, Math.sin(a) * sp, owner, team, def.damage, 1.1);
+      const pr = this.addProjectile('grenade', x + Math.cos(a) * 30, y + Math.sin(a) * 30, Math.cos(a) * sp, Math.sin(a) * sp, owner, team, def.damage * dmgMul, 1.1);
       this.emit({ e: 'shot', o: owner, w, x, y, a: aim, ends: [], team });
       return pr;
     }

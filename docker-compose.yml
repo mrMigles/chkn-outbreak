@@ -3,7 +3,7 @@
 # Secrets and options go into a .env file next to this one (see README → «Сервер и Docker»).
 services:
   chkn:
-    image: ghcr.io/mrmigles/chkn-outbreak2d:latest
+    image: ghcr.io/mrmigles/chkn-outbreak:latest
     build:
       context: .
       args:
@@ -16,6 +16,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 2580
+      CHKN_SAVE_DIR: /app/data/rooms
       # Telegram (optional): bot token from @BotFather — checks who opened the game and from which chat
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # the game's short name from @BotFather /newgame and the public https address players open
@@ -25,7 +26,11 @@ services:
       TELEGRAM_APP_URL: ${TELEGRAM_APP_URL:-}
       # signs game links; keep it stable so links in chats survive restarts (defaults to the bot token)
       SESSION_SECRET: ${SESSION_SECRET:-}
+    volumes:
+      - chkn-progress:/app/data
     # Very old Docker (< 20.10.10) blocks the clone3 call of modern images; if the log shows
     # "uv_thread_create" assertions, update Docker — or, as a stopgap, uncomment:
     # security_opt:
     #   - seccomp:unconfined
+volumes:
+  chkn-progress:

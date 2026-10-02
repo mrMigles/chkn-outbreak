@@ -20,6 +20,7 @@ export function lerpAngle(a: number, b: number, t: number) {
 export class Rng {
   private s: number;
   constructor(seed = 1234567) { this.s = seed >>> 0; }
+  get state() { return this.s >>> 0; }
   next() {
     let t = (this.s += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);

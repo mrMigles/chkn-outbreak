@@ -37,6 +37,7 @@ COPY server server
 COPY src/shared src/shared
 COPY public/assets/maps public/assets/maps
 COPY --from=build /app/dist dist
+RUN mkdir -p /app/data/rooms && chown -R node:node /app/data
 USER node
 EXPOSE 2580
 # busybox wget: the health check needs no second Node process

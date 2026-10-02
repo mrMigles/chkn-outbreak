@@ -1,6 +1,6 @@
 // Level source format compiled by tools/build-maps.ts into a Tiled map (.tmj).
 
-export type Theme = 'office' | 'lab' | 'industrial';
+export type Theme = 'office' | 'lab' | 'industrial' | 'office7';
 
 /** Object placement. `at` is in TILE units (fractions allowed, 0.5 = centre of the first tile). */
 export interface ObjSpec {

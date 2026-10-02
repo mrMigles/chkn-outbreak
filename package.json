@@ -23,6 +23,8 @@
     "check:levels": "tsx tools/check-levels.ts",
     "check:combat": "tsx tools/check-combat.ts",
     "check:telegram": "tsx tools/check-telegram.ts",
+    "check:campaign": "tsx tools/check-campaign.ts",
+    "check:progress": "tsx tools/check-room-progress.ts",
     "qa:play": "node tools/qa-play.mjs",
     "qa:menu": "node tools/qa-menu.mjs",
     "art:fetch": "node tools/art/lpc-fetch.mjs"

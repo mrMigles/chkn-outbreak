@@ -34,6 +34,9 @@ P.rect(9, 37, 12, 37, 'L');    // generator → freight lift (power)
 P.rect(38, 31, 40, 32, '.');   // incubator → vivarium opening
 P.set(38, 32, 'M'); P.set(39, 32, 'M'); P.set(40, 32, 'M');
 P.set(45, 39, 'N');            // vivarium → cold storage
+// Two corridor approaches during the generator defence; no monsters hatch beside its console.
+P.rect(20, 34, 22, 35, '.');
+P.set(20, 34, 'O'); P.set(20, 35, 'O');
 
 const objs: ObjSpec[] = [];
 const at = (x: number, y: number): [number, number] => [x, y];
@@ -113,7 +116,9 @@ light(11, 31, 'alarm', 'ff3b1f', 420); light(3, 35, 'alarm', 'ff3b1f', 360); lig
 light(11, 30.5, 'lamp', 'ffb347', 200, { flicker: 0.7 });
 objs.push({ type: 'barrel', at: at(3, 26) }, { type: 'barrel', at: at(19, 26) }, { type: 'barrel', at: at(3, 35.5) });
 label(11, 35.6, 'ГЕНЕРАТОРНАЯ', 22);
-spawner('gen', 2.5, 30); spawner('gen', 19.3, 33); spawner('gen', 25, 28); spawner('gen', 31, 24);
+for (const [x, y] of [[25, 28], [32, 29], [24, 35], [38, 35], [44, 29]]) {
+  objs.push({ type: 'spawner', name: 'gen_corridor', at: at(x, y), props: { how: 'rise', corridorOnly: true } });
+}
 trigger('gen_room', 2, 25, 19, 12);
 
 // ---------------------------------------------------------------- freight lift
@@ -169,6 +174,7 @@ const level: LevelSource = {
     'L': { floor: F.labPlain, door: { id: 'freight', locked: 'script' } },
     'M': { floor: F.labPlain, door: { id: 'vivarium' } },
     'N': { floor: F.labPlain, door: { id: 'cold' } },
+    'O': { floor: F.labPlain, door: { id: 'gen_east' } },
   },
   objects: objs,
 };

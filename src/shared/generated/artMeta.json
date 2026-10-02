@@ -54,7 +54,8 @@
   "themes": [
    "office",
    "lab",
-   "industrial"
+   "industrial",
+   "office7"
   ]
  },
  "weapons": {
@@ -515,6 +516,14 @@
   "feather_pile": [
    48,
    40
+  ],
+  "desk_light": [
+   128,
+   96
+  ],
+  "table_tennis": [
+   160,
+   112
   ]
  },
  "office25": {

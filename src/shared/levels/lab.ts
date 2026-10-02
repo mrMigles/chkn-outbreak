@@ -91,19 +91,22 @@ const lab: LevelScript = {
     if (id !== 'generator') return;
     if (w.flags.generator) { w.say(by.id, 'Генератор уже раскручивается.'); return; }
     w.flags.generator = true;
+    w.setBlackout(true);
     w.say(by.id, 'Ну давай, родной… Заводись!', 2);
     w.setAlarm(true);
-    w.say('pa', 'Генератор: прогрев 35 секунд. Шум привлечёт образцы.', 4);
+    w.say('pa', 'Генератор: прогрев 35 секунд. Свет погас. Образцы бегут ИЗ КОРИДОРОВ. Удачной пятницы.', 5);
     w.setObjective('Защищать генератор, пока он прогревается');
     const pool: EnemyType[] = ['normal', 'fast', 'fast', 'spitter', 'exploder', 'fat', 'armored'];
     let t = 0;
-    w.every(3.5, () => {
+    w.spawnWave('gen_corridor', ['fast', 'normal', 'fast'], 8, .25, true, 'gen', true);
+    w.every(2.5, () => {
       if (!w.alarm) return;
-      t += 3.5;
-      w.spawnWave('gen', pool, 3 + Math.floor(t / 9), 0.35, true, 'gen');
+      t += 2.5;
+      w.spawnWave('gen_corridor', pool, 4 + Math.floor(t / 8), .22, true, 'gen', true);
     });
     w.after(35, () => {
       w.setAlarm(false);
+      w.setBlackout(false);
       w.flags.power = true;
       w.openDoor('freight');
       w.msg('ПИТАНИЕ ВОССТАНОВЛЕНО', 'Грузовой лифт работает', 3);

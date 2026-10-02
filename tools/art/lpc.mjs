@@ -174,18 +174,18 @@ export async function buildLpc(root) {
     const c = canvas(128, 96), g = c.getContext('2d');
     g.drawImage(cut(deskSheet, 0, 0, 32, 48), 0, 0);
     g.drawImage(cut(deskSheet, 64, 0, 32, 48), 64, 0);
-    g.drawImage(cut(laptop, key === 'desk' ? 0 : 32, 0, 32, 32), 32, -5);
     if (key === 'desk_light') {
       const data = g.getImageData(0, 0, c.width, c.height);
       for (let i = 0; i < data.data.length; i += 4) {
         const [r, gg, b] = data.data.slice(i, i + 3);
-        if (r > gg * 1.12 && gg > b * 1.12 && data.data[i + 3]) {
+        if (data.data[i + 3]) {
           const l = (r + gg + b) / 3;
-          data.data[i] = Math.min(238, l * 1.25 + 42); data.data[i + 1] = Math.min(215, l * 1.15 + 35); data.data[i + 2] = Math.min(167, l * .85 + 28);
+          data.data[i] = l < 40 ? 67 : Math.min(232, l * .6 + 144); data.data[i + 1] = l < 40 ? 58 : Math.min(207, l * .55 + 117); data.data[i + 2] = l < 40 ? 51 : Math.min(160, l * .38 + 80);
         }
       }
       g.putImageData(data, 0, 0);
     }
+    g.drawImage(cut(laptop, key === 'desk' ? 0 : 32, 0, 32, 32), 32, -5);
     add(key, c, 83);
   }
   // New small props use the same native pixel scale and outlines as adapted LPC furniture.

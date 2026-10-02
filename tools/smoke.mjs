@@ -5,7 +5,7 @@ const secs = +(process.argv[2] ?? 12);
 const baseUrl = process.env.SMOKE_URL ?? 'http://localhost:5280';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 let failed = 0;
-for (const level of ['arena', 'office', 'lab', 'factory', 'boss']) {
+for (const level of ['arena', 'office', 'office7', 'lab', 'factory', 'boss']) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));

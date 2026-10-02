@@ -23,7 +23,9 @@ docker compose up -d                 # image from GitHub Container Registry (bui
 docker compose up -d --build         # or build locally
 ```
 Health check: `GET /healthz`. CI (`.github/workflows/docker.yml`) runs the typecheck, the headless checks, a production build,
-the network/Telegram checks against a real server, then builds and pushes `ghcr.io/<owner>/chkn-outbreak2d` (`latest` on `main`, short SHA, tags).
+the network/Telegram checks against a real server, then builds and pushes `ghcr.io/<owner>/chkn-outbreak` (`latest` on `main`, short SHA, tags).
+
+Room progress is saved under its code every five seconds and when the room closes. After a team wipe, play resumes at the last living position with recovery health. Use «Продолжить последнюю комнату» or enter the original code after a server restart, then start from the lobby. Saves include the current floor, inventory, companions, enemies and story events. Docker keeps them in the `chkn-progress` volume; outside Docker the default is `data/rooms` (`CHKN_SAVE_DIR` overrides it). Victory clears the room save.
 
 Options go into `.env` next to `docker-compose.yml`:
 
@@ -57,12 +59,14 @@ optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/se
 | `npm run maps` | compile `tools/levels/*.ts` → Tiled maps in `public/assets/maps` |
 | `npm run check:combat` | hit boxes/headshots, NPC fire, companions, off-screen spawns, destructibles, table pickups |
 | `npm run check:coop` | authoritative support/mutation/death regressions |
+| `npm run check:campaign` | all five rescues, manager/trophy/escort, buffs, generator waves and exact room replay on six maps |
+| `npm run check:progress` | team wipe, empty-room disposal and real server restart preserve progress |
 | `npm run check:levels` | story-order flood fill, pickups within reach, every door walkable |
 | `npm run check:art` | source hashes, atlas bounds, direction/frame completeness |
 | `npm run check:network` | real Colyseus clients; requires `npm run server` |
 | `npm run check:telegram` | chat rooms via the Telegram endpoints; requires a server (`SESSION_SECRET` for the game-link part) |
 | `npm run check:network-ui` | two app browser pages: menus, keyboard E revival and automatic reconnect |
-| `npm run smoke` | short fights in all five scenes |
+| `npm run smoke` | short fights in all six scenes |
 | `node tools/qa-campaign.mjs <dir> [levels] [mobile]` | E2E autopilot through the campaign via the real UI (objective arrow, E, «Дальше») |
 | `node tools/qa-gun.mjs <prefix> [look]` | close-ups of the armed pose in 8 directions |
 
@@ -88,7 +92,8 @@ docs/            DECISIONS, HANDOFF, ASSETS, plans
 - The yellow arrow at your feet and the objective panel point along the path to the current goal.
 
 ## Levels
-Office «Курникс Групп» → dark lab of project «ЯЙЦО» → «Курникс-Агро» plant → hangar boss «Генеральный Петух».
+Office «Курникс Групп», floor 6 → floor 7 (rescue Андрей, Серёга, Влад, Стас and Паша; escort to the lifts; bald manager ambush and «Рутовый петушок» trophy) → dark lab of project «ЯЙЦО» → «Курникс-Агро» plant → hangar boss «Генеральный Петух». The separate `arena` remains the weapon sandbox.
+Strong enemies sometimes drop ten-second invincibility, triple damage, infinite ammunition or sprint buffs. Non-story companions can turn more frequently; the named floor-7 friends safely evacuate before the lab.
 Maps are Tiled JSON (`public/assets/maps/*.tmj`, editable in Tiled) compiled from `tools/levels`.
 
 ## Testing hooks

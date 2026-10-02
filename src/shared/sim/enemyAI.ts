@@ -5,7 +5,7 @@ import type { Enemy, Npc, Player } from './types';
 
 type Target = { id: string; x: number; y: number; ref: Player | Npc; isPlayer: boolean };
 
-const losCache = new Map<number, { t: number; ok: boolean }>();
+const losByWorld = new WeakMap<World, Map<number, { t: number; ok: boolean }>>();
 
 function findTarget(w: World, e: Enemy, sight: number): { t: Target | null; d: number } {
   let best: Target | null = null, bd = Infinity;
@@ -24,6 +24,8 @@ function findTarget(w: World, e: Enemy, sight: number): { t: Target | null; d: n
 }
 
 function los(w: World, e: Enemy, t: Target) {
+  let losCache = losByWorld.get(w);
+  if (!losCache) { losCache = new Map(); losByWorld.set(w, losCache); }
   const c = losCache.get(e.id);
   if (c && w.time - c.t < 0.25) return c.ok;
   const ok = w.map.lineOfSight(e.x, e.y, t.x, t.y, false);
@@ -81,7 +83,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
     } else {
       // idle: peck around slowly
       e.t -= dt;
-      if (e.t <= 0) { e.t = 1 + Math.random() * 2.5; e.wanderA = Math.random() < 0.4 ? NaN : Math.random() * TAU; }
+      if (e.t <= 0) { e.t = 1 + w.rng.next() * 2.5; e.wanderA = w.rng.next() < 0.4 ? NaN : w.rng.next() * TAU; }
       if (!Number.isNaN(e.wanderA)) {
         e.angle = lerpAngle(e.angle, e.wanderA, Math.min(1, dt * 4));
         const [nx, ny] = w.map.move(e.x, e.y, def.radius * 0.8, Math.cos(e.angle) * 28 * dt, Math.sin(e.angle) * 28 * dt);
@@ -105,7 +107,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
       e.state = 'chase';
       e.cd = def.attackCd;
       if (e.type === 'spitter') {
-        const a = Math.atan2(t.y - e.y, t.x - e.x) + (Math.random() - 0.5) * 0.12;
+        const a = Math.atan2(t.y - e.y, t.x - e.x) + (w.rng.next() - 0.5) * 0.12;
         w.addProjectile('spit', e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 20, Math.cos(a) * 400, Math.sin(a) * 400, String(e.id), 'chicken', def.damage * (w.script.enemyDamage ?? 1), 1.3);
       } else if (td < def.attackRange + 22) {
         hurt(w, e, t, def.damage);
@@ -208,15 +210,15 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
 
   if (e.abilityCd <= 0) {
     const options = e.phase === 0 ? ['eggs', 'charge'] : e.phase === 1 ? ['eggs', 'charge', 'ring', 'summon'] : ['charge', 'ring', 'eggs', 'summon', 'ring'];
-    const ab = options[Math.floor(Math.random() * options.length)];
-    e.abilityCd = (4.2 - e.phase * 0.9) + Math.random();
+    const ab = options[Math.floor(w.rng.next() * options.length)];
+    e.abilityCd = (4.2 - e.phase * 0.9) + w.rng.next();
     if (ab === 'eggs') {
       w.say(String(e.id), 'Делегирую задачи!', 1.6);
       const n = 4 + e.phase * 2;
       for (let i = 0; i < n; i++) {
         const a = toT + (i / (n - 1) - 0.5) * 1.6;
-        const sp = 300 + Math.random() * 260;
-        w.addProjectile('egg', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * sp, Math.sin(a) * sp, String(e.id), 'chicken', 0, 0.9 + Math.random() * 0.4);
+        const sp = 300 + w.rng.next() * 260;
+        w.addProjectile('egg', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * sp, Math.sin(a) * sp, String(e.id), 'chicken', 0, 0.9 + w.rng.next() * 0.4);
       }
     } else if (ab === 'charge') {
       e.state = 'charge'; e.ability = 'charge_wind'; e.t = 0.8;
@@ -233,7 +235,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
       });
     } else if (ab === 'summon') {
       w.say(String(e.id), 'Совещание! Все в переговорку!', 1.8);
-      w.spawnWave('boss', ['normal', 'fast', 'normal', 'spitter'], 5 + e.phase * 3, 0.35, true, 'boss');
+      w.spawnWave('boss', ['normal', 'fast', 'normal', 'spitter', 'armored'], 10 + e.phase * 4, .25, true, 'boss');
     }
     return;
   }

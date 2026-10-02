@@ -28,6 +28,8 @@ jobs:
       - run: npm run typecheck
       # headless simulation checks (no browser, no server)
       - run: npm run check:combat
+      - run: npm run check:campaign
+      - run: npm run check:progress
       - run: npm run check:coop
       - run: npm run check:levels
       - run: npm run check:art
@@ -60,7 +62,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/chkn-outbreak2d
+          images: ghcr.io/${{ github.repository_owner }}/chkn-outbreak
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short

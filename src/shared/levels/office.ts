@@ -7,9 +7,9 @@ const giveKey = (w: World, k: string) => { for (const p of w.players) if (!p.key
 
 const office: LevelScript = {
   id: 'office',
-  title: 'Этаж 7. Офис «Курникс Групп»',
+  title: 'Этаж 6. Офис «Курникс Групп»',
   subtitle: 'Пятница, 17:55. До выходных — пять минут',
-  next: 'lab',
+  next: 'office7',
   // the first level is a gentle introduction: softer chickens, smaller waves (D30)
   enemyHp: 0.85,
   enemyDamage: 0.65,
@@ -99,10 +99,10 @@ const office: LevelScript = {
         const g = w.npc('galina');
         const pt = w.npc('petrovich');
         const saved = [g, pt].filter((n) => n && n.mode === 'follow').map((n) => n!.name);
-        if (saved.length) w.msg('ЛИФТ ВНИЗ', 'С вами: ' + saved.join(', '), 2.5);
-        else w.msg('ЛИФТ ВНИЗ', 'Минус третий этаж. Лаборатория.', 2.5);
+        w.msg('ЛИФТ НА 7-Й', saved.length ? 'С вами: ' + saved.join(', ') : 'Серёга просит забрать друзей этажом выше.', 3);
+        w.say('radio', 'Серёга: Мы на седьмом! Не уезжай без нас — Влад на кухне, остальные в офисе!', 5);
         w.flags.saved = saved.length;
-        w.completeLevel('lab');
+        w.completeLevel('office7');
         break;
       }
     }

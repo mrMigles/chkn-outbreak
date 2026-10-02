@@ -276,3 +276,17 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
   .msg-title { font-size: 24px; }
   .msg-sub { font-size: 12px; }
 }
+:root { --buff: #ffd65c; }
+.hud-buffs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; max-width: 300px; }
+.hud-buffs span { background: #182028e8; border-left: 3px solid var(--buff); padding: 4px 7px; border-radius: 5px; color: var(--buff); font-size: 12px; }
+.hud-buffs b { color: #fff; margin-left: 4px; }
+.hud-achievements { color: #ffd65c; font-size: 12px; margin-top: 5px; text-shadow: 0 2px #17202a; }
+@media (max-width: 600px) {
+  .hud-effects { position: absolute; top: 112px; left: 0; width: 180px; }
+  .hud-buffs { max-width: 180px; }
+  .hud-buffs span { font-size: 10px; padding: 3px 5px; white-space: nowrap; }
+  .hud-achievements { font-size: 10px; }
+}
+@media (pointer: coarse) and (max-width: 600px) and (orientation: portrait) {
+  .hud-weapon { top: 110px; }
+}

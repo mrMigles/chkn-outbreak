@@ -8,8 +8,9 @@ export const WALL_THEMES = {
   office: { rim: '#c48647', dark: '#956536', bevel: '#d08e4a' },
   lab: { rim: '#a6c9cb', dark: '#648587', bevel: '#94b4b6' },
   industrial: { rim: '#e86a17', dark: '#a64a0f', bevel: '#565656' },
+  office7: { rim: '#bfc2bb', dark: '#727b7c', bevel: '#d9dbd2', top: '#939891' },
 };
-export const THEME_ORDER = ['office', 'lab', 'industrial'];
+export const THEME_ORDER = ['office', 'lab', 'industrial', 'office7'];
 
 // bits: N=1 E=2 S=4 W=8 NE=16 SE=32 SW=64 NW=128  (bit set = neighbour is wall)
 export function canonical(mask) {
@@ -30,7 +31,7 @@ export function canonicalList() {
 const DARK = 2, RIM = 8, BEV = 5; // band thickness from outside in
 
 function drawTile(g, ox, oy, mask, th) {
-  g.fillStyle = '#4a4a4a';
+  g.fillStyle = th.top || '#4a4a4a';
   g.fillRect(ox, oy, T, T);
   const open = { N: !(mask & 1), E: !(mask & 2), S: !(mask & 4), W: !(mask & 8) };
   const band = (side, from, size, col) => {

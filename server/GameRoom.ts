@@ -9,6 +9,8 @@ import { encodeSnapshot, MAX_PLAYERS, SNAP_HZ, TICK_HZ } from '../src/shared/pro
 import type { PlayerInput } from '../src/shared/sim/types';
 import { decodeLook } from '../src/shared/look';
 import { isChatCode } from './telegram';
+import { RoomRecording, type RoomCheckpoint } from '../src/shared/sim/Checkpoint';
+import { clearCheckpoint, readCheckpoint, validRoomCode, writeCheckpoint } from './checkpoints';
 
 const MAPS_DIR = path.resolve(process.cwd(), 'public/assets/maps');
 const mapCache = new Map<string, TiledMap>();
@@ -23,8 +25,8 @@ function makeCode() {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   for (;;) {
     let c = '';
-    for (let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)];
-    if (!usedCodes.has(c)) { usedCodes.add(c); return c; }
+    for (let i = 0; i < 4; i++) { const alphabet = i ? A : A.replace('T', ''); c += alphabet[Math.floor(Math.random() * alphabet.length)]; }
+    if (!usedCodes.has(c) && !readCheckpoint(c)) { usedCodes.add(c); return c; }
   }
 }
 
@@ -38,10 +40,13 @@ export class GameRoom extends Room<RoomState> {
   private timer: NodeJS.Timeout | null = null;
   private carry: Carry | undefined;
   private levelCarry: Carry | undefined;
+  private recording: RoomRecording | null = null;
+  private savedProgress: RoomCheckpoint | undefined;
+  private saveAcc = 0;
 
   override onCreate(options: { level?: string; code?: string; chat?: string }) {
     // Telegram chat rooms get their chat's fixed code (server/telegram.ts); ordinary rooms a random one
-    const fixed = isChatCode(options?.code) && !usedCodes.has(options.code) ? options.code : '';
+    const fixed = options?.code && validRoomCode(options.code) && (isChatCode(options.code) || readCheckpoint(options.code)) && !usedCodes.has(options.code) ? options.code : '';
     if (fixed) usedCodes.add(fixed);
     const code = fixed || makeCode();
     this.roomId = code;
@@ -49,6 +54,8 @@ export class GameRoom extends Room<RoomState> {
     this.state.code = code;
     if (fixed) this.state.chat = String(options.chat ?? 'Чат').slice(0, 40) || 'Чат';
     this.state.level = options?.level && LEVELS[options.level] ? options.level : FIRST_LEVEL;
+    this.savedProgress = readCheckpoint(code);
+    if (this.savedProgress) this.state.level = this.savedProgress.level;
     this.setPatchRate(100);
 
     this.onMessage('ready', (client, msg: { ready?: boolean }) => {
@@ -61,7 +68,7 @@ export class GameRoom extends Room<RoomState> {
       const all = [...this.state.players.values()].filter((q) => q.connected);
       if (!all.every((q) => q.ready || q.host)) return;
       this.carry = undefined;
-      this.startLevel(this.state.level || FIRST_LEVEL);
+      this.startLevel(this.state.level || FIRST_LEVEL, this.savedProgress);
     });
     this.onMessage('input', (client, m: Partial<PlayerInput>) => {
       if (!this.world || !m) return;
@@ -88,6 +95,8 @@ export class GameRoom extends Room<RoomState> {
     const taken = new Set([...this.state.players.values()].map((p) => p.slot));
     let slot = 0;
     while (taken.has(slot)) slot++;
+    const savedSeat = this.savedProgress?.seats?.find(p => p.name === String(options?.name ?? 'Игрок').trim().slice(0, 14) && !taken.has(p.slot));
+    if (savedSeat) slot = savedSeat.slot;
     const p = new LobbyPlayer();
     p.id = client.sessionId;
     p.name = String(options?.name ?? 'Игрок').trim().slice(0, 14) || 'Игрок';
@@ -97,7 +106,9 @@ export class GameRoom extends Room<RoomState> {
     this.state.players.set(client.sessionId, p);
     // joining a running game: drop in as a fresh employee
     if (this.world && this.state.phase === 'playing') {
-      this.world.addPlayer(client.sessionId, p.name, slot, p.look);
+      if (this.world.players.some(q => q.slot === slot && !q.connected) && this.recording) {
+        this.recording.resume([...this.state.players.values()].map(q => ({ id: q.id, name: q.name, slot: q.slot, look: q.look, connected: q.connected })), false);
+      } else this.world.addPlayer(client.sessionId, p.name, slot, p.look);
       client.send('start', { level: this.world.mapId });
     }
   }
@@ -127,25 +138,36 @@ export class GameRoom extends Room<RoomState> {
   }
 
   override onDispose() {
+    this.saveProgress();
     usedCodes.delete(this.state.code);
     if (this.timer) clearTimeout(this.timer);
   }
 
-  private startLevel(id: string) {
+  private startLevel(id: string, checkpoint?: RoomCheckpoint) {
     const map = new GameMap(id, loadMap(id));
     this.levelCarry = this.carry;
-    const world = new World(map, LEVELS[id], { solo: false, carry: this.carry });
+    let world: World;
     const players = [...this.state.players.values()].sort((a, b) => a.slot - b.slot);
-    for (const p of players) world.addPlayer(p.id, p.name, p.slot, p.look).connected = p.connected;
-    world.start();
+    if (checkpoint) {
+      this.recording = RoomRecording.restore(loadMap(id), checkpoint);
+      world = this.recording.world;
+      this.recording.resume(players.map(p => ({ id: p.id, name: p.name, slot: p.slot, look: p.look, connected: p.connected })));
+    } else {
+      world = new World(map, LEVELS[id], { solo: false, carry: this.carry });
+      for (const p of players) world.addPlayer(p.id, p.name, p.slot, p.look).connected = p.connected;
+      world.start(); this.recording = new RoomRecording(world);
+    }
     this.world = world;
     this.state.level = id;
     this.state.phase = 'playing';
     this.snapAcc = 0;
+    this.saveAcc = 0;
+    this.saveProgress();
     this.broadcast('start', { level: id });
   }
 
   private toLobby() {
+    clearCheckpoint(this.state.code); this.savedProgress = undefined; this.recording = null;
     this.world = null;
     this.state.phase = 'lobby';
     this.state.level = FIRST_LEVEL;
@@ -160,7 +182,11 @@ export class GameRoom extends Room<RoomState> {
   private tick(dtMs: number) {
     const w = this.world;
     if (!w || (this.state.phase !== 'playing' && this.state.phase !== 'between')) return;
-    w.step(Math.min(dtMs, 100) / 1000);
+    if (!w.players.some(p => p.connected)) return;
+    if (this.state.phase === 'playing' && this.recording) this.recording.step(Math.min(dtMs, 100) / 1000);
+    else w.step(Math.min(dtMs, 100) / 1000);
+    this.saveAcc += dtMs;
+    if (this.saveAcc >= 5000) { this.saveAcc = 0; this.saveProgress(); }
     if (w.events.length) {
       const ev = w.events;
       w.events = [];
@@ -181,6 +207,12 @@ export class GameRoom extends Room<RoomState> {
     const w = this.world!;
     this.carry = w.carryOut();
     this.state.phase = 'between';
+    if (next && LEVELS[next] && !win) {
+      const preview = new World(new GameMap(next, loadMap(next)), LEVELS[next], { solo: false, carry: this.carry });
+      for (const p of this.state.players.values()) preview.addPlayer(p.id, p.name, p.slot, p.look).connected = p.connected;
+      preview.start(); this.savedProgress = new RoomRecording(preview).checkpoint();
+      this.savedProgress.chat = this.state.chat; writeCheckpoint(this.state.code, this.savedProgress);
+    } else { clearCheckpoint(this.state.code); this.savedProgress = undefined; }
     this.timer = setTimeout(() => {
       const stats = this.stats();
       if (win || !next || !LEVELS[next]) {
@@ -196,11 +228,18 @@ export class GameRoom extends Room<RoomState> {
 
   private onGameOver(reason: string) {
     const level = this.world!.mapId;
+    this.saveProgress();
+    const checkpoint = this.savedProgress;
     this.state.phase = 'between';
     this.timer = setTimeout(() => {
       this.broadcast('end', { kind: 'gameover', reason, stats: this.stats() });
-      // retry the same level with the loadout we had when it started
-      this.timer = setTimeout(() => { this.carry = this.levelCarry; this.startLevel(level); }, 6000);
+      this.timer = setTimeout(() => { this.carry = this.levelCarry; this.startLevel(level, checkpoint); }, 6000);
     }, 2000);
+  }
+  private saveProgress() {
+    if (this.recording && this.state.phase === 'playing' && !this.world?.finished) {
+      this.savedProgress = this.recording.checkpoint(); this.savedProgress.chat = this.state.chat;
+      try { writeCheckpoint(this.state.code, this.savedProgress); } catch (e) { console.error('Room checkpoint failed:', e); }
+    }
   }
 }

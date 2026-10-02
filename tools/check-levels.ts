@@ -10,6 +10,7 @@ import { PLAYER } from '../src/shared/enemies';
 /** Story progression: which object unlocks which lock id. `goal` must become reachable. */
 const STORY: Record<string, { unlock: { by: string; lock: string }[]; goal: string[] }> = {
   office: { unlock: [{ by: 'npc:marat', lock: 'blue' }, { by: 'trigger:security_in', lock: 'server' }, { by: 'use:reboot', lock: 'script' }], goal: ['trigger:elevator'] },
+  office7: { unlock: [], goal: ['npc:andrey', 'npc:sergey', 'npc:vlad', 'npc:stas', 'npc:pasha', 'trigger:evacuation'] },
   lab: { unlock: [{ by: 'npc:omletov', lock: 'lab' }, { by: 'use:generator', lock: 'script' }], goal: ['trigger:freight'] },
   factory: { unlock: [{ by: 'use:valve1+use:valve2+use:valve3', lock: 'script' }], goal: ['trigger:exit'] },
   boss: { unlock: [], goal: ['spawner:boss_spawn'] },

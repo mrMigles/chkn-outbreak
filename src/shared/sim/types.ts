@@ -134,10 +134,10 @@ export interface Projectile {
 }
 
 export const BUFFS = {
-  invincible: { name: 'Непробиваемый сотрудник', icon: '✦', color: 0xffd65c },
-  damage: { name: 'Ультраурон ×3', icon: '×3', color: 0xff7568 },
-  infinite: { name: 'Бесконечные патроны', icon: '∞', color: 0x78baff },
-  sprint: { name: 'Бег ×1.6', icon: '»', color: 0x8dffbd },
+  invincible: { name: 'Непробиваемый сотрудник', label: 'Бессмертие', icon: '✦', color: 0xffd65c },
+  damage: { name: 'Ультраурон ×3', label: 'Ультраурон', icon: '×3', color: 0xff7568 },
+  infinite: { name: 'Бесконечные патроны', label: 'Патроны', icon: '∞', color: 0x78baff },
+  sprint: { name: 'Бег ×1.6', label: 'Бег ×1.6', icon: '»', color: 0x8dffbd },
 } as const;
 export type BuffKind = keyof typeof BUFFS;
 export const BUFF_SECONDS = 10;

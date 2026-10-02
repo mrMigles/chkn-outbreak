@@ -232,3 +232,49 @@ Each entry: what was decided, why, and consequences. Newest at the bottom.
 ## D42 — Office objective chain
 
 - The server-room and guard-room triggers kept overwriting each other («ключ у охраны» ↔ «синий пропуск») every time the player crossed them. The objective never steps back now (`needBlue`), the hint line is said once. Dropped key cards become the objective («Подобрать синий пропуск», lab «Подобрать пропуск в оружейную») and picking them up moves the objective on, so the arrow cannot lead away from a card the player still needs.
+
+## D43 — Floors 6 and 7; rescue before the laboratory (2026-10-02)
+
+- The first office retains its geometry and gentler balance; it is floor 6. Its lift now goes to `office7`, then the campaign continues to lab → factory → boss.
+- Floor 7 adapts the supplied plan: grey floors and walls, light wooden desks, western Phoenix/table tennis, central desks, northeastern kitchen, eastern Castor, southern rooms and lift lobby, stepped curved perimeter. Art uses the existing LPC pipeline; the references guide geometry and colour, not the rendering style.
+- The request says four people but names five. All five are rescued: Андрей and Серёга by the red mark, Влад in the kitchen, Стас and Паша playing table tennis. The HUD counts 0/5. These story friends cannot randomly betray or die and block the mission; non-story survivors remain vulnerable. Андрей provides covering fire.
+- Workers mutate visibly on approach. Rescue patrols arrive every 24 seconds (15 after gathering everyone), then stop when the manager ambush begins. Its finite wave keeps evacuation achievable.
+- Returning with all five triggers the bald manager's mutation into an armored, enlarged enemy with 850 HP in solo, scaling with party size. He is not the final boss. Killing him drops the physical, permanent «Рутовый петушок» trophy; collecting it awards the whole room. The guide targets the manager, remaining attackers, trophy and finally lifts in order.
+- Evacuation requires the friends to physically reach the lift and all living players to enter it. Earlier followers also evacuate. Nobody follows into the lab: a mislabeled pilot drink links the outbreak to project ЯЙЦО on floor −3; Омлетов confirms the source and need for an antidote.
+
+## D44 — More frequent non-story mutations
+
+- Betrayal roll is 65%, with an 18–45 second delay after recruitment. A survivor must help for at least 12 seconds; mutations are spaced at least 12 seconds apart and never overlap. Removed the lifetime limit of two betrayals.
+- Story survivors and the five friends are excluded. Plans, remaining delay, story protection and appearance persist when changing levels and restoring rooms.
+
+## D45 — Walking body and weapon move together
+
+- Armed walk keeps the upper body in the existing thrust pose. The lower body is masked by leg/clothing pixels, rather than a broad rectangular crop, removing stray swinging hands below the seam.
+- The body and gun share the same integer gait offset. Followers animate walking only when their rendered position actually changes, so stationary survivors no longer shuffle.
+- Evidence: `qa/armed-fixed_sheet.png`, eight directions standing and walking; the original first-floor layout is unchanged.
+
+## D46 — Generator blackout attacks from the corridors
+
+- Using the generator immediately starts the blackout and an eight-enemy wave. More waves arrive every 2.5 seconds, increasing from four attackers as the 35-second defense progresses.
+- Removed generator-room spawners, added corridor spawners and an eastern entrance. Spawn fallback for this encounter is restricted to marked corridor points; it cannot silently select a point inside the room.
+
+## D47 — Temporary loot buffs
+
+- Fat, armored, spitter and exploder enemies have a 28% chance to drop a buff: invincibility, triple damage, infinite ammunition or ×1.6 running speed. All last 10 seconds; uncollected drops expire after 20 seconds.
+- Repeated pickup refreshes the timer instead of stacking duration. Damage includes grenades; infinite ammunition works even with an empty magazine and reserve. Server authority and client movement prediction agree on speed. HUD shows each active timer and the root trophy.
+
+## D48 — Persistent room progress and recovery after death
+
+- Room saves belong to the four-letter code, not a browser or player connection. Save every five seconds and on room disposal; keep the next level immediately when finishing the current one. Empty rooms pause. Winning clears the save.
+- A deterministic authoritative input recording rebuilds positions, inventory, keys, NPCs, enemies, destroyed furniture, story flags, RNG and pending callback timers. Recordings restart at each level. Random simulation decisions now use the world's seeded RNG; line-of-sight caches are per world, avoiding interference between rooms and replay.
+- Keep the last tick with a living connected teammate. After a team wipe, continue there with at least 60 HP and three seconds of protection instead of restarting the floor. Rejoining after server restart reassigns preserved seats to the new connections.
+- Main menu remembers the last code; «Продолжить последнюю комнату» pre-fills it. Joining by code recreates a saved lobby, then the host starts continuation. No client supplies saved game state.
+- Files live in `data/rooms` (`CHKN_SAVE_DIR` override), are atomically replaced and excluded from Git. Docker uses a named volume. Random room codes avoid Telegram's reserved T-prefix. Recordings are versioned; future simulation changes must preserve replay compatibility or bump the save version.
+- Verified against actual server disposal/restart and team death, plus exact replay and pending timers on all six maps. This is room persistence; solo still uses its existing retry behaviour.
+
+## D49 — Busier final boss and occasional office absurdity
+
+- Final boss receives periodic reinforcements, 14 attackers at phase 2 and 20 at rage, larger summon waves, with periodic spawning gated at 65 active enemies. Death cancels waves/projectiles and protects survivors through the victory scene, including delayed boss attacks.
+- Outside the unchanged first floor, 12% of ordinary spawns can have comic coworker looks/names: Ко-коуч, петух-отпускник, директор по корму, служба петушиной безопасности, бухгалтер and DevOops. Their original combat type remains intact. Occasional speech and PA jokes use existing bubbles/radio UI, with an 18–28 second cooldown.
+- The ping-pong ball moves until both players are rescued; rescue dialogue, manager dialogue, kitchen label and evacuation plan explain the story with office humour.
+- Minor fixes: unchanged objective text no longer emits redundant events, blinks or repeats its sound when only the target moves; floor-7 guide follows moving ambush enemies; grenade damage respects buffs; recreated scenes clear their old ping-pong ball reference. Buff labels are compact and avoid the objective on narrow phones; the portrait weapon panel sits below the objective. New comic looks are precomposed before gameplay. QA reports capture per-floor health before entering the next level. Container image name matches `mrMigles/chkn-outbreak`.

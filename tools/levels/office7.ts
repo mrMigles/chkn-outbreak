@@ -34,7 +34,7 @@ for (const x of [19, 24, 29, 34, 37]) for (const y of [4, 9, 14, 19]) desk(x, y)
 for (const x of [53, 58, 63, 66]) for (const y of [4, 9, 14, 19]) if (x < 69 - Math.floor(Math.max(0, y - 16) * .52) - 1) desk(x, y);
 for (const x of [28, 33, 37]) for (const y of [30, 35, 39]) desk(x, y);
 for (const x of [5, 11]) for (const y of [30, 35, 39]) desk(x, y);
-for (const x of [62, 65]) desk(x, 29);
+desk(62, 30);
 prop('table_tennis', 8, 9);
 prop('whiteboard', 8, 3); prop('sofa_green', 4, 15); prop('plant', 13, 3);
 label('PHOENIX · ПИНГ-ПОНГ', 8, 17);
@@ -42,16 +42,16 @@ label('ОПЕНСПЕЙС · CAPELLA', 27, 21);
 label('CASTOR', 59, 21); label('SIRIUS', 8, 40);
 label('ALTAIR', 54, 38); label('ЭТАЖ 7 · ЛИФТЫ', 45, 37);
 prop('counter_a', 46, 3); prop('sink', 47, 3); prop('vending', 47, 11);
-prop('table_round', 46, 7); prop('stool', 45, 8.1); prop('plant', 44, 3);
+prop('table_round', 46, 7); prop('office_chair', 45, 8.1); prop('plant', 44, 3);
 label('КУХНЯ', 46, 10);
 prop('cabinet', 47, 15); prop('printer', 46, 19);
 prop('elevator', 44, 39); prop('elevator', 47, 39);
 prop('whiteboard', 44, 30); prop('plant', 48, 35);
 for (let i = 0; i < 4; i++) obj('spawn', 'player', 44 + (i % 2) * 1.5, 35 - Math.floor(i / 2) * 1.4);
 for (const [id, title, x, y] of [
-  ['andrey', 'Андрей', 62, 27], ['sergey', 'Серёга', 64, 27],
+  ['andrey', 'Андрей', 61.5, 27], ['sergey', 'Серёга', 63, 27],
   ['vlad', 'Влад', 46, 9], ['stas', 'Стас', 6, 9], ['pasha', 'Паша', 10, 9],
-] as const) obj('npc', id, x, y, { title, mode: 'cower', hp: 200, story: true, essential: true, weapon: id === 'andrey' ? 'smg' : '', lines: 'Мы тут!|Это всё корпоративный напиток!' });
+] as const) obj('npc', id, x, y, { title, mode: id === 'stas' || id === 'pasha' ? 'idle' : 'cower', hp: 200, story: true, essential: true, weapon: id === 'andrey' ? 'smg' : '', angle: id === 'stas' ? 0 : id === 'pasha' ? 180 : 90, lines: id === 'stas' || id === 'pasha' ? 'До одиннадцати! Потом эвакуация.|Петух под сеткой? Это фол!' : 'Мы тут!|Это всё корпоративный напиток!' });
 obj('npc', 'root_manager', 45, 29, { title: 'Лысый менеджер', mode: 'idle', hp: 300, story: true, essential: true, lines: 'Вы куда? Рабочий день ещё не окончен.|У меня root-доступ к вашему отпуску.' });
 const workers = [[21, 6], [31, 11], [36, 16], [55, 6], [61, 11], [57, 17], [30, 32], [6, 33], [54, 33]];
 workers.forEach(([x, y], i) => obj('npc', 'f7_worker' + i, x, y, { title: ['Скрам-мастер', 'Ко-коуч', 'Стажёр', 'Куриный евангелист'][i % 4], kind: i % 2 ? 'manBrown' : 'womanGreen', tag: 'worker7', turn: i % 4 === 0 ? 'fast' : 'normal', lines: 'Это не баг, это перья.|Митинг можно было заменить яйцом.' }));
@@ -66,7 +66,7 @@ for (const [x, y] of [[45, 34], [42, 24], [46, 9], [8, 14], [63, 25]]) obj('pick
 obj('pickup', 'health', 44, 33);
 obj('note', '', 44, 30, { text: 'План эвакуации: 1. Сохраняйте спокойствие. 2. Не сохраняйте Excel. 3. Бегите.' });
 obj('note', '', 46, 4, { text: 'КУКАРЕКС — пилотная партия лаборатории −3. Не смешивать с кофе. Не выдавать сотрудникам. Подпись: менеджер.' });
-const level: LevelSource = { id: 'office7', theme: 'office', mapProps: { ambient: 0, wallFace: 'office7' }, grid: p.rows(), legend: {
+const level: LevelSource = { id: 'office7', theme: 'office7', mapProps: { ambient: 0, wallFace: 'office7' }, grid: p.rows(), legend: {
   '#': { wall: true }, g: { floor: [500] }, c: { floor: [501] }, k: { floor: F.white },
 }, objects };
 export default level;

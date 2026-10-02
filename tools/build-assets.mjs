@@ -8,7 +8,7 @@ import { packAtlas } from './art/lib.mjs';
 import { CHICKENS, drawChicken, drawHand, drawEgg } from './art/characters.mjs';
 import { WEAPON_ART, PICKUP_ART } from './art/weapons.mjs';
 import { FX_ART } from './art/fx.mjs';
-import { buildWallSheet } from './art/walls.mjs';
+import { buildWallSheet, THEME_ORDER } from './art/walls.mjs';
 import { KENNEY_PROPS, NEW_PROPS, cutKenney } from './art/props.mjs';
 import { buildLpc } from './art/lpc.mjs';
 
@@ -81,6 +81,7 @@ for (const [k, fn] of Object.entries(NEW_PROPS)) props.push({ name: k, canvas: f
 for (const p of props) propSizes[p.name] = [p.canvas.width, p.canvas.height];
 writeAtlas('props', props);
 const lpc = await buildLpc(ROOT);
+for (const p of lpc.props) if (p.name === 'desk_light' || p.name === 'table_tennis') propSizes[p.name] = [p.canvas.width, p.canvas.height];
 writeAtlas('lpc', lpc.people, 4096);
 writeAtlas('office25', lpc.props);
 // tiles25: Kenney tile layout, every floor/rug index used by the maps replaced with LPC floors (×2)
@@ -91,7 +92,7 @@ save('tiles25.png', tiles25);
 
 // 6) metadata for shared code
 const meta = {
-  wall: { cols: walls.cols, perTheme: walls.perTheme, lookup: walls.lookup, themes: ['office', 'lab', 'industrial'] },
+  wall: { cols: walls.cols, perTheme: walls.perTheme, lookup: walls.lookup, themes: THEME_ORDER },
   weapons: weaponMeta,
   props: propSizes,
   office25: lpc.meta,

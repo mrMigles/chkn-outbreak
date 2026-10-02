@@ -22,8 +22,7 @@ export class Hud {
       <div class="hud-tl">
         <div class="hp-wrap"><div class="hp-bar"><div class="hp-fill"></div><div class="hp-armor"></div></div><div class="hp-text"></div></div>
         <div class="hud-team"></div>
-        <div class="hud-buffs"></div>
-        <div class="hud-achievements"></div>
+        <div class="hud-effects"><div class="hud-buffs"></div><div class="hud-achievements"></div></div>
       </div>
       <div class="hud-obj"><span class="obj-label">ЗАДАЧА</span><span class="obj-text"></span><span class="obj-dir hidden"><i>➤</i><b></b></span></div>
       <div class="hud-boss hidden"><div class="boss-name">ГЕНЕРАЛЬНЫЙ ПЕТУХ</div><div class="boss-bar"><div class="boss-fill"></div></div></div>
@@ -149,7 +148,7 @@ export class Hud {
     } else c.classList.remove('show');
     this.comboShown = combo;
     this.q('.hud-score').textContent = `☠ ${me.kills}   ★ ${Math.floor(me.score)}`;
-    this.q('.hud-buffs').innerHTML = (Object.entries(me.buffs ?? {}) as [BuffKind, number][]).filter(([, t]) => t > 0).map(([k, t]) => `<span style="--buff:${hex(BUFFS[k].color)}">${BUFFS[k].icon} ${BUFFS[k].name} <b>${Math.ceil(t)}с</b></span>`).join('');
+    this.q('.hud-buffs').innerHTML = (Object.entries(me.buffs ?? {}) as [BuffKind, number][]).filter(([, t]) => t > 0).map(([k, t]) => `<span style="--buff:${hex(BUFFS[k].color)}">${BUFFS[k].icon} ${BUFFS[k].label} <b>${Math.ceil(t)}с</b></span>`).join('');
     this.q('.hud-achievements').textContent = me.achievements?.includes('root_rooster') ? '🏆 Рутовый петушок' : '';
     // boss
     const boss = view.bossId >= 0 ? view.enemies.find((e) => e.id === view.bossId) : undefined;

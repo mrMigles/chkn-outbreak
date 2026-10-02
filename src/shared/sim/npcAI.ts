@@ -68,9 +68,9 @@ export function updateNpc(w: World, n: Npc, dt: number) {
     aimA = n.angle;
     if (n.fireCd <= 0 && Math.abs(angleDiff(n.angle, a)) < 0.3) {
       const def = WEAPONS[n.weapon];
-      w.fireFrom(n.id, 'human', n.weapon, n.x, n.y, a + (Math.random() - 0.5) * 0.08, null, 0.7);
+      w.fireFrom(n.id, 'human', n.weapon, n.x, n.y, a + (w.rng.next() - 0.5) * 0.08, null, 0.7);
       n.fireCd = 1 / (def.rof * 0.6);
-      if (Math.random() < 0.04 && n.talkCd <= 0) { w.say(n.id, pickLine(COMBAT_LINES)); n.talkCd = 6; }
+      if (w.rng.next() < 0.04 && n.talkCd <= 0) { w.say(n.id, w.rng.pick(COMBAT_LINES)); n.talkCd = 6; }
     }
   }
 
@@ -100,8 +100,8 @@ export function updateNpc(w: World, n: Npc, dt: number) {
         n.angle = Math.atan2(p.y - n.y, p.x - n.x);
         w.script.onRescue?.(w, n, p);
       } else if (n.talkCd <= 0 && danger) {
-        w.say(n.id, pickLine(HELP_LINES), 2.2);
-        n.talkCd = 4 + Math.random() * 3;
+        w.say(n.id, w.rng.pick(HELP_LINES), 2.2);
+        n.talkCd = 4 + w.rng.next() * 3;
       }
       break;
     }
@@ -110,7 +110,7 @@ export function updateNpc(w: World, n: Npc, dt: number) {
         const p = w.players.find((q) => q.state === 'alive' && dist(q.x, q.y, n.x, n.y) < 220);
         if (p) {
           n.angle = lerpAngle(n.angle, Math.atan2(p.y - n.y, p.x - n.x), Math.min(1, dt * 4));
-          if (n.talkCd <= 0 && n.lines.length) { w.say(n.id, pickLine(n.lines)); n.talkCd = 9 + Math.random() * 6; }
+          if (n.talkCd <= 0 && n.lines.length) { w.say(n.id, w.rng.pick(n.lines)); n.talkCd = 9 + w.rng.next() * 6; }
         }
       }
       break;
@@ -122,7 +122,6 @@ export function updateNpc(w: World, n: Npc, dt: number) {
   void ENEMIES;
 }
 
-const pickLine = (a: string[]) => a[Math.floor(Math.random() * a.length)];
 const hash = (s: string) => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 const HELP_LINES = ['Помогите!!!', 'Они клюются!', 'Кто-нибудь! Тут курицы!', 'Я забаррикадировался кулером!', 'Мама, я не хочу нестись!'];
 const COMBAT_LINES = ['Получай, несушка!', 'Это за мой отпуск!', 'Перья во все стороны!', 'Обед отменяется!', 'Я ВСЁ напишу в отчёте!'];

@@ -107,16 +107,16 @@ scenario('recruitment rolls once; plans and remaining delay survive level carry'
   const carried=next.npc('friend')!; assert.deepEqual(carried.betrayal,carry.npcs[0].betrayal);
   step(next,0.2); assert.equal(carried.betrayal!.remaining < 0,plan.remaining < 0);
 });
-scenario('random betrayal waits for twenty seconds of help and cannot overlap', () => {
+scenario('random betrayal waits for twelve seconds, is staggered and has no two-NPC cap', () => {
   const w=setup(); w.players.forEach(p=>p.hp=1e6);
   for(let i=0;i<3;i++) w.npcs.push({id:'n'+i,kind:'manBlue',name:'Друг '+i,x:600+i*80,y:600,angle:0,hp:1e6,maxHp:1e6,
     mode:'guard',weapon:null,fireCd:0,follow:'p0',goal:null,lines:[],talkCd:0,tag:'friend',rescued:true,vx:0,vy:0,hurtT:0,
     betrayal:{checked:true,remaining:0,helped:0}});
-  step(w,19); assert.ok(w.npcs.every(n=>!n.mutation)); step(w,1.1);
+  step(w,11); assert.ok(w.npcs.every(n=>!n.mutation)); step(w,1.1);
   assert.equal(w.npcs.filter(n=>n.mutation).length,1); step(w,3.1); w.enemies=[];
-  step(w,26.2); assert.equal(w.npcs.filter(n=>n.mutation).length,1);
-  step(w,1); assert.equal(w.npcs.filter(n=>n.mutation).length,2); step(w,3.1); w.enemies=[];
-  step(w,35); assert.equal(w.npcs.filter(n=>n.mutation).length,2);
+  step(w,7.2); assert.equal(w.npcs.filter(n=>n.mutation).length,1);
+  step(w,1.8); assert.equal(w.npcs.filter(n=>n.mutation).length,2); step(w,3.1); w.enemies=[];
+  step(w,13); assert.equal(w.npcs.filter(n=>n.mutation).length,3);
 });
 scenario('office mandatory keys survive NPC mutation and death exactly once', () => {
   const map = new GameMap('office', JSON.parse(fs.readFileSync('public/assets/maps/office.tmj','utf8')));

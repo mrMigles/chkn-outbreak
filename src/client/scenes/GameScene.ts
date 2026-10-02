@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   npcs = new Map<string, NpcView>();
   pickups = new Map<number, Phaser.GameObjects.Image>();
   pickupGlows = new Map<number, Phaser.GameObjects.Image>();
+  private pingPong?: { ball: Phaser.GameObjects.Rectangle; x: number; y: number };
   projs = new Map<number, Phaser.GameObjects.Image>();
   doors = new Map<string, Phaser.GameObjects.Image[]>();
   barrels = new Map<number, Phaser.GameObjects.Image>();
@@ -79,6 +80,7 @@ export class GameScene extends Phaser.Scene {
     this.session = data.session;
     this.onEnd = data.onEnd;
     this.players = new Map(); this.enemies = new Map(); this.npcs = new Map(); this.pickups = new Map(); this.pickupGlows = new Map();
+    this.pingPong = undefined;
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
     this.wallFaces = [];
@@ -133,6 +135,7 @@ export class GameScene extends Phaser.Scene {
           img = this.add.image(o.cx, o.cy, 'props', o.name).setRotation((o.rot * Math.PI) / 180).setDepth(def.top ? 16 : 4);
         }
         if (o.props.tint) img.setTint(parseInt(String(o.props.tint), 16));
+        if (o.name === 'table_tennis') this.pingPong = { ball: this.add.rectangle(o.cx, o.cy - 12, 5, 5, 0xffe5a3).setDepth(worldDepth(feetY) + .00002), x: o.cx, y: o.cy - 12 };
         if (def.hp) this.propImgs.set(o.id, img);
         if (o.props.text) this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text) });
       } else if (o.type === 'label') {
@@ -180,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     for (const p of v.players) lookTexture(this, p.look || 'p' + (p.slot % 4));
     const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder'] as const;
     for (const type of types) for (let i = 0; i < LOOK_POOL; i++) lookTexture(this, enemyLookKey({ type, id: i, appearance: undefined }), true);
+    if (this.session.levelId !== 'office') for (const kind of ['manBlue', 'worker', 'arkady', 'guard', 'scientist']) lookTexture(this, kind, true);
     if (this.session.levelId === 'boss') lookTexture(this, enemyLookKey({ type: 'boss', id: 0, appearance: undefined }), true);
     // draw every composed texture once (nearly invisible) so the driver uploads it now, not during the first fight
     const warm = Object.keys(this.textures.list).filter((k) => k.startsWith('look:') || k.startsWith('mut:') || ['office25', 'fx', 'chars', 'props'].includes(k))
@@ -527,6 +531,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     // pickups
+    if (this.pingPong) {
+      const { ball, x, y } = this.pingPong;
+      const playing = v.npcs.some(n => n.id === 'stas' && !n.rescued) && v.npcs.some(n => n.id === 'pasha' && !n.rescued);
+      ball.setVisible(playing).setPosition(x + Math.sin(time * 5) * 63, y - Math.abs(Math.cos(time * 5)) * 9);
+    }
     const seenK = new Set<number>();
     for (const k of v.pickups) {
       seenK.add(k.id);

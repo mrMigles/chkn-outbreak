@@ -10,6 +10,8 @@ try {
   const friend = await browser.newPage({viewport:{width:960,height:720}});
   for (const page of [host,friend]) {
     page.on('pageerror', e => errors.push(e.message));
+    // Quiet lift foyer isolates support/reconnection from the office's timed attack.
+    await page.addInitScript(() => localStorage.setItem('chkn-settings', JSON.stringify({dev:true, devLevel:'office7', tutorials:false})));
     await page.goto(base + '/?loop=timeout');
     await page.getByRole('button',{name:'Создать комнату',exact:true}).waitFor();
   }
@@ -23,7 +25,7 @@ try {
   await friend.getByRole('button',{name:'Войти',exact:true}).click();
   await friend.locator('.code').waitFor();
   await friend.getByRole('button',{name:'Готов',exact:true}).click();
-  await host.getByRole('button',{name:'Старт',exact:true}).click();
+  await host.locator('button[data-a="start"]').click();
   for (const page of [host,friend]) await page.waitForFunction(() => window.__app?.net?.gotSnapshot && window.__game?.scene.isActive('game'));
   results.push('two app menus → ready → playing');
   const id = await friend.evaluate(() => __app.room.sessionId);

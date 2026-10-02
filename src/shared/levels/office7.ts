@@ -8,7 +8,12 @@ function objective(w: World) {
   const left = FRIENDS.filter(id => !w.npc(id)?.rescued);
   if (left.length) w.setObjective(`Найти друзей (${5 - left.length}/5) · кухня, Phoenix, Castor`, left);
   else if (!w.flags.rootStarted) w.setObjective('Все пятеро с нами. Провести их к лифтам', 'root_ambush');
-  else if (!w.flags.rootDead || w.countTag('root_attack')) w.setObjective('Отбить нападение менеджера. Защитить друзей');
+  else if (!w.flags.rootDead || w.countTag('root_attack')) {
+    const root = w.enemies.find(e => e.appearance?.npcId === 'root_manager');
+    const other = w.enemies.find(e => w.enemyTags.get(e.id) === 'root_attack');
+    const enemy = root ?? other;
+    w.setObjective(root ? 'Уволить Рутового петушка. Защитить друзей' : 'Отбить нападение менеджера. Защитить друзей', enemy ? { x: enemy.x, y: enemy.y } : undefined);
+  }
   else if (!w.flags.rootAchievement) {
     const drop = w.pickups.find(k => k.kind === 'achievement');
     w.setObjective('Подобрать «Рутового петушка»', drop ? { x: drop.x, y: drop.y } : 'evacuation');
@@ -23,14 +28,21 @@ const level: LevelScript = {
     w.say('radio', 'Серёга: Мы этажом выше! Андрей со мной у Castor, Влад на кухне, Стас и Паша в Phoenix. Забери нас!', 7);
     w.after(6, () => w.say('radio', 'Влад: На банке написано «проект ЯЙЦО, лаборатория −3». Они разослали опытную партию по офису!', 6));
   },
-  onTick(w) {
+  onTick(w, dt) {
+    for (const id of ['stas', 'pasha']) {
+      const n = w.npc(id)!;
+      const p = w.humanPlayers.find(p => dist(p.x, p.y, n.x, n.y) < 160 && w.map.lineOfSight(p.x, p.y, n.x, n.y, false));
+      if (!n.rescued && p && !w.enemies.some(e => dist(e.x, e.y, n.x, n.y) < 380 && w.map.lineOfSight(e.x, e.y, n.x, n.y, false))) {
+        n.rescued = true; level.onRescue!(w, n, p);
+      }
+    }
     for (const n of w.npcs.filter(n => n.tag === 'worker7')) {
       if (!n.mutation && n.mode !== 'gone' && n.mode !== 'dead' && w.humanPlayers.some(p => dist(p.x, p.y, n.x, n.y) < 430)) {
         w.say(n.id, w.rng.pick(['Я на минуту отойду… ко-ко!', 'Daily превращается в poultry!', 'Перья — это наш новый дресс-код!']), 2.5);
         w.infect(n, n.props?.turn || 'normal', 'workers7');
       }
     }
-    if (w.time >= w.flags.escortWaveAt && !w.flags.evacuated) {
+    if (w.time >= w.flags.escortWaveAt && !w.flags.evacuated && !w.flags.rootStarted) {
       w.flags.escortWaveAt = w.time + (allFound(w) ? 15 : 24);
       w.spawnWave('escort', ['normal', 'normal', 'fast', 'spitter'], allFound(w) ? 7 : 4, .5, true, 'escort7', true);
     }
@@ -39,7 +51,7 @@ const level: LevelScript = {
       w.flags.rootScaled = true; boss.hp = boss.maxHp = 850 * (1 + .3 * (w.players.length - 1)); boss.speedMul = 1.12;
       boss.appearance!.name = 'Рутовый петушок · sudo ко-ко';
     }
-    if (Math.floor(w.time) !== Math.floor(w.time - 1 / 30)) objective(w);
+    if (Math.floor(w.time) !== Math.floor(w.time - dt)) objective(w);
     const lift = w.object('evacuation');
     if (lift && allFound(w) && w.flags.rootDead && w.flags.rootAchievement && !w.countTag('root_attack') &&
       w.humanPlayers.length && w.humanPlayers.every(p => p.x >= lift.x && p.x <= lift.x + lift.w && p.y >= lift.y && p.y <= lift.y + lift.h) &&
@@ -59,7 +71,6 @@ const level: LevelScript = {
     if (id === 'root_ambush' && allFound(w) && !w.flags.rootStarted) {
       w.flags.rootStarted = true;
       const n = w.npc('root_manager')!;
-      n.props!.essential = false;
       w.say(n.id, 'Эвакуация? Тикет согласован? Сейчас вы получите ROOT-ПЕТУШКА!', 4);
       w.infect(n, 'armored', 'root_attack');
       w.setAlarm(true);

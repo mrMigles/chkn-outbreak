@@ -214,6 +214,8 @@ export class NpcView {
   rig: Rig;
   label: Phaser.GameObjects.Text;
   warn?: Phaser.GameObjects.Graphics;
+  private lastX = NaN;
+  private lastY = NaN;
   constructor(private scene: Phaser.Scene, n: Npc) {
     this.rig = new Rig(scene, n.kind);
     this.rig.setWeapon(n.weapon);
@@ -221,7 +223,8 @@ export class NpcView {
       .setOrigin(0.5, 1).setDepth(40).setResolution(TEXT_RES());
   }
   sync(n: Npc, x: number, y: number, dt: number, time: number, near: boolean) {
-    const moving = n.mode === 'follow' || n.mode === 'goto' || n.mode === 'flee';
+    const moving = Number.isFinite(this.lastX) && Math.hypot(x - this.lastX, y - this.lastY) > .5;
+    this.lastX = x; this.lastY = y;
     this.rig.setWeapon(n.weapon);
     if (n.mode === 'dead' || n.mode === 'gone') { this.rig.root.setVisible(false); this.label.setVisible(false); return; }
     this.rig.root.setVisible(true);

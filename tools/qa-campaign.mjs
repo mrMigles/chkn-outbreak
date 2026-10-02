@@ -7,7 +7,7 @@
 // Needs the client (npm run dev, SMOKE_URL) — or a production server serving dist (SMOKE_URL=http://localhost:2590).
 import { chromium, devices } from 'playwright';
 import fs from 'node:fs';
-const [out = 'docs/qa/campaign', levelsArg = 'office,lab,factory,boss', mobile = '0', maxMin = '6', god = '0'] = process.argv.slice(2);
+const [out = 'docs/qa/campaign', levelsArg = 'office,office7,lab,factory,boss', mobile = '0', maxMin = '6', god = '0'] = process.argv.slice(2);
 const base = process.env.SMOKE_URL ?? 'http://localhost:5280';
 fs.mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -28,7 +28,7 @@ await page.addInitScript(() => {
   const qa = (window.__qa = { log: [], minHp: 100, deaths: 0, stuck: 0, lastPos: null, lastMoveT: performance.now(), level: '', t0: performance.now(), kills: 0, events: {} });
   let interactPulse = 0, wander = 0, wanderA = 0;
   setInterval(() => {
-    const sc = window.__game.scene.getScene('game');
+    const sc = window.__game?.scene.getScene('game');
     if (!sc?.session || !sc.scene.isActive()) { window.__input = {}; return; }
     const s = sc.session, v = s.view, me = v.players.find((p) => p.id === s.myId);
     if (!me) return;
@@ -77,7 +77,7 @@ await page.addInitScript(() => {
     // reload when idle
     window.__input = inp;
   }, 50);
-  const sc0 = () => window.__game.scene.getScene('game');
+  const sc0 = () => window.__game?.scene?.getScene('game');
   const hook = () => {
     const sc = sc0();
     if (!sc?.handle || sc.__qaHooked) return;
@@ -100,9 +100,14 @@ await page.waitForFunction(() => window.__game?.scene?.getScene('game')?.session
 const report = [];
 let shot = 0;
 const deadline = (min) => Date.now() + min * 60000;
+const takeQa = () => page.evaluate(() => {
+  const q = window.__qa ?? { log: [], minHp: 0, deaths: 0, stuck: 0, kills: 0 };
+  const r = { log: q.log.splice(0), minHp: q.minHp, deaths: q.deaths, stuck: q.stuck, kills: q.kills };
+  q.deaths = 0; q.stuck = 0; q.kills = 0; return r;
+});
 for (let li = 0; li < levels.length; li++) {
   const end = deadline(+maxMin);
-  let done = false, retries = 0;
+  let done = false, retries = 0, completedQa;
   while (Date.now() < end && !done) {
     await page.waitForTimeout(5000);
     const st = await page.evaluate(() => {
@@ -115,6 +120,7 @@ for (let li = 0; li < levels.length; li++) {
     if (shot++ % 3 === 0) await page.screenshot({ path: `${out}/${levels[li]}-${String(shot).padStart(3, '0')}.png` });
     if (/ЭТАП ПРОЙДЕН|ПОБЕДА/.test(st.txt)) {
       done = true;
+      completedQa = await takeQa();
       await page.screenshot({ path: `${out}/${levels[li]}-done.png` });
       const next = await page.$('button[data-a="next"]');
       if (next) { await next.click(); await page.waitForTimeout(3000); }
@@ -125,11 +131,11 @@ for (let li = 0; li < levels.length; li++) {
     }
     process.stdout.write(`${levels[li]} ${new Date().toISOString().slice(11, 19)} obj="${st.obj}" hp=${st.hp} e=${st.enemies} @${st.x},${st.y}${retries ? ' retries=' + retries : ''}\n`);
   }
-  const qa = await page.evaluate(() => { const q = window.__qa ?? { log: [], minHp: 0, deaths: 0, stuck: 0, kills: 0 }; const r = { log: q.log.splice(0), minHp: q.minHp, deaths: q.deaths, stuck: q.stuck, kills: q.kills }; q.deaths = 0; q.stuck = 0; q.kills = 0; return r; });
+  const qa = completedQa ?? await takeQa();
   report.push({ level: levels[li], done, retries, ...qa });
   console.log(JSON.stringify(report[report.length - 1], null, 1));
   if (!done) break;
 }
-fs.writeFileSync(`${out}/report.json`, JSON.stringify({ report, errors }, null, 2));
+fs.writeFileSync(`${out}/report.json`, JSON.stringify({ god, mobile, report, errors }, null, 2));
 console.log('errors:', errors.length ? errors : 'none');
 await browser.close();

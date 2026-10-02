@@ -103,6 +103,7 @@ export class App {
           <button class="btn" data-a="join">Войти по коду</button>
         </div>
         <button class="btn ghost" data-a="arena">Полигон (тест оружия)</button>
+        ${localStorage.getItem('chkn-last-room') ? '<button class="btn ghost" data-a="resume-room">Продолжить последнюю комнату</button>' : ''}
         ${settings.dev ? `<div class="dev-box">
           <div class="dev-title">DEV-режим <button class="btn tiny ghost" data-a="devoff" title="Выключить">✕</button></div>
           <div class="row small">
@@ -149,6 +150,7 @@ export class App {
       if (a === 'solo') { this.levelStartCarry = undefined; this.startSolo(FIRST_LEVEL); }
       if (a === 'arena') { this.levelStartCarry = undefined; this.startSolo('arena'); }
       if (a === 'host' || a === 'join') this.multiplayer(a);
+      if (a === 'resume-room') { this.multiplayer('join'); const input = this.screen?.querySelector<HTMLInputElement>('.code-input'); if (input) input.value = localStorage.getItem('chkn-last-room') || ''; }
       if (a === 'look') { const host = this.show(''); openEditor(host, () => this.mainMenu()); }
       if (a === 'tipsreset') { resetTips(); this.toastMenu('Подсказки будут показаны снова'); }
       if (a === 'chat') this.chatRoom();
@@ -269,10 +271,12 @@ export class App {
   private async connect(mode: 'host' | 'join', code: string, err: Element): Promise<boolean> {
     try {
       const client = new Client(this.serverUrl());
+      if (mode === 'join') await fetch(this.httpBase() + '/api/rooms/resume', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ code }) }).catch(() => null);
       const room = mode === 'host'
         ? await client.create('game', { name: settings.name, look: settings.look, ...(settings.dev && LEVELS[settings.devLevel] ? { level: settings.devLevel } : {}) })
         : await client.joinById(code, { name: settings.name, look: settings.look });
       this.bindRoom(room, client);
+      localStorage.setItem('chkn-last-room', room.roomId);
       if (room.state.phase === 'lobby') this.lobby();
       return true;
     } catch (e) {
@@ -368,7 +372,7 @@ export class App {
       list.push(`<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}${p.id === room.sessionId ? ' (вы)' : ''}</b><span class="st ${p.ready || p.host ? 'ok' : ''}">${status}</span></div>`);
     });
     const action = me?.host
-      ? `<button class="btn primary" data-a="start" ${allReady ? '' : 'disabled'}>${allReady ? 'Старт' : 'Ждём готовности…'}</button>`
+      ? `<button class="btn primary" data-a="start" ${allReady ? '' : 'disabled'}>${allReady ? 'Играть / продолжить' : 'Ждём готовности…'}</button>`
       : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>`;
     const chat = (st as any).chat as string;
     const d = this.show(`<div class="panel center">
@@ -408,7 +412,7 @@ export class App {
     const isHost = !!this.room?.state.players.get(this.room.sessionId)?.host;
     const title = m.kind === 'win' ? 'ПОБЕДА!' : m.kind === 'level' ? 'ЭТАП ПРОЙДЕН' : 'КО-КО-КОНЕЦ';
     const sub = m.kind === 'win' ? 'Корпорация повержена. Понедельник отменён.'
-      : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Повтор этапа через 6 секунд…`;
+      : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Продолжим с места гибели через 6 секунд…`;
     this.stopGame();
     const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>

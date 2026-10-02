@@ -7,6 +7,7 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { GameRoom } from './GameRoom';
 import { tgSession, gameSession, type TgSession } from './telegram';
 import { startTelegramBot } from './tgbot';
+import { readCheckpoint, validRoomCode } from './checkpoints';
 
 const PORT = Number(process.env.PORT || 2580);
 const DIST = path.resolve(process.cwd(), 'dist');
@@ -41,6 +42,23 @@ const httpServer = http.createServer(async (req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
   if (url === '/health' || url === '/healthz') { res.writeHead(200); res.end('ok'); return; }
   if (url === '/version') { json(res, 200, { build: process.env.BUILD_ID ?? 'dev' }); return; }
+  if (req.method === 'POST' && url === '/api/rooms/resume') {
+    if (req.headers.origin) res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    const code = String((await readBody(req)).code ?? '').toUpperCase();
+    if (!validRoomCode(code)) { json(res, 400, { error: 'Некорректный код' }); return; }
+    try {
+      const found = await matchMaker.query({ roomId: code });
+      if (!found.length) {
+        const save = readCheckpoint(code);
+        if (!save) { json(res, 404, { error: 'Нет сохранения' }); return; }
+        let p = creating.get(code);
+        if (!p) { p = matchMaker.createRoom('game', { code, chat: save.chat }).then(() => {}).finally(() => creating.delete(code)); creating.set(code, p); }
+        await p;
+      }
+      json(res, 200, { ok: true });
+    } catch { json(res, 500, { error: 'Не удалось восстановить комнату' }); }
+    return;
+  }
   // Telegram: Mini App initData or a signed game link → the chat's room code and the player's name
   if (req.method === 'POST' && (url === '/api/tg/session' || url === '/api/tg/game')) {
     const body = await readBody(req);
