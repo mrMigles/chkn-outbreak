@@ -1,6 +1,40 @@
 # HANDOFF
 
-_Last updated: 2026-10-02_
+_Last updated: 2026-10-03_
+
+## Iteration 12 (2026-10-03, Claude) — three chapters: floors 8, 11, 12, the city; balance by autopilot
+
+User request (10 items), decisions D68–D70, story/level design in [design/chapters.md](design/chapters.md).
+
+- **Chat lobby** has «🎮 Одиночный режим» (back to the main menu). **Root manager** halved (rules 5).
+- **Campaign:** Глава 1 «Офис» 6 → 7 → **8 «Тёмная тема»** → **11 «Начальство»** → **12 кафе**; Глава 2 «Город» **улица 1** (вертолёт) → **улица 2** (рынок, проходная); Глава 3 «Провансаль» завод → лаборатория → ангар. Chapter line on title cards, chapter banners + achievements on the last floors.
+- **Floor 8:** darkness, sleeping red-eyed chickens (stealth: flashlight/closeness wakes them, sleepers take ×2.5), two safety releases (split up, or Неля helps a lone player), four scares, Валера's call «Артём, не слышно тебя!», breaker → elite «Петух Тёмной Темы» (hit-and-run, hates flashlights), light returns.
+- **Floor 11:** Жанна's three visas (finance / HR forms + Ирина mutates / escorting the lawyer), 75-s board meeting, executive director elite (charge, egg «delegation»), private lift.
+- **Floor 12:** lunch heals, the chicken joke, a helicopter falls past the panoramic windows (camera cutscene), Капитан Крылов on the radio. Chapter 1 complete.
+- **Street 1:** avenue, park (grandma + flock), shawarma kiosk, courier; 60-s helicopter defence; epicentre «Провансаль». **Street 2:** market back gate after Тётя Валя's eggs hatch, blogger Стёпа (may turn on stream), Семёныч's pass from chicken-Толик, 40-s gate. Chapter 2 complete.
+- **Engine:** elite chickens (`ELITES`, boss bar name, larger bodies with matching hit boxes), scripted light (`setLight`), scares/cutscene events, red eyes, path-following NPC `goto`, NPC talk `reach`, tall props fade over the player, 15 achievements, 4 floor bonuses, new sounds. Art: Skorpio cars/streets/facades, [LPC] Trees, LPC fountain/brick/fence/phones/paintings, hand-made helicopter/kiosk/stall/bus stop/breaker/food/windows ([ASSETS.md](ASSETS.md), credits page).
+- **Bugs found by playing (bots + browser):** floor 6 objective stepping back to the locked lifts (twice: late open-space clear, fast team before 7 s); lab co-op lock-out behind the decontamination doors; E on a cowering armed survivor (Омлетов) skipped his rescue and froze the lab objective; Неля stuck on a wide door; a corridor plant wedging NPCs; the escorted lawyer falling behind. Final boss was nearly impossible for the bot even with every gun → rules 5: 7500 HP solo, softer claw/charge/ring, smaller reinforcements (×1.5 per player), a trade-union medkit every ~24 s.
+
+**Balance matrix** (`npm run sim:play`, whole campaign chained with carried loadouts; average game-overs per floor / typical lowest HP):
+
+| Floor | Solo (5 runs) | Duo (4 runs) | Quad (3 runs) |
+|---|---|---|---|
+| 6 | 0 / 70–100 | 0 / 77–92 | 0 / 92–100 |
+| 7 | 0.6 / 2–57 | 0 / 19–41 | 0 / 23–81 |
+| 8 Тёмная тема | 0 / 9–85 | 0 / 62–92 | 0 / 68–81 |
+| 11 Начальство (director 2300 after the matrix) | 0–0.25 / 1–80 | 0 / 35–84 | 0 / 37–60 |
+| 12 кафе | 0 | 0 | 0 |
+| Улица 1 (defence retuned after the matrix: 5 solo runs 0.4 / 4–63) | 0 / 69–88 | 0 / 76–96 | 0 / 90–96 |
+| Улица 2 (gate eased after the browser autopilot died in the booth 5×: 35 s, smaller waves) | 0 / 59–84 | 0 / 64–67 | 0 / 27–71 |
+| Завод | 0 / 55–80 | 0 / 7–90 | 0 / 35–80 |
+| Лаборатория | 1.75 / 0–27 (runs 5, 0, 0, 2; one stuck run → bug fixed) | 0 / 39–51 | 0 / 45–62 |
+| Ангар (босс) | 1.25 / 1–43 | 2 + one run that lost all 6 tries | 0.7 / 3–52 |
+
+Reading: chapter 1–2 floors are tense but rarely lost for a decent player; the lab and the final boss stay the hardest (as a finale should). The bot never suffers the dark, so floor 8 is harder for humans than the table says.
+
+**Checks:** build; check:coop, combat, campaign (new order, all 11 levels round-trip), progress, floor6, engagement, polish, art, levels (5 new story paths), **check:chapters** (new, CI: two bots finish each new floor inside a room recording; saves every 20 s replay exactly; snapshot fields), **check:chapters-net** (new, debug server: a room plays office8 → … → factory), check:lobby (14), check:lobby-ui (+«Одиночный режим»), check:network, check:network-ui; `node tools/qa-chapters.mjs` screenshots in `docs/qa/chapters/`; browser autopilot `qa-campaign` through floors 8, 11, 12 and both streets, all done without game over (`docs/qa/chapters-e2e/`). Not tried: a real phone on the new floors, humans in the dark, four humans online.
+
+New tools: `tools/sim-play.ts` (balance autopilot), `tools/check-chapters.ts`, `tools/check-chapters-net.ts`, `tools/qa-chapters.mjs`, `tools/art/city.mjs`.
 
 ## Iteration 11 (2026-10-03, Claude) — fixes from online play, floor 6, battery
 
@@ -105,7 +139,7 @@ Existing campaign structure is retained. New 2.5D campaign acceptance is incompl
 | Part | Status |
 |---|---|
 | Art | All levels 2.5D: runtime LPC characters/mutants, LPC + Skorpio furniture, hand-made pixel guns/props, LPC floors; legacy only for FX/pickup icons/floor details (`npm run assets`) |
-| Levels | `office` → `lab` (dark) → `factory` → `boss`, plus `arena` (weapon sandbox, «Полигон» in menu) |
+| Levels | Глава 1: `office` → `office7` → `office8` (dark, stealth) → `office11` → `cafe12`; Глава 2: `street1` → `street2`; Глава 3: `factory` → `lab` (dark) → `boss`; plus `arena` (weapon sandbox) |
 | Combat | 7 weapons, 6 enemy types + chicks + boss, juicy FX, procedural audio, hit-stop (solo), crosshair/hitmarker |
 | NPCs | 2.2 s authoritative mutation, clothes/name retained, safe mandatory key/weapon drops; rescued/armed followers may betray after helping; decision/timer carry between levels |
 | Lighting | darkness overlay, flashlight with wall shadows, lamps/emergency/alarm lights, muzzle/explosion lights |
@@ -132,6 +166,9 @@ Production: `npm run build` then `npm start` → server on :2580 also serves `di
 - `npm run check:art` — source/archives SHA256, atlas bounds and all directed walking/mutant frames.
 - `npm run check:combat` — hit boxes/headshots, NPC fire, companion spacing, off-screen spawns, office balance.
 - `npm run check:levels` — story-order flood fill of every map (goal, triggers, NPCs, pickups, spawners).
+- `npm run sim:play -- <levels> <players> <runs> <seed>` — balance autopilot in the simulation (D70); `LOADOUT=smg,shotgun` for a single floor, `LOG=1` timelines, `TRACE=1` positions.
+- `npm run check:chapters` / `check:chapters-net` — new floors finished by bots with exact save replay / network floor order (debug server).
+- `node tools/qa-chapters.mjs [out] [levels]` — screenshots of the new floors with scripted beats (breaker, meeting, lunch + helicopter).
 - `node tools/qa-play.mjs <level> <outPrefix> [secs] [gpu]` — auto-fight with frame-time stats and screenshots.
 - `npm run check:office` — controlled fight and support HUD, screenshots at five sizes; not a natural room playthrough.
 - Browser checks use `SMOKE_URL` (default :5280); SDK checks use `TEST_SERVER` (default ws://localhost:2580). During this iteration a separate preview was started at :5281; normal startup remains :5280.

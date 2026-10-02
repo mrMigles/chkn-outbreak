@@ -8,7 +8,7 @@ import type { EnemyType } from '../enemies';
  * garage now. The gate opens slowly (30 s) while the factory guard comes. Блогер Стёпа streams all the way
  * (or until he turns live on stream — a seeded coin toss).
  */
-const GATE = 40;
+const GATE = 35;
 const stepa = (w: World) => w.npc('blogger');
 const STREAM = ['Ставьте лайк, если вы ещё не курица!', 'Чат пишет: «Стёпа, сзади!». Спасибо за донат!', 'Это не постановка! Петухи настоящие! Подписывайтесь!',
   'Коллаборация с курицами? Только по бартеру!', 'Минус подписчик… а, нет, это его клюнули.', 'Стрим идёт уже три часа. Батарея — восемь процентов.'];
@@ -49,7 +49,7 @@ function hatch(w: World) {
 const street2: LevelScript = {
   id: 'street2', title: 'Улица. Дорога к «Провансалю»',
   subtitle: 'Рынок, сквер и проходная. Пропуск обязателен',
-  next: 'factory', enemyDamage: 1,
+  next: 'factory', enemyDamage: .9,
   chapterEnd: { title: 'ГЛАВА 2 «ГОРОД» ПРОЙДЕНА', text: 'Вертолёт, бабушка, шаурма и вахтёр позади. Впереди — завод «Провансаль», где всё началось.', award: 'chapter_city' },
 
   onStart(w) {
@@ -91,9 +91,9 @@ const street2: LevelScript = {
     if (w.flags.gateOpening && !w.flags.gateOpen) {
       const t = w.time - w.flags.gateAt;
       if (w.time >= w.flags.gateWaveAt) {
-        w.flags.gateWaveAt = w.time + 4;
-        const pool: EnemyType[] = t < 14 ? ['normal', 'fast', 'armored', 'spitter'] : ['armored', 'fast', 'normal', 'exploder', 'fat', 'spitter'];
-        if (w.countTag('gate') < 14 + 4 * w.players.length) w.spawnWave('yard', pool, 3 + Math.floor(t / 13) + w.players.length, .3, true, 'gate');
+        w.flags.gateWaveAt = w.time + 4.5;
+        const pool: EnemyType[] = t < 14 ? ['normal', 'fast', 'fast', 'spitter'] : ['armored', 'fast', 'normal', 'exploder', 'normal', 'spitter'];
+        if (w.countTag('gate') < 10 + 4 * w.players.length) w.spawnWave('yard', pool, 2 + Math.floor(t / 14) + w.players.length, .35, true, 'gate');
       }
       if (t >= GATE) {
         w.flags.gateOpen = true;
@@ -150,7 +150,7 @@ const street2: LevelScript = {
     w.flags.gateOpening = true; w.flags.gateAt = w.time; w.flags.gateWaveAt = w.time + 1.5;
     w.setAlarm(true);
     w.say('pa', 'Внимание! Открытие ворот. Охране «Провансаля» прибыть на проходную. Посторонних — склевать.', 5);
-    w.msg('ВОРОТА', `Открываются ${GATE} секунд`, 3);
+    w.msg('ВОРОТА', `Открываются ${GATE} секунд. Не запирайтесь в будке!`, 3);
     objective(w);
   },
 
