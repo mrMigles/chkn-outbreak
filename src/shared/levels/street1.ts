@@ -25,7 +25,7 @@ const street1: LevelScript = {
   id: 'street1', title: 'Улица. Вертолёт у фонтана',
   subtitle: 'Город. Пятница. Петухи на проспекте',
   chapter: 'Глава 2 · Город',
-  next: 'street2', enemyDamage: .85,
+  next: 'street2', enemyDamage: 1,
 
   onStart(w) {
     objective(w);
@@ -45,9 +45,9 @@ const street1: LevelScript = {
     if (w.flags.pilotMet && !w.flags.radioDone) {
       const t = w.time - w.flags.radioAt;
       if (w.time >= w.flags.heliWaveAt) {
-        w.flags.heliWaveAt = w.time + 4;
-        const pool: EnemyType[] = t < 20 ? ['normal', 'fast', 'fast'] : t < 40 ? ['normal', 'fast', 'spitter', 'exploder'] : ['armored', 'fast', 'normal', 'fat', 'spitter'];
-        if (w.countTag('heli') < 12 + 4 * w.players.length) w.spawnWave('heli', pool, 2 + Math.floor(t / 20) + w.players.length, .3, true, 'heli');
+        w.flags.heliWaveAt = w.time + 3.5;
+        const pool: EnemyType[] = t < 20 ? ['normal', 'fast', 'fast', 'spitter'] : t < 40 ? ['normal', 'fast', 'spitter', 'exploder', 'armored'] : ['armored', 'fast', 'normal', 'fat', 'spitter', 'armored'];
+        if (w.countTag('heli') < 14 + 4 * w.players.length) w.spawnWave('heli', pool, 3 + Math.floor(t / 15) + w.players.length, .3, true, 'heli');
       }
       if (t >= RADIO) {
         w.flags.radioDone = true;

@@ -12,7 +12,7 @@ const SPOTS = {
   office8: [['lobby', 31.5, 39.5, -1.6], ['west-sleepers', 12, 22, -1.6], ['lever-w', 5.5, 6, -1.7], ['east', 52, 18, -1.2],
     ['den-call', 30.5, 13.5, -1.6, 'beat:door'], ['breaker', 33.5, 5, -1.2, 'beat:breaker'], ['valera-dark', 30.5, 13.5, -1.6, 'wait:4'], ['lights', 30.5, 13, -1.6, 'beat:killvalera']],
   office11: [['lift-hall', 32.5, 6, 1.6], ['reception', 32.5, 15.5, -1.6], ['finance', 11, 14, -1.6], ['hr', 52, 9, 0], ['archive', 11, 38, -1.6], ['boardroom', 32.5, 38, -1.6, 'beat:meeting'], ['director', 50, 36, -1, 'beat:director']],
-  cafe12: [['arrival', 29, 7, 3.1], ['table', 16.5, 8.2, -1.6, 'beat:lunch'], ['heli', 16.5, 8.2, -1.6, 'wait:25'], ['heli2', 16.5, 8.2, -1.6, 'wait:3'], ['after', 16.5, 8.2, -1.6, 'wait:4']],
+  cafe12: [['arrival', 29, 7, 3.1], ['table', 16.5, 8.2, -1.6, 'beat:lunch'], ['heli', 16.5, 8.2, -1.6, 'wait:23.5'], ['heli2', 16.5, 8.2, -1.6, 'wait:3'], ['after', 16.5, 8.2, -1.6, 'wait:4']],
   street1: [['forecourt', 11, 8, 1.6], ['avenue', 30, 17, 0], ['kiosk', 55, 15.5, -1.6], ['park', 12, 31, -1.6], ['square', 62, 38, -1.6], ['south', 42, 45, 1.6]],
   street2: [['arrival', 42, 5, 1.6], ['market', 20, 16, -1.6], ['park', 20, 40, 0], ['yard', 55, 42, 0], ['garage', 76, 37, -1.6], ['gate', 60, 50, 1.6]],
 };

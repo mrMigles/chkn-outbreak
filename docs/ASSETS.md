@@ -22,6 +22,18 @@
 Старый арт остаётся только для эффектов (`fx`), иконок подбираемых предметов и плоских деталей пола (oil, note, blood_trail, feather_pile, plates). Атлас `people25` и `officeTiles.png` удалены. Скачаны, но не использованы (плотность пикселей не совпадает с LPC): Warped Tech Lab 2 и Factory Tileset.
 
 
+## Итерация 12 (2026-10-03): главы 1–2 — тёмный офис, начальство, кафе, город (D69)
+
+Сборка: `tools/art/city.mjs` (вызывается из `buildLpc`), `npm run assets`. Габариты столкновений новых объектов задаются отдельно от картинки (`foot` в `artMeta.office25`); высокие уличные объекты (деревья, фонари, ларёк) становятся полупрозрачными над игроком.
+
+| Что | Источник / файлы | Лицензия | Как используется |
+|---|---|---|---|
+| Машины (такси-хэтчбек ×4 цвета перекраской, седан), сгоревший седан | Skorpio's Sprite Pack, `Cars_final.png` (распакован из `vendor/skorpio/Skorpios_Sprite_Pack.zip`, SHA в `SHA256SUMS`) | CC BY-SA 3.0 / GPL 3 | `car_<цвет>`, `_l` (влево), `_v` (сверху), `car_burnt`; масштаб ×1.5 (пропорции LPC-персонажа) |
+| Асфальт, тротуар-брусчатка, стеклянный фасад, уличный фонарь, урна | Skorpio: `Street.png`, `Sidewalk_dark.png`, `Building.png`, `Lamp_alternative.png`, `Fire/Trashcan.png` | CC BY-SA 3.0 / GPL 3 | полы 502–506 (разметка и зебра дорисованы), 510; `wall_face_glass`; `street_lamp`, `trash_can` |
+| Деревья, живая изгородь | [LPC] Trees, bluecarrot16 и др. — `vendor/lpc-trees/` (zip, `trees-green.png`, `CREDITS-trees.txt`, `SHA256SUMS`), https://opengameart.org/content/lpc-trees | CC BY-SA 3.0 (части CC0 / CC BY) | `tree_round`, `tree_oak`, `tree_pine`, `tree_big`, `hedge` |
+| Фонтан, кирпич, забор, цветы, дисковые телефоны, барные стулья, картины, тележка, кружка | LPC office / structure (уже в `vendor/lpc-office`) | CC BY-SA 3.0 / OGA-BY 3.0 | `fountain`, `wall_face_street`, `fence`, `flowers_*`, `desk_phone`, `bar_stool`, `portrait_ceo`, `painting_*`, `shopping_cart`, `coffee_cup` |
+| Собственная пиксель-графика (палитра LPC, ×2) | `tools/art/city.mjs` | проект | вертолёт (летящий и обломки), ларёк шаурмы, рыночный прилавок, остановка, билборд, скамейка, конус, гидрант, рубильник, курочка гриль, панорамные окна, полы (трава, ковры, плитка, дорожка), фасады стен `dark` / `exec` / `cafe`, двери новых тем |
+
 ## Фактически импортировано в первой итерации (история)
 
 Адаптация: `tools/art/lpc.mjs`; сборка: `npm run assets`. Результат: `public/assets/gen/people25.{png,json}` (648 кадров, 2048×2048), `office25.{png,json}` (14 кадров, 2048×256), `officeTiles.png`. Проверка: `npm run check:art`. Указанные ниже области имеют формат `[x,y,w,h]` исходного PNG; кроме стены масштаб ×2 без сглаживания.

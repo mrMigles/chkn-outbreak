@@ -21,7 +21,7 @@ import type { Player } from '../src/shared/sim/types';
 const json = (id: string) => JSON.parse(fs.readFileSync(`public/assets/maps/${id}.tmj`, 'utf8'));
 const DT = 1 / 30;
 
-interface Bot { id: string; flow: FlowField; key: string; recalc: number; target: { x: number; y: number } | null; aimT: number; aimId: number; err: number; stuckT: number; lastX: number; lastY: number; wander: number; wanderA: number; pulse: number; minHp: number; downs: number }
+export interface Bot { id: string; flow: FlowField; key: string; recalc: number; target: { x: number; y: number } | null; aimT: number; aimId: number; err: number; stuckT: number; lastX: number; lastY: number; wander: number; wanderA: number; pulse: number; minHp: number; downs: number }
 
 export interface RunResult { level: string; ok: boolean; time: number; retries: number; downs: number; minHp: number; kills: number; log: string[]; carry?: Carry; stuck: number; hpEnd: number[] }
 
@@ -73,7 +73,7 @@ function bestWeapon(p: Player) {
   return best;
 }
 
-function botStep(w: World, b: Bot, skill: number) {
+export function botStep(w: World, b: Bot, skill: number) {
   const p = w.players.find(q => q.id === b.id)!;
   if (!p) return;
   b.recalc -= DT; b.aimT -= DT; b.pulse--;
@@ -89,6 +89,12 @@ function botStep(w: World, b: Bot, skill: number) {
     if (w.stealth && e.dormant && !e.aggro && d > 330) continue;
     if (d < bd && d < 640 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true)) { bd = d; best = e; }
   }
+  // keep the current target while it is still a fair choice (a human does not flick between equals)
+  const cur = w.enemies.find(e => e.id === b.aimId && e.state !== 'rise');
+  if (cur && best && cur !== best) {
+    const d = Math.hypot(cur.x - p.x, cur.y - p.y);
+    if (d < 640 && d < bd * 1.4 + 40 && w.map.lineOfSight(p.x, p.y, cur.x, cur.y, true)) { best = cur; bd = d; }
+  }
   // ---- movement
   let mv: [number, number] | null = null;
   const downed = w.players.filter(q => q.id !== p.id && q.state === 'downed').sort((a, c) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(c.x - p.x, c.y - p.y))[0];
@@ -101,9 +107,22 @@ function botStep(w: World, b: Bot, skill: number) {
     if (k) goal = { x: k.x, y: k.y };
   }
   if (best && bd < 210 && best.type !== 'spitter') {
-    // back off while shooting, curving so a wall does not trap us
-    const a = Math.atan2(p.y - best.y, p.x - best.x) + Math.sin(w.time * 1.7 + p.slot) * 0.8;
-    mv = [Math.cos(a), Math.sin(a)];
+    // back off while shooting: away from every chicken close by, pulled a little towards open space,
+    // picking the free direction closest to that (a human circles instead of backing into a corner)
+    let vx = 0, vy = 0;
+    for (const e of w.enemies) { const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy); if (d < 360 && d > 1) { vx += dx / d / Math.max(60, d) * 100; vy += dy / d / Math.max(60, d) * 100; } }
+    const cx = w.map.pw / 2 - p.x, cy = w.map.ph / 2 - p.y, cl = Math.hypot(cx, cy) || 1;
+    vx += cx / cl * 0.35; vy += cy / cl * 0.35;
+    const want = Math.atan2(vy, vx) + Math.sin(w.time * 1.3 + p.slot) * 0.35;
+    let bestA = want, bestScore = -1e9;
+    for (let k = 0; k < 16; k++) {
+      const a = want + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 8;
+      const [tx, ty] = w.map.move(p.x, p.y, PLAYER.radius, Math.cos(a) * 70, Math.sin(a) * 70);
+      const free = Math.hypot(tx - p.x, ty - p.y) / 70;
+      const score = free * 2 - Math.abs(Math.atan2(Math.sin(a - want), Math.cos(a - want)));
+      if (score > bestScore) { bestScore = score; bestA = a; }
+    }
+    mv = [Math.cos(bestA), Math.sin(bestA)];
   } else if (best && bd < 360 && !downed && !(goal && p.hp < 65)) {
     mv = null; // stand and shoot (keeps aim steady)
   } else if (goal) {
@@ -143,6 +162,9 @@ function botStep(w: World, b: Bot, skill: number) {
   const wi = bestWeapon(p);
   w.setInput(p.id, { ...inp, seq: inp.seq + 1, x: nx, y: ny, aim, weapon: wi });
 }
+
+export const makeBot = (w: World, id: string): Bot => ({ id, flow: new FlowField(w.map), key: '', recalc: 0, target: null, aimT: 0, aimId: -1, err: 0, stuckT: 0, lastX: 0, lastY: 0, wander: 0, wanderA: 0, pulse: 0, minHp: 100, downs: 0 });
+export const seedBots = (seed: number) => { R = new Rng(seed); };
 
 export function playLevel(level: string, players: number, seed: number, carry?: Carry, skill = 1, maxSec = 900, verbose = false): RunResult {
   const log: string[] = [];

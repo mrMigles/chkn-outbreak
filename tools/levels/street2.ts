@@ -80,7 +80,7 @@ o('pickup', 'health', 67.5, 49.8); o('pickup', 'ammo', 70, 50); o('pickup', 'amm
 note(64, 51.4, 'Объявление: «Экскурсии на завод отменены. Причина: экскурсанты кудахчут»');
 
 const level: LevelSource = {
-  id: 'street2', theme: 'street', mapProps: { ambient: 0.12, wallFace: 'street' }, grid: p.rows(), objects,
+  id: 'street2', theme: 'street', mapProps: { ambient: 0.12, wallFace: 'street', podLook: 'egg' }, grid: p.rows(), objects,
   legend: {
     '#': { wall: true }, z: { floor: [510] }, k: { floor: [507] }, r: { floor: [502] }, '|': { floor: [504] }, g: { floor: [508, 509] }, p: { floor: [514] },
     c: { floor: [6] }, b: { floor: [507] }, f: { floor: [502] },

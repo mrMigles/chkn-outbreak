@@ -733,15 +733,20 @@ export class GameScene extends Phaser.Scene {
     // incubator pods
     for (const p of v.pods) {
       let pv = this.pods.get(p.id);
+      // D69: on the market the «pods» are just big fresh eggs in a crate (no incubator glass, no green glow)
+      const eggs = this.session.map.props.podLook === 'egg';
       if (!pv) {
-        const img = this.add.image(p.x, p.y + 20, 'office25', p.broken ? 'egg_pod_broken' : 'egg_pod').setOrigin(0.5, 1).setDepth(worldDepth(p.y + 20));
+        const img = eggs
+          ? this.add.image(p.x, p.y + 16, 'chars', 'egg_big').setOrigin(0.5, 1).setScale(1.5).setDepth(worldDepth(p.y + 16))
+          : this.add.image(p.x, p.y + 20, 'office25', p.broken ? 'egg_pod_broken' : 'egg_pod').setOrigin(0.5, 1).setDepth(worldDepth(p.y + 20));
         const glow = this.add.image(p.x, p.y - 30, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7dff8a).setDepth(19).setScale(1.3).setAlpha(0.4);
         pv = { img, glow, broken: p.broken };
         this.pods.set(p.id, pv);
       }
-      if (p.broken !== pv.broken) { pv.broken = p.broken; pv.img.setFrame(p.broken ? 'egg_pod_broken' : 'egg_pod'); }
-      pv.glow.setVisible(!p.broken).setAlpha(0.3 + Math.sin(time * 2 + p.id) * 0.1);
-      if (!p.broken) this.fx.light(p.x, p.y, 150, 0x7dff8a, 0.6, 0.02);
+      if (p.broken !== pv.broken) { pv.broken = p.broken; if (eggs) pv.img.setVisible(!p.broken); else pv.img.setFrame(p.broken ? 'egg_pod_broken' : 'egg_pod'); }
+      if (eggs && !p.broken) pv.img.setRotation(Math.sin(time * 9 + p.id) * (Math.sin(time * 0.7 + p.id) > 0.6 ? 0.12 : 0.02));
+      pv.glow.setVisible(!p.broken && !eggs).setAlpha(0.3 + Math.sin(time * 2 + p.id) * 0.1);
+      if (!p.broken && !eggs) this.fx.light(p.x, p.y, 150, 0x7dff8a, 0.6, 0.02);
     }
   }
 
@@ -983,13 +988,11 @@ export class GameScene extends Phaser.Scene {
     const win = this.session.map.objects.find(o => o.type === 'zone' && o.name === 'windows');
     if (!win) return;
     const y0 = win.y + win.h * 0.45;
-    this.cineFocus = { x: Math.min(Math.max(this.px, win.x + 300), win.x + win.w - 300), y: win.y + win.h + 220, until: this.time.now + 9000 };
-    const heli = this.add.image(win.x + win.w + 120, y0, 'office25', 'heli_side').setDepth(worldDepth(win.y + win.h) + 0.0001).setScale(-0.7, 0.7);
-    const mask = this.make.graphics({}, false).fillRect(win.x, win.y, win.w, win.h);
-    heli.setMask(mask.createGeometryMask());
+    this.cineFocus = { x: Math.min(Math.max(this.px, win.x + 400), win.x + win.w - 400), y: win.y + win.h * 0.5 + 170, until: this.time.now + 9000 };
+    const heli = this.add.image(win.x + win.w + 120, y0, 'office25', 'heli_side').setDepth(worldDepth(win.y + win.h + 48)).setScale(0.7);
     let t = 0;
     const smoke = this.time.addEvent({ delay: 70, loop: true, callback: () => {
-      this.fx.high.emit({ frame: 'smoke', x: heli.x + 50, y: heli.y - 6, vx: 30, vy: -20, life: 1.2, s0: 0.3, s1: 1.1, a0: 0.55, a1: 0, tint: 0x555555, rot: Math.random() * 6 });
+      this.fx.high.emit({ frame: 'smoke', x: heli.x + 40, y: heli.y - 6, vx: 30, vy: -20, life: 1.2, s0: 0.3, s1: 1.1, a0: 0.55, a1: 0, tint: 0x555555, rot: Math.random() * 6 });
     } });
     sfx.loop('heli', 'heli', true, 0.5);
     this.tweens.addCounter({ from: 0, to: 1, duration: 5200, onUpdate: (tw) => {
@@ -998,8 +1001,10 @@ export class GameScene extends Phaser.Scene {
       const fall = Math.max(0, t - 0.55) / 0.45;
       heli.y = y0 + Math.sin(t * 20) * 4 + fall * fall * win.h * 1.3;
       heli.setRotation(-0.1 - fall * 0.9 + Math.sin(t * 30) * 0.05);
+      // it disappears below the window sill (no mask: fade out as it drops past the glass)
+      heli.setAlpha(Math.max(0, Math.min(1, (win.y + win.h + 10 - heli.y) / 40)));
     }, onComplete: () => {
-      smoke.remove(); heli.destroy(); mask.destroy();
+      smoke.remove(); heli.destroy();
       sfx.loop('heli', 'heli', false);
       sfx.play('explosion', { vol: 1, rate: 0.7 });
       this.fx.shake(0.8);

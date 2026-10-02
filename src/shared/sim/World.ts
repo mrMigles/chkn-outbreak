@@ -348,7 +348,8 @@ export class World implements WorldView {
   spawnEnemy(type: EnemyType, x: number, y: number, o: { aggro?: boolean; how?: 'egg' | 'vent' | 'rise' | null; tag?: string; dormant?: boolean } = {}) {
     const def = ENEMIES[type];
     const diff = this.opts.difficulty ?? 1;
-    const hpMul = (type === 'boss' ? 0.6 + 0.4 * Math.max(1, this.players.length) : 1) * (this.script.enemyHp ?? 1);
+    // D70 (rules 5): the final boss has 7500 HP solo instead of 9000 (still +40 % of that per extra player)
+    const hpMul = (type === 'boss' ? (0.6 + 0.4 * Math.max(1, this.players.length)) * (this.rules >= 5 ? 7500 / 9000 : 1) : 1) * (this.script.enemyHp ?? 1);
     const e: Enemy = {
       id: this.nextId++, type, variant: this.rng.int(0, def.sprite.length - 1), x, y, angle: this.rng.range(0, TAU), vx: 0, vy: 0,
       hp: def.hp * hpMul * diff, maxHp: def.hp * hpMul * diff, state: o.how ? 'rise' : 'idle', t: o.how ? 0.55 : 0, cd: this.rng.range(0, 0.6),
@@ -673,6 +674,9 @@ export class World implements WorldView {
       this.interactCd.set(p.id, this.time);
       const r = this.script.onNpcUse?.(this, n, p);
       if (r === true) return;
+      // D70 (rules 5): a cowering survivor is rescued by the story (no chickens around), not recruited by E —
+      // pressing E at an armed scientist used to skip his rescue and leave the floor's objective stuck
+      if (n.mode === 'cower' && !n.rescued && this.rules >= 5) { if (n.lines.length) this.say(n.id, this.rng.pick(n.lines)); return; }
       if (n.rescued || n.weapon) {
         n.mode = 'follow'; n.follow = p.id;
         this.say(n.id, n.weapon ? this.rng.pick(['Я с тобой! Прикрою.', 'Веди, я стреляю.', 'Пошли, покажем им KPI.']) : this.rng.pick(['Иду за тобой!', 'Только не бросай меня!']));

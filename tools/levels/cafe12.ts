@@ -20,7 +20,7 @@ for (const [x, y] of [[6, 7], [11, 7], [22, 7], [6, 12], [11, 12], [22, 12]]) {
 // the team's table by the middle window: three round tables in a row, roast chicken on each
 for (const x of [15, 16.5, 18]) { prop('table_round', x, 5.6); prop('chicken_plate', x, 6.2); }
 for (const x of [15, 16.5, 18]) prop('chair_2_180', x, 6.9);
-o('use', 'lunch', 16.5, 7.4, { hint: 'пообедать: курочка гриль' });
+o('use', 'lunch', 16.5, 7.4, { done: true, hint: 'пообедать: курочка гриль' });
 prop('chicken_plate', 6, 7.6); prop('chicken_plate', 22, 7.6); prop('coffee_cup', 11, 7.6);
 // counter and the chef
 for (let i = 0; i < 4; i++) prop(i === 1 ? 'stove' : i === 2 ? 'sink' : 'counter_a', 26 + i * 1, 16.4);

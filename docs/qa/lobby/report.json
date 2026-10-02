@@ -7,6 +7,7 @@
     "pause menu shows the achievements list",
     "closed tab: opening the game again goes straight back into the floor, same seat, no clicks",
     "Telegram on a computer: banner → browser window takes the same seat; the small window says so",
+    "chat lobby: «Одиночный режим» leaves the room and opens the main menu with single-player",
     "install link opens the install page; the service worker is active",
     "phone portrait/landscape lobby fits without horizontal scrolling"
   ],

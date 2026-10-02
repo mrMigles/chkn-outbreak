@@ -115,6 +115,12 @@ try {
   assert.equal(await popup.evaluate(() => __app.room.state.players.size), 1, 'one seat, moved — not a second player');
   await tg.screenshot({ path: `${out}/telegram-handed-over.png` });
   results.push('Telegram on a computer: banner → browser window takes the same seat; the small window says so');
+  // D68: the chat lobby has «Одиночный режим», which leaves the chat room for the main menu
+  await popup.locator('.lobby [data-a="solo-mode"]').click();
+  await popup.locator('.menu [data-a="solo"]').waitFor({ timeout: 8000 });
+  assert.equal(await popup.evaluate(() => !!__app.room), false, 'left the chat room');
+  await popup.screenshot({ path: `${out}/telegram-solo-mode.png` });
+  results.push('chat lobby: «Одиночный режим» leaves the room and opens the main menu with single-player');
   await tgCtx.close();
 
   // install page + service worker

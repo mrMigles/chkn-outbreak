@@ -22,7 +22,22 @@ const boss: LevelScript = {
 
   onTick(w) {
     const e = w.enemies.find(e => e.type === 'boss');
+    // D70 (rules 5): the trade-union medkit — the final fight is long, a supply now and then keeps it fair
+    if (e && w.rules >= 5 && w.time >= (w.flags.medkitAt ?? w.time + 1)) {
+      if (w.flags.medkitAt !== undefined && !w.pickups.some(k => k.kind === 'health')) {
+        const sp = w.objects('spawner', 'boss_spawn')[0];
+        w.addPickup('health', w.map.pw / 2, sp ? sp.cy + 600 : w.map.ph / 2, { ttl: 20 });
+        w.say('pa', w.rng.pick(['Профсоюз напоминает: аптечка в центре зала.', 'Отдел охраны труда выдал аптечку. Распишитесь.', 'Аптечка от профсоюза. Не благодарите, это из ваших взносов.']), 3.5, true);
+      }
+      w.flags.medkitAt = w.time + 24;
+    }
     if (!e || w.time < w.flags.reinforcementsAt) return;
+    if (w.rules >= 5) {
+      // D70: smaller, slightly rarer reinforcements (the old stream buried even a full arsenal in ~25 s)
+      w.flags.reinforcementsAt = w.time + (e.phase === 2 ? 7 : 10);
+      if (w.enemies.length < 50) w.spawnWave('boss', ['normal', 'fast', 'fast', 'spitter', 'armored'], 4 + e.phase * 2 + Math.round(w.players.length * 1.5), .25, true, 'board');
+      return;
+    }
     w.flags.reinforcementsAt = w.time + (e.phase === 2 ? 6 : 9);
     if (w.enemies.length < 65) w.spawnWave('boss', ['normal', 'fast', 'fast', 'spitter', 'armored'], 6 + e.phase * 3 + w.players.length * 2, .23, true, 'board');
   },
@@ -31,12 +46,12 @@ const boss: LevelScript = {
     if (phase === 1) {
       w.say(String(e.id), 'Вы уволены! ВСЕ уволены!', 2.5);
       w.msg('ФАЗА 2', 'Директор вызвал отдел продаж', 2);
-      w.spawnWave('boss', ['normal', 'fast', 'armored', 'spitter'], 14, .23, true, 'board');
+      w.spawnWave('boss', ['normal', 'fast', 'armored', 'spitter'], w.rules >= 5 ? 8 + 2 * w.players.length : 14, .23, true, 'board');
     }
     if (phase === 2) {
       w.say(String(e.id), 'Я… не… курица… Я — ЭФФЕКТИВНЫЙ МЕНЕДЖЕР!', 3);
       w.msg('ЯРОСТЬ', 'Последний квартал', 2);
-      w.spawnWave('boss', ['exploder', 'fast', 'fast', 'armored'], 20, .2, true, 'board');
+      w.spawnWave('boss', ['exploder', 'fast', 'fast', 'armored'], w.rules >= 5 ? 10 + 3 * w.players.length : 20, .2, true, 'board');
     }
   },
 

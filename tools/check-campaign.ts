@@ -96,9 +96,9 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   for (const id of FRIENDS) { const n = w.npc(id)!; n.x = lift.cx; n.y = lift.cy; }
   step(w, .1); assert.equal(w.finished, true);
   assert.ok(w.players[0].achievements?.includes('no_one_left'));
-  assert.ok(w.events.some(e => e.e === 'level' && e.next === 'lab'));
-  assert.equal(w.carryOut().npcs.length, 0, 'friends evacuated, not carried into the lab');
-  console.log('PASS Castor siege, locked rescue, Elena mutation/drop, door, five rescues, root charge, trophy, escort and lab');
+  assert.ok(w.events.some(e => e.e === 'level' && e.next === 'office8'), 'D69: the lift only goes up');
+  assert.equal(w.carryOut().npcs.length, 0, 'friends evacuated, not carried upstairs');
+  console.log('PASS Castor siege, locked rescue, Elena mutation/drop, door, five rescues, root charge, trophy, escort and the lift up');
 }
 {
   const w = make('lab'); w.god = true;
@@ -146,7 +146,7 @@ const state = (w: World) => JSON.stringify({
   view: encodeSnapshot(w), flags: w.flags, rng: w.rng.state,
   enemies: w.enemies, npcs: w.npcs, tags: [...w.enemyTags],
 });
-for (const id of ['office', 'office7', 'lab', 'factory', 'boss', 'arena']) {
+for (const id of ['office', 'office7', 'office8', 'office11', 'cafe12', 'street1', 'street2', 'lab', 'factory', 'boss', 'arena']) {
   const map = json(id);
   const w = new World(new GameMap(id, map), LEVELS[id], { solo: false, seed: 9103, carry: { players: { me: { weapons: ['pistol'], ammo: { pistol: { mag: 12, reserve: -1 } }, hp: 10000, armor: 10000 } }, npcs: [] } });
   const p = w.addPlayer('me', 'QA', 0); w.start(); const recording = new RoomRecording(w);
@@ -165,5 +165,8 @@ for (const id of ['office', 'office7', 'lab', 'factory', 'boss', 'arena']) {
   assert.equal(state(restoredAgain.world), state(restored.world), id + ': recover and rebind survive a second restart');
   console.log(`PASS ${id}: disk round-trip, timers, random AI, rebind, second restart (${Math.round(performance.now() - start)} ms)`);
 }
-assert.equal(LEVELS.office.next, 'office7'); assert.equal(LEVELS.office7.next, 'lab');
+// D69: chapter 1 office → chapter 2 city → chapter 3 «Провансаль»
+const order: string[] = []; for (let l: string | undefined = 'office'; l; l = LEVELS[l]?.next) order.push(l);
+assert.deepEqual(order, ['office', 'office7', 'office8', 'office11', 'cafe12', 'street1', 'street2', 'factory', 'lab', 'boss']);
+console.log('PASS campaign order: ' + order.join(' → '));
 console.log('Campaign/resume regressions passed');

@@ -35,6 +35,7 @@ jobs:
       - run: npm run check:coop
       - run: npm run check:levels
       - run: npm run check:floor6
+      - run: npm run check:chapters
       - run: npm run check:art
       - run: npm run build
       # own server + fake Telegram API: lobby, seats, summon/share, PWA files (needs the build above)

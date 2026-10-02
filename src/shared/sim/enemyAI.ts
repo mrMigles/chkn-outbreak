@@ -260,7 +260,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
     for (const p of w.players) {
       if (p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < def.radius + 20 && !(p as any)._bossHit) {
         (p as any)._bossHit = true;
-        w.damagePlayer(p, 30, e.x, e.y);
+        w.damagePlayer(p, w.rules >= 5 ? 24 : 30, e.x, e.y);
       }
     }
     for (const o of w.enemies) if (o !== e && dist(o.x, o.y, e.x, e.y) < def.radius + 10) w.damageEnemy(o, 999, e.angle, 600, '', 'melee');
@@ -280,7 +280,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
       for (const p of w.players) {
         if (p.state !== 'alive') continue;
         const d = dist(p.x, p.y, e.x, e.y);
-        if (d < def.attackRange + 30 && Math.abs(angleDiff(e.angle, Math.atan2(p.y - e.y, p.x - e.x))) < 1.2) w.damagePlayer(p, def.damage, e.x, e.y);
+        if (d < def.attackRange + 30 && Math.abs(angleDiff(e.angle, Math.atan2(p.y - e.y, p.x - e.x))) < 1.2) w.damagePlayer(p, w.rules >= 5 ? 28 : def.damage, e.x, e.y);
       }
     }
     return;
@@ -309,12 +309,12 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
       for (let k = 0; k < 2; k++) w.after(k * 0.45, () => {
         for (let i = 0; i < n; i++) {
           const a = (i / n) * TAU + k * 0.17;
-          w.addProjectile('spit', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * 330, Math.sin(a) * 330, String(e.id), 'chicken', 12, 2.2);
+          w.addProjectile('spit', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * 330, Math.sin(a) * 330, String(e.id), 'chicken', w.rules >= 5 ? 9 : 12, 2.2);
         }
       });
     } else if (ab === 'summon') {
       w.say(String(e.id), 'Совещание! Все в переговорку!', 1.8);
-      w.spawnWave('boss', ['normal', 'fast', 'normal', 'spitter', 'armored'], 10 + e.phase * 4, .25, true, 'boss');
+      w.spawnWave('boss', ['normal', 'fast', 'normal', 'spitter', 'armored'], w.rules >= 5 ? 6 + e.phase * 3 : 10 + e.phase * 4, .25, true, 'boss');
     }
     return;
   }

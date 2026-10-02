@@ -117,7 +117,7 @@ const office11: LevelScript = {
     const d = directorEnemy(w);
     if (d && !w.flags.directorScaled) {
       w.flags.directorScaled = true;
-      d.hp = d.maxHp = 2000 * (1 + .45 * (w.players.length - 1)); d.speedMul = 1.3; d.abilityCd = 4;
+      d.hp = d.maxHp = 2300 * (1 + .45 * (w.players.length - 1)); d.speedMul = 1.3; d.abilityCd = 4;
       w.setBoss(d, 'Петух-директор · исполнительный');
       w.flags.supportAt = w.time + 10;
     }

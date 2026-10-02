@@ -49,7 +49,7 @@ function hatch(w: World) {
 const street2: LevelScript = {
   id: 'street2', title: 'Улица. Дорога к «Провансалю»',
   subtitle: 'Рынок, сквер и проходная. Пропуск обязателен',
-  next: 'factory', enemyDamage: .85,
+  next: 'factory', enemyDamage: 1,
   chapterEnd: { title: 'ГЛАВА 2 «ГОРОД» ПРОЙДЕНА', text: 'Вертолёт, бабушка, шаурма и вахтёр позади. Впереди — завод «Провансаль», где всё началось.', award: 'chapter_city' },
 
   onStart(w) {

@@ -8,7 +8,7 @@ import { World } from '../src/shared/sim/World';
 import { GameMap, TILE } from '../src/shared/map';
 import { LEVELS } from '../src/shared/levels';
 import { RoomRecording } from '../src/shared/sim/Checkpoint';
-import { supportTarget, BLEEDOUT } from '../src/shared/sim/support';
+import { supportTarget, BLEEDOUT, RULES } from '../src/shared/sim/support';
 const map = JSON.parse(fs.readFileSync('public/assets/maps/office.tmj', 'utf8'));
 const make = (rules?: number, solo = true) => {
   const w = new World(new GameMap('office', map), LEVELS.office, { solo, seed: 777, rules });
@@ -87,7 +87,7 @@ let n = 0; const pass = (s: string) => { n++; console.log('PASS', s); };
   const p = w.players[0]; p.input.x = 12 * TILE; p.input.y = 15.5 * TILE;
   for (let i = 0; i < 30 * 15; i++) { if (i % 10 === 0) { p.input.x = p.x + (12 * TILE - p.x); p.input.y = p.y + (15.5 * TILE - p.y); } rec.step(1 / 30); }
   const copy = RoomRecording.restore(map, JSON.parse(rec.serialize()));
-  assert.equal(copy.world.rules, 4); assert.equal(copy.world.time, w.time);
+  assert.equal(copy.world.rules, RULES); assert.equal(copy.world.time, w.time);
   assert.ok(['courier', 'zina', 'vitya'].every(id => copy.world.npc(id)), 'scenes are in the save');
   assert.deepEqual(copy.world.npcs.map(q => [q.id, q.mode, Math.round(q.x)]), w.npcs.map(q => [q.id, q.mode, Math.round(q.x)]));
   assert.deepEqual(copy.world.enemies.map(e => [e.id, Math.round(e.x), Math.round(e.y)]), w.enemies.map(e => [e.id, Math.round(e.x), Math.round(e.y)]));

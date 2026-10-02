@@ -88,7 +88,7 @@ prop('server_rack', 26, 3.6); prop('server_rack', 27.2, 3.6); prop('server_rack'
 prop('desk', 30.5, 9.4); prop('office_chair', 30.5, 7.9); prop('desk_phone', 29.6, 9.2);
 o('npc', 'valera', 30.5, 8.1, { reach: 130, title: 'Валера · тимлид тёмной темы', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90 });
 light(30.5, 8.7, 'lamp', '3d6bff', 150, { flicker: .1 });
-prop('breaker', 34.5, 3.1); o('use', 'breaker', 34.5, 4.1, { hint: 'включить рубильник' });
+prop('breaker', 34.5, 3.1); o('use', 'breaker', 34.5, 4.1, { done: true, hint: 'включить рубильник' });
 o('trigger', 'den', 25, 11, {}, [12, 6]);
 for (const [x, y] of [[26, 15.5], [36, 15.5], [26, 5], [36, 4.5]]) o('spawner', 'den', x, y, { how: 'vent' });
 label('СЕРВЕРНАЯ ТЁМНОЙ ТЕМЫ', 30.5, 14.6, 18);

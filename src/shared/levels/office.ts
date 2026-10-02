@@ -45,7 +45,8 @@ const office: LevelScript = {
         w.after(0.2 + i * 0.12, () => w.say(q.id, ['Ко?!', 'КО-КО-КО!', 'Мне плохо…', 'Перья?!', 'Кукаре-е-е…'][i % 5], 1.2));
         w.after(1.1 + i * 0.45, () => w.infect(q, (q.props?.turn as EnemyType) || 'normal', 'os'));
       });
-      w.setObjective('Выжить. Выбраться из опенспейса');
+      // D69: fast teams may already be past the open space (corridor, blue pass): never step back
+      if (w.objective.startsWith('Что происходит')) w.setObjective('Выжить. Выбраться из опенспейса');
     });
   },
 
