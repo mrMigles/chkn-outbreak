@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
-import { GameRoom } from './GameRoom';
+import { GameRoom, activeRooms } from './GameRoom';
 import { tgSession, gameSession, type TgSession } from './telegram';
-import { startTelegramBot } from './tgbot';
+import { startTelegramBot, linkRoom, isKnownChat } from './tgbot';
 import { readCheckpoint, validRoomCode } from './checkpoints';
 
 const PORT = Number(process.env.PORT || 2580);
@@ -14,7 +14,7 @@ const DIST = path.resolve(process.cwd(), 'dist');
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png',
   '.json': 'application/json', '.tmj': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-  '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.webp': 'image/webp', '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.webp': 'image/webp', '.woff2': 'font/woff2',
 };
 
 /** The chat's room exists (created on first open); one creation at a time per code. */
@@ -60,7 +60,7 @@ const httpServer = http.createServer(async (req, res) => {
         if (!p) { p = matchMaker.createRoom('game', { code, chat: save.chat }).then(() => {}).finally(() => creating.delete(code)); creating.set(code, p); }
         await p;
       }
-      json(res, 200, { ok: true });
+      json(res, 200, { ok: true, ...activeRooms.get(code)?.info() });
     } catch { json(res, 500, { error: 'Не удалось восстановить комнату' }); }
     return;
   }
@@ -69,8 +69,11 @@ const httpServer = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const s = url === '/api/tg/session' ? tgSession(String(body.initData ?? '')) : gameSession(String(body.token ?? ''));
     if ('error' in s) { json(res, 403, s); return; }
+    // D62: the bot may post into this chat («Призвать», achievements) once it knows the chat id
+    const { chatId, ...pub } = s;
+    if (chatId && (s.chatTitle !== undefined || isKnownChat(chatId))) linkRoom(s.code, { id: chatId, title: s.chatTitle });
     try { await ensureChatRoom(s); } catch (e) { json(res, 500, { error: 'Не удалось создать комнату: ' + (e as Error).message }); return; }
-    json(res, 200, s);
+    json(res, 200, { ...pub, room: activeRooms.get(s.code)?.info() });
     return;
   }
   if (!fs.existsSync(DIST)) {
@@ -84,7 +87,7 @@ const httpServer = http.createServer(async (req, res) => {
   // everything else (atlases, maps, music — requested with ?v=<build>) revalidates by ETag.
   const stat = fs.statSync(file), name = path.basename(file);
   const etag = `"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
-  const cache = name === 'index.html' || name === 'version.json' ? 'no-store, max-age=0'
+  const cache = name === 'index.html' || name === 'version.json' || name === 'sw.js' ? 'no-store, max-age=0'
     : file.startsWith(path.join(DIST, 'assets')) && /-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(name) ? 'public, max-age=31536000, immutable'
     : 'no-cache';
   const headers: Record<string, string> = { 'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream', 'cache-control': cache, etag };

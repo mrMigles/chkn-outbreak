@@ -6,7 +6,41 @@ import { decodeEnemies, decodePickups, decodeProjectiles, Snapshot } from '../..
 import { lerpAngle } from '../../shared/math';
 import type { Session } from './Session';
 
-type Smooth = { tx: number; ty: number; ta: number };
+type Smooth = { tx: number; ty: number; ta: number; buf: number[] };
+
+/**
+ * D59: remote bodies are drawn INTERP seconds in the past, between the two snapshots around that
+ * moment, instead of chasing the newest one. A late or bunched packet no longer stops chickens and
+ * makes them jump; a long gap extrapolates briefly, then holds.
+ */
+const INTERP = 0.1, EXTRAP = 0.12, HISTORY = 6, TELEPORT = 220;
+function push(o: Smooth & { x: number; y: number; angle?: number; aim?: number }, t: number, x: number, y: number, a: number) {
+  const b = o.buf, n = b.length;
+  if (n) {
+    // world restarted or someone teleported: start over instead of sliding through walls
+    if (t < b[n - 4] - 1 || Math.hypot(x - b[n - 3], y - b[n - 2]) > TELEPORT) b.length = 0;
+    else if (t <= b[n - 4]) return;
+  }
+  b.push(t, x, y, a);
+  if (b.length > HISTORY * 4) b.splice(0, b.length - HISTORY * 4);
+}
+/** Position at render time `rt`; writes into o.x/o.y and returns the angle. */
+function sample(o: Smooth & { x: number; y: number }, rt: number, a0: number): number {
+  const b = o.buf, n = b.length;
+  if (!n) return a0;
+  if (rt <= b[0] || n === 4) { o.x = b[1]; o.y = b[2]; return b[3]; }
+  for (let i = 0; i + 4 < n; i += 4) {
+    if (rt <= b[i + 4]) {
+      const k = (rt - b[i]) / Math.max(1e-4, b[i + 4] - b[i]);
+      o.x = b[i + 1] + (b[i + 5] - b[i + 1]) * k; o.y = b[i + 2] + (b[i + 6] - b[i + 2]) * k;
+      return lerpAngle(b[i + 3], b[i + 7], k);
+    }
+  }
+  // past the newest snapshot: keep moving a little, then wait
+  const dt = Math.min(rt - b[n - 4], EXTRAP), span = Math.max(1e-4, b[n - 4] - b[n - 8]);
+  o.x = b[n - 3] + (b[n - 3] - b[n - 7]) / span * dt; o.y = b[n - 2] + (b[n - 2] - b[n - 6]) / span * dt;
+  return b[n - 1];
+}
 
 /** Client side of a multiplayer game: renders server snapshots, sends inputs. */
 export class NetSession implements Session {
@@ -24,6 +58,8 @@ export class NetSession implements Session {
   private podColliders = new Map<string, Collider>();
   private sendT = 0;
   private lastInput: PlayerInput | null = null;
+  /** server time − local time, tracked from the earliest arrivals */
+  private offset = NaN;
   gotSnapshot = false;
 
   constructor(public room: Room, levelId: string, mapJson: TiledMap) {
@@ -52,6 +88,10 @@ export class NetSession implements Session {
 
   onSnapshot(s: Snapshot) {
     const v = this.view;
+    const now = performance.now() / 1000, off = s.t - now;
+    // earliest arrival defines the clock; drift down slowly; a restarted world resets it
+    if (Number.isNaN(this.offset) || off > this.offset || off < this.offset - 2) this.offset = off;
+    else this.offset += (off - this.offset) * 0.02;
     v.time = s.t;
     v.incidents = s.incidents ?? [];
     v.bonus = s.bn ?? null;
@@ -62,12 +102,14 @@ export class NetSession implements Session {
     for (const raw of s.p) {
       let p = this.playerCache.get(raw.id!);
       if (!p) {
-        p = { ...(raw as Player), vx: 0, vy: 0, shotSeq: 0, input: { seq: 0, x: raw.x!, y: raw.y!, aim: 0, fire: false, reload: false, interact: false, weapon: 0 }, deaths: 0, comboT: 0, connected: true, fireCd: 0, tx: raw.x!, ty: raw.y!, ta: raw.aim! } as Player & Smooth;
+        p = { ...(raw as Player), vx: 0, vy: 0, shotSeq: 0, input: { seq: 0, x: raw.x!, y: raw.y!, aim: 0, fire: false, reload: false, interact: false, weapon: 0 }, deaths: 0, comboT: 0, connected: true, fireCd: 0, tx: raw.x!, ty: raw.y!, ta: raw.aim!, buf: [] } as Player & Smooth;
         this.playerCache.set(raw.id!, p);
       }
-      const jump = Math.hypot(raw.x! - p.x, raw.y! - p.y) > 250;
-      Object.assign(p, raw, { x: jump ? raw.x : p.x, y: jump ? raw.y : p.y, aim: p.aim });
+      const { x, y, aim } = p;
+      Object.assign(p, raw, { x, y, aim });
+      if (raw.id === this.myId) { p.x = raw.x!; p.y = raw.y!; p.aim = raw.aim!; } // own body: newest authority (prediction runs ahead of it)
       p.tx = raw.x!; p.ty = raw.y!; p.ta = raw.aim!;
+      push(p, s.t, raw.x!, raw.y!, raw.aim!);
       players.push(p);
     }
     for (const id of [...this.playerCache.keys()]) if (!s.p.some((q) => q.id === id)) this.playerCache.delete(id);
@@ -81,10 +123,11 @@ export class NetSession implements Session {
     for (const d of decoded) {
       seen.add(d.id);
       let e = this.enemyCache.get(d.id);
-      if (!e) { e = { ...d, tx: d.x, ty: d.y, ta: d.angle }; this.enemyCache.set(d.id, e); }
+      if (!e) { e = { ...d, tx: d.x, ty: d.y, ta: d.angle, buf: [] }; this.enemyCache.set(d.id, e); }
       const { x, y, angle } = e;
       Object.assign(e, d, { x, y, angle });
       e.tx = d.x; e.ty = d.y; e.ta = d.angle;
+      push(e, s.t, d.x, d.y, d.angle);
       enemies.push(e);
     }
     for (const id of [...this.enemyCache.keys()]) if (!seen.has(id)) this.enemyCache.delete(id);
@@ -93,12 +136,14 @@ export class NetSession implements Session {
     const npcs: Npc[] = [];
     for (const raw of s.n) {
       let n = this.npcCache.get(raw.id!);
-      if (!n) { n = { ...(raw as Npc), fireCd: 0, goal: null, lines: [], talkCd: 0, tag: '', vx: 0, vy: 0, tx: raw.x!, ty: raw.y!, ta: raw.angle! }; this.npcCache.set(raw.id!, n); }
+      if (!n) { n = { ...(raw as Npc), fireCd: 0, goal: null, lines: [], talkCd: 0, tag: '', vx: 0, vy: 0, tx: raw.x!, ty: raw.y!, ta: raw.angle!, buf: [] }; this.npcCache.set(raw.id!, n); }
       const { x, y, angle } = n;
       Object.assign(n, raw, { x, y, angle });
       n.tx = raw.x!; n.ty = raw.y!; n.ta = raw.angle!;
+      push(n, s.t, raw.x!, raw.y!, raw.angle!);
       npcs.push(n);
     }
+    for (const id of [...this.npcCache.keys()]) if (!s.n.some((q) => q.id === id)) this.npcCache.delete(id);
     v.npcs = npcs;
     v.projectiles = decodeProjectiles(s);
     v.pickups = decodePickups(s);
@@ -125,18 +170,12 @@ export class NetSession implements Session {
   }
 
   poll(dt: number) {
-    // smooth remote entities towards their latest snapshot positions
-    const k = Math.min(1, dt * 14);
-    for (const e of this.enemyCache.values()) {
-      if (Math.hypot(e.tx - e.x, e.ty - e.y) > 220) { e.x = e.tx; e.y = e.ty; }
-      e.x += (e.tx - e.x) * k; e.y += (e.ty - e.y) * k; e.angle = lerpAngle(e.angle, e.ta, k);
-    }
-    for (const p of this.playerCache.values()) {
-      p.x += (p.tx - p.x) * k; p.y += (p.ty - p.y) * k; p.aim = lerpAngle(p.aim, p.ta, Math.min(1, dt * 20));
-    }
-    for (const n of this.npcCache.values()) {
-      if (Math.hypot(n.tx - n.x, n.ty - n.y) > 220) { n.x = n.tx; n.y = n.ty; }
-      n.x += (n.tx - n.x) * k; n.y += (n.ty - n.y) * k; n.angle = lerpAngle(n.angle, n.ta, k);
+    // remote entities: interpolate between buffered snapshots, INTERP seconds behind the server
+    const rt = performance.now() / 1000 + this.offset - INTERP;
+    if (!Number.isNaN(rt)) {
+      for (const e of this.enemyCache.values()) e.angle = sample(e, rt, e.angle);
+      for (const p of this.playerCache.values()) if (p.id !== this.myId) p.aim = sample(p, rt, p.aim);
+      for (const n of this.npcCache.values()) n.angle = sample(n, rt, n.angle);
     }
     // projectiles fly between snapshots
     for (const pr of this.view.projectiles) { pr.x += pr.vx * dt; pr.y += pr.vy * dt; }

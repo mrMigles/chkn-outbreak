@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "CHKN OUTBREAK — Петушки",
+  "short_name": "CHKN",
+  "description": "Кооперативный шутер: вытащите коллег из корпоративного курятника. 1–4 игрока, Telegram-чаты.",
+  "lang": "ru",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#17191d",
+  "theme_color": "#1b1d21",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

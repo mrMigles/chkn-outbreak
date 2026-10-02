@@ -9,7 +9,17 @@ import crypto from 'node:crypto';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? '';
 const SECRET = process.env.SESSION_SECRET || BOT_TOKEN || crypto.randomBytes(16).toString('hex');
 
-export interface TgSession { code: string; name: string; chat: string; chatTitle?: string; verified: boolean; personal?: boolean }
+export interface TgSession {
+  code: string; name: string; chat: string; chatTitle?: string; verified: boolean; personal?: boolean;
+  /** D59: the player's seat key — the same Telegram user gets it in the Mini App, the game window and the browser. */
+  pid?: string;
+  /** D60: signed ?tg= token that opens this very session in an ordinary browser tab. */
+  link?: string;
+  /** Telegram showed the chat's id (signed): the bot may post there. Server-side only. */
+  chatId?: string;
+}
+/** Seat key of a Telegram user: unguessable without the server secret. */
+export const pidOf = (userId: number | string) => 'tg-' + crypto.createHmac('sha256', SECRET + ':pid').update(String(userId)).digest('base64url').slice(0, 22);
 
 /** Telegram's check: HMAC-SHA256 over the sorted fields with a key derived from the bot token; a day at most. */
 export function checkInitData(initData: string): URLSearchParams | null {
@@ -49,7 +59,12 @@ export function tgSession(initData: string): TgSession | { error: string } {
   let key = (ci ? 'ci' + ci : '') || (chat?.id ? String(chat.id) : '') || p.get('start_param') || '';
   let personal = false;
   if (!key) { key = 'u' + user.id; personal = true; }
-  return { code: codeForChat(key), name: nameOf(user), chat: key, chatTitle: chat?.title, verified: !!BOT_TOKEN, personal };
+  // the chat id: signed chat object, or the /app start parameter («c<id>», «m» = minus)
+  const sp = /^c(m?)(\d+)$/.exec(p.get('start_param') ?? '');
+  const chatId = chat?.id ? String(chat.id) : sp ? (sp[1] ? '-' : '') + sp[2] : undefined;
+  const name = nameOf(user);
+  const link = makeGameToken({ c: key, u: user.id, n: name, t: Math.floor(Date.now() / 1000), title: chat?.title });
+  return { code: codeForChat(key), name, chat: key, chatTitle: chat?.title, verified: !!BOT_TOKEN, personal, pid: pidOf(user.id), link, chatId };
 }
 
 // ---------------------------------------------------------------- signed game links (HTML5 Games)
@@ -65,5 +80,7 @@ export function gameSession(token: string): TgSession | { error: string } {
   let c: GameClaim;
   try { c = JSON.parse(Buffer.from(body, 'base64url').toString()); } catch { return { error: 'Повреждённая ссылка' }; }
   if (Date.now() / 1000 - c.t > 86400) return { error: 'Ссылка устарела — нажмите «Играть» в чате ещё раз' };
-  return { code: codeForChat(c.c), name: c.n, chat: c.c, chatTitle: c.title, verified: true };
+  // a fresh link for «open in the browser»: the old one may be close to its 24 hours
+  const link = makeGameToken({ ...c, t: Math.floor(Date.now() / 1000) });
+  return { code: codeForChat(c.c), name: c.n, chat: c.c, chatTitle: c.title, verified: true, pid: pidOf(c.u), link, personal: c.c === 'u' + c.u };
 }

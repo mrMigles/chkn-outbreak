@@ -348,3 +348,34 @@ Payout once: +300 KPI to every player, +1 medkit and +1 ammo supply to the livin
 **Phone comfort.** Dashed «БЕГ / ПРИЦЕЛ» ghost circles show where the invisible sticks live for the first three levels (fade on first use or after 14 s). «Левша» swaps the halves. Sticks and the action button release on app switch/blur/touchcancel (no stuck input). «Размер HUD» (compact/normal/large) zooms HUD and buttons; HUD widths are zoom-aware. In portrait only one popup at a time: a tutorial card yields to an alert and returns after it.
 
 **Verification.** `check:campaign` (bonuses: tagged/headshot/combo progress, single payout, achievements, snapshot), all sim checks, engagement/polish/network UI, `tools/qa-phone.mjs` now also runs large-HUD portrait/landscape and asserts a threat arrow and the bonus line are visible without overlaps.
+
+## D58 — The lobby is the main menu with the team on it (2026-10-02)
+
+- User request: choose/change your character in the lobby, see colleagues' characters, host = first in the lobby or its creator and starts the game; another host if they leave; same in Telegram; continue or new game.
+- Lobby screen reuses the menu's look: own card (name, «Изменить внешность» → editor → `profile` message), four colleague cards with LPC portraits (`lookPortrait`, cached per look), slot colour, «★ ведущий / готов / не готов / переподключается», achievement count. Empty slots are shown. Sub-screens (editor, achievements, controls) are not redrawn by state patches; the dynamic parts are diffed so typing a name is never interrupted.
+- Host = earliest-joined **connected** player (join order kept per seat, also across take-overs). Leadership moves immediately when the host leaves or drops; a returning player does not take it back.
+- Host chooses **Продолжить** (`state.saved`, the saved floor caption) or **Новая игра** (second tap confirms when a save exists). Readiness no longer blocks the start: it is a visible hint, late colleagues join the floor. Defeat → «В лобби» keeps the floor-entrance save so the team can continue or restart.
+- «Пригласить» shares `/?room=CODE` (system share sheet or clipboard).
+
+## D59 — Seats belong to people, not connections; less traffic, no save stalls
+
+- Every browser profile has a persistent id (`chkn-pid`); a Telegram user's id is `HMAC(server secret, user id)`, the same in the Mini App, the game window and an external browser. Rooms map connections to these ids.
+- Closed tab / crash (non-consented leave): the lobby entry lives 25 s for Colyseus reconnection; after that the **world seat stays reserved for the whole floor**. Joining again with the same id gets the same slot, position, loadout and companions (recorded `resume` → deterministic replay). «Выйти» (consented) frees the seat. The client remembers the active room (6 h) and reopening the game goes straight back without clicks; only «Выйти»/«Не надо» forgets it.
+- A second connection with the same id (another tab, phone, the browser after Telegram) takes the seat over; the old one gets `replaced` and a «Игра открыта в другом окне / Играть здесь» panel instead of fighting back with reconnects. The 4-player limit is enforced in `onJoin`; Colyseus' own limit is doubled so a reserved reconnection seat never locks its owner out of a full room.
+- Joining a running floor: a new colleague drops in fresh; returning to a **dead** character keeps it dead and `benched` (no rally) until the next floor — reconnecting is never a respawn. Loadouts carry by slot, so a reconnect between floors keeps them. Save files store `pids` (slot → id) to restore seats after a server restart; anonymous connections fall back to names.
+- Freezes («петушки застывают»): measured 6.4 KB full snapshots × 20 Hz ≈ 1 Mbit/s per client with 66 enemies on floor 7, and a synchronous JSON + write of the whole input tape every 5 s (9 ms at 10 minutes on a fast desktop; several times that on a small VPS, stalling every room). Now: (1) `SnapshotEncoder` sends sticky player/NPC fields (names, looks, inventories, achievements, follow…) and enemy appearances only when changed, with a keyframe every 2 s and on every join/reconnect → 3.9 KB, −40 %; (2) the recording serializes each frame once and appends (0.1 ms) and files are written asynchronously through a per-room queue where the newest operation wins; (3) clients interpolate remote bodies 100 ms in the past between buffered snapshots (with 120 ms extrapolation, teleport/world-restart resets) instead of chasing the newest packet, so late or bunched packets no longer stop chickens. `npm run bench:net` reproduces the numbers.
+
+## D60 — Telegram on a computer: offer the full browser window
+
+- Mini App platforms `tdesktop/macos/web*/unigram`, or the SDK-less game window with a mouse pointer, count as a computer. The menu and lobby show a dismissible banner «На компьютере удобнее в браузере» → `openLink`/`window.open` of `/?tg=<fresh signed token>` (issued with every Telegram session). The browser tab becomes the same Telegram player (same name, same seat key), joins the chat room and takes the seat over (D59); the small window shows «Игра открыта в другом окне». A copy-link fallback covers clients that block opening.
+
+## D61 — Installable app (PWA)
+
+- `manifest.webmanifest` (fullscreen, any orientation, 192/512/maskable icons drawn from the game's own LPC chicken-person — `npm run icons`), Apple touch icon/meta. `sw.js` caches only an offline notice for navigations and is served `no-store`: D56's build ids remain the only cache authority, an installed app never runs a stale build. Not registered inside Telegram.
+- Install screen: the browser's own prompt when offered (`beforeinstallprompt`), otherwise iOS/Android/desktop instructions; inside Telegram — open in the browser. Shareable link `/?install=1`; the bot's `/install` posts it; menu button «📲 Установить игру» (hidden when already installed).
+
+## D62 — Telegram: summon the chat, share rare achievements, achievements everywhere
+
+- «📣 Призвать чат» (chat rooms with a configured bot): the bot posts «<name> зовёт всех…» with the room state and a play button (Mini App link when `TELEGRAM_APP_URL`, else the game card); once per minute per room. The bot learns code → chat id when Telegram shows both: the game button's callback (chat_instance + message chat), a signed `chat` in Mini App initData, or the `/app` start parameter of a chat where the bot has seen a command. Stored in `<save dir>/_tg-chats.json`. `TELEGRAM_API` can point the bot at a fake API (tests).
+- Nine achievements are `rare`. Earning one in a chat room queues a «→ в чат» button on the floor-complete / victory screen and in the lobby; the server shares only achievements the player really has, rare ones, once per player.
+- Achievements are viewable in the main menu, the lobby and the pause menu (shared `achievementsMarkup`; rare ones are labelled).

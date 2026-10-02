@@ -10,6 +10,8 @@ import { Tutorial } from '../ui/Tutorial';
 import { Input } from '../input/Input';
 import { Hud } from '../ui/Hud';
 import { preferencesMarkup, bindPreferences } from '../ui/Preferences';
+import { achievementsMarkup, earnedAchievements } from '../ui/AchievementProfile';
+import { ACHIEVEMENTS } from '../../shared/achievements';
 import { controlsMarkup } from '../ui/ControlsHelp';
 import { Coach } from '../ui/Coach';
 import { Threats } from '../render/Threats';
@@ -970,15 +972,18 @@ export class GameScene extends Phaser.Scene {
       if (p) this.session.send({ ...p.input, seq: ++this.seq, x: p.x, y: p.y, fire: false, reload: false, interact: false, weapon: p.cur });
       const d = document.createElement('div');
       d.className = 'overlay pause-menu';
-      const render = (v: 'menu' | 'settings' | 'controls') => {
+      const render = (v: 'menu' | 'settings' | 'controls' | 'achievements') => {
         d.dataset.view = v;
-        d.innerHTML = v === 'settings'
+        d.innerHTML = v === 'achievements'
+          ? `<div class="panel achievements-panel"><h2>ДОСТИЖЕНИЯ</h2>${achievementsMarkup()}<button class="btn primary" data-a="back">Назад</button></div>`
+          : v === 'settings'
           ? `<div class="panel preferences-panel"><h2>НАСТРОЙКИ</h2>${preferencesMarkup()}<button class="btn primary" data-a="back">Назад</button></div>`
           : v === 'controls'
             ? `<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup(this.input2.touch)}<button class="btn primary" data-a="${view === 'controls' ? 'resume' : 'back'}">${view === 'controls' ? 'Понятно, в бой!' : 'Назад'}</button></div>`
             : `<div class="panel"><h2>ПАУЗА</h2>${this.session.solo ? '' : '<p class="flavor">Команда продолжает бой — пауза только у вас.</p>'}
               <button class="btn primary" data-a="resume">Продолжить</button>
               <div class="row"><button class="btn" data-a="settings">Настройки</button><button class="btn" data-a="controls">Управление</button></div>
+              <button class="btn" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
               <button class="btn ghost" data-a="quit">В главное меню</button></div>`;
         d.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => sfx.play('ui', { vol: 0.6 })));
         if (v === 'settings') bindPreferences(d);
@@ -986,7 +991,7 @@ export class GameScene extends Phaser.Scene {
       d.addEventListener('click', (e) => {
         const a = (e.target as HTMLElement).closest<HTMLElement>('[data-a]')?.dataset.a;
         if (a === 'resume') this.togglePause();
-        if (a === 'settings' || a === 'controls') render(a);
+        if (a === 'settings' || a === 'controls' || a === 'achievements') render(a);
         if (a === 'back') { render('menu'); this.fx.shakeScale = settings.shake; }
         if (a === 'quit') { d.remove(); this.ended = true; this.onEnd({ kind: 'quit' }); }
       });

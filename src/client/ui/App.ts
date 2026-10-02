@@ -16,11 +16,12 @@ import { openEditor, currentLook } from './Editor';
 import { lookPortrait } from '../render/Looks';
 import { encodeLook } from '../../shared/look';
 import { preferencesMarkup, bindPreferences } from './Preferences';
-import { ACHIEVEMENTS, type AchievementKey } from '../../shared/achievements';
-import { earnedAchievements } from './AchievementProfile';
-import { telegramSession, telegramBack, type TgSession } from '../telegram';
+import { ACHIEVEMENTS, isRare, type AchievementKey } from '../../shared/achievements';
+import { earnedAchievements, achievementsMarkup } from './AchievementProfile';
+import { telegramSession, telegramBack, isTelegramDesktop, openExternal, type TgSession } from '../telegram';
 import { music } from '../audio/Music';
-import { loadSolo, saveSolo, clearSolo, loadRoom, saveRoom, levelCaption } from '../progress';
+import { loadSolo, saveSolo, clearSolo, loadRoom, saveRoom, levelCaption, activeRoom, setActiveRoom, clearActiveRoom, browserPid } from '../progress';
+import { initPwa, isStandalone, isIos, canPromptInstall, promptInstall, installUrl, onInstallChange, shareLink } from '../pwa';
 import { controlsMarkup } from './ControlsHelp';
 import { reloadIfOutdated } from '../version';
 
@@ -39,7 +40,11 @@ export class App {
     const unlock = () => { sfx.resume(); };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
+    initPwa();
   }
+
+  /** Seat key on the server: the Telegram user, else this browser profile (D59). */
+  pid() { return this.tg?.pid || browserPid(); }
 
   /** Telegram chat room of this session (opened from a chat), if any. */
   tg: TgSession | null = null;
@@ -52,11 +57,20 @@ export class App {
       if (document.visibilityState === 'visible' && !this.room && !this.game.scene.isActive('game')) void reloadIfOutdated();
     });
     // ?level=<id> jumps straight into a level (testing)
-    const lv = new URLSearchParams(location.search).get('level');
+    const params = new URLSearchParams(location.search);
+    const lv = params.get('level');
     if (lv && LEVELS[lv]) { this.startSolo(lv); return; }
     const tg = await telegramSession(this.httpBase());
     if (tg && 'error' in tg) { this.mainMenu(); this.toastMenu('Telegram: ' + tg.error); return; }
     if (tg) { this.tg = tg; settings.name = tg.name; saveSettings(); this.chatRoom(); return; }
+    // D61: the shareable install link
+    if (params.has('install')) { this.installScreen(); return; }
+    // «Пригласить» link from a lobby
+    const invite = (params.get('room') ?? '').toUpperCase();
+    if (/^[A-Z]{4}$/.test(invite)) { history.replaceState(null, '', location.pathname); void this.resumeRoom(invite); return; }
+    // D59: a closed tab / crashed browser comes back to its room (the server kept the seat)
+    const active = activeRoom();
+    if (active) { void this.resumeRoom(active, true); return; }
     this.mainMenu();
   }
 
@@ -69,6 +83,9 @@ export class App {
     if (!tg) return;
     const d = this.show(`<div class="panel center"><h2>КОМНАТА ЧАТА</h2><p class="flavor">${escapeHtml(tg.chatTitle || (tg.personal ? 'Личная комната' : 'Чат'))} · входим как ${escapeHtml(tg.name)}…</p><div class="err"></div>
       <button class="btn ghost" data-a="menu">В меню</button></div>`);
+    // the server already knows the room is running: say so while connecting
+    const info = (tg as TgSession & { room?: { phase?: string } }).room;
+    if (info?.phase && info.phase !== 'lobby') d.querySelector('.flavor')!.textContent += ' Команда уже в бою — подключаемся к ней.';
     d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'menu') this.leaveRoom(); });
     const ok = await this.connect('join', tg.code, d.querySelector('.err')!);
     if (!ok && retry && this.screen === d) {
@@ -107,6 +124,7 @@ export class App {
             <button class="btn tiny" data-a="look">Изменить внешность</button>
           </div>
         </div>
+        ${this.desktopBanner()}
         ${this.tg ? `<button class="btn primary" data-a="chat">Играть с чатом · ${escapeHtml(this.tg.chatTitle || 'комната чата')}</button>` : ''}
         <div class="menu-group">
           <div class="menu-label">Одиночная игра</div>
@@ -140,7 +158,10 @@ export class App {
           <button class="btn ghost" data-a="preferences">Настройки</button>
           <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
         </div>
-        <button class="btn ghost" data-a="controls">Как управлять</button>
+        <div class="menu-extras">
+          <button class="btn ghost" data-a="controls">Как управлять</button>
+          ${isStandalone() ? '' : '<button class="btn ghost" data-a="install">📲 Установить игру</button>'}
+        </div>
         <a href="credits.html" target="_blank" rel="noopener" style="color:#acb4bd;font-size:13px">Авторы графики и лицензии</a>
       </div>`);
     const name = d.querySelector<HTMLInputElement>('.name')!;
@@ -166,8 +187,11 @@ export class App {
       if (a === 'solo-continue' && solo) this.startSolo(solo.level, solo.carry);
       if (a === 'arena') { this.levelStartCarry = undefined; this.startSolo('arena'); }
       if (a === 'host' || a === 'join') this.multiplayer(a);
-      if (a === 'resume-room' && room) this.resumeRoom(room.code);
+      if (a === 'resume-room' && room) void this.resumeRoom(room.code);
       if (a === 'controls') this.controls();
+      if (a === 'install') this.installScreen();
+      if (a === 'browser') this.openInBrowser(btn!);
+      if (a === 'banner-close') this.closeBanner(btn!);
       if (a === 'look') { const host = this.show(''); openEditor(host, () => this.mainMenu()); }
       if (a === 'preferences') this.preferences();
       if (a === 'achievements') this.achievements();
@@ -187,11 +211,78 @@ export class App {
   }
 
   /** «Продолжить» for rooms: the server rebuilds the room from its save if it was closed. */
-  private resumeRoom(code: string) {
-    const d = this.show(`<div class="panel center"><h2>КОМНАТА ${escapeHtml(code)}</h2><p class="flavor">Возвращаемся к команде…</p><div class="err"></div>
-      <button class="btn ghost" data-a="back">Назад</button></div>`);
-    d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'back') this.leaveRoom(); });
-    void this.connect('join', code, d.querySelector('.err')!);
+  private async resumeRoom(code: string, auto = false) {
+    const d = this.show(`<div class="panel center"><h2>КОМНАТА ${escapeHtml(code)}</h2><p class="flavor">${auto ? 'Игра закрылась без «Выйти» — возвращаем вас на ваше место…' : 'Возвращаемся к команде…'}</p><div class="err"></div>
+      <button class="btn ghost" data-a="back">${auto ? 'Не надо, в меню' : 'Назад'}</button></div>`);
+    d.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.a === 'back') { clearActiveRoom(); this.leaveRoom(); } });
+    const ok = await this.connect('join', code, d.querySelector('.err')!);
+    if (!ok && auto && this.screen === d) { clearActiveRoom(); this.mainMenu(); this.toastMenu(`Комната ${code} уже закрыта.`); }
+  }
+
+  // ------------------------------------------------------------------ D60: Telegram on a computer
+  /** Banner «open in the browser» for the small Telegram desktop window (dismissible per session). */
+  private desktopBanner() {
+    if (!this.tg?.link || !isTelegramDesktop()) return '';
+    try { if (sessionStorage.getItem('chkn-tg-banner')) return ''; } catch { /* ignore */ }
+    return `<div class="tg-desktop"><button class="x" data-a="banner-close" aria-label="Скрыть">✕</button>
+      <b>🖥 На компьютере удобнее в браузере</b><span>Окно Telegram маленькое. Откройте игру на весь экран — вы останетесь в той же комнате, на своём месте.</span>
+      <button class="btn primary" data-a="browser">Открыть в браузере</button></div>`;
+  }
+  private closeBanner(btn: HTMLElement) {
+    try { sessionStorage.setItem('chkn-tg-banner', '1'); } catch { /* ignore */ }
+    btn.closest('.tg-desktop')?.remove();
+  }
+  private openInBrowser(btn: HTMLElement) {
+    if (!this.tg?.link) return;
+    const url = `${location.origin}/?tg=${encodeURIComponent(this.tg.link)}`;
+    openExternal(url);
+    const box = btn.closest('.tg-desktop') ?? btn.parentElement!;
+    box.querySelector('.tg-link')?.remove();
+    const note = document.createElement('div');
+    note.className = 'tg-link';
+    note.innerHTML = `Браузер открывается… Когда вы войдёте там, это окно отдаст своё место. Не открылся? <button class="btn tiny" data-copy>Скопировать ссылку</button>`;
+    note.querySelector('[data-copy]')!.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const r = await shareLink(url, 'CHKN OUTBREAK', 'Моя комната');
+      (e.target as HTMLElement).textContent = r === 'failed' ? url : 'Скопировано ✓';
+    });
+    box.appendChild(note);
+  }
+
+  // ------------------------------------------------------------------ D61: install as an app
+  installScreen() {
+    this.stopGame();
+    let off = () => {};
+    const render = () => {
+      const standalone = isStandalone(), inTg = !!this.tg || /[?&]tg=|tgWebAppData=/.test(location.href);
+      const how = isIos()
+        ? 'iPhone/iPad: откройте ссылку в Safari → «Поделиться» → «На экран „Домой“».'
+        : /android/i.test(navigator.userAgent)
+          ? 'Android: меню браузера ⋮ → «Установить приложение» (или «Добавить на главный экран»).'
+          : 'Компьютер: Chrome/Edge — значок установки справа в адресной строке или меню ⋮ → «Установить».';
+      const d = this.show(`<div class="panel center install-panel"><h2>CHKN КАК ПРИЛОЖЕНИЕ</h2>
+        <img class="install-icon" src="/icons/icon-192.png" alt="" width="96" height="96">
+        <p class="flavor">Иконка на рабочем столе, игра на весь экран без адресной строки. Сохранения, комнаты и достижения — те же.</p>
+        ${standalone ? '<p class="ok-line">Уже установлено ✓ Вы играете в приложении.</p>'
+          : inTg ? `<p class="flavor">Внутри Telegram установить нельзя — откройте ссылку в браузере.</p><button class="btn primary" data-a="ext">Открыть в браузере</button>`
+          : canPromptInstall() ? '<button class="btn primary" data-a="prompt">📲 Установить</button>'
+          : `<p class="install-how">${escapeHtml(how)}</p>`}
+        <button class="btn" data-a="share">Поделиться ссылкой на установку</button>
+        <div class="err"></div>
+        <button class="btn ghost" data-a="menu">${this.room ? 'Назад' : 'В меню'}</button></div>`);
+      d.addEventListener('click', async (e) => {
+        const a = (e.target as HTMLElement).closest<HTMLElement>('[data-a]')?.dataset.a;
+        if (a === 'prompt') { const ok = await promptInstall(); render(); if (!ok) this.screen?.querySelector('.err')?.replaceChildren('Установка отменена.'); }
+        if (a === 'ext') openExternal(installUrl());
+        if (a === 'share') {
+          const r = await shareLink(installUrl(), 'CHKN OUTBREAK', 'Установи игру про офисных петушков');
+          d.querySelector('.err')!.textContent = r === 'copied' ? 'Ссылка скопирована: ' + installUrl() : r === 'shared' ? '' : installUrl();
+        }
+        if (a === 'menu') { off(); if (this.room) this.lobby(); else this.mainMenu(); }
+      });
+    };
+    off = onInstallChange(() => { if (this.screen?.querySelector('.install-panel')) render(); });
+    render();
   }
 
   private preferences() {
@@ -200,12 +291,9 @@ export class App {
     d.querySelector('[data-a="back"]')!.addEventListener('click', () => this.mainMenu());
   }
 
-  private achievements() {
-    const earned = new Set(earnedAchievements());
-    const entries = (Object.entries(ACHIEVEMENTS) as [AchievementKey, typeof ACHIEVEMENTS[AchievementKey]][]).map(([key, a]) =>
-      `<li class="achievement-entry ${earned.has(key) ? 'earned' : 'locked'}"><span class="achievement-icon" aria-hidden="true">${a.icon}</span><div><b>${escapeHtml(a.name)}${earned.has(key) ? ' ✓' : ''}</b><p>${escapeHtml(a.description)}</p></div></li>`).join('');
-    const d = this.show(`<div class="panel achievements-panel"><h2>ДОСТИЖЕНИЯ</h2><p class="flavor">${earned.size}/${Object.keys(ACHIEVEMENTS).length} · личная трудовая книжка на этом устройстве</p><ul class="achievement-list">${entries}</ul><button class="btn primary" data-a="back">В меню</button></div>`);
-    d.querySelector('[data-a="back"]')!.addEventListener('click', () => this.mainMenu());
+  private achievements(back: () => void = () => this.mainMenu()) {
+    const d = this.show(`<div class="panel achievements-panel"><h2>ДОСТИЖЕНИЯ</h2>${achievementsMarkup()}<button class="btn primary" data-a="back">Назад</button></div>`);
+    d.querySelector('[data-a="back"]')!.addEventListener('click', back);
   }
 
   private stopGame() {
@@ -286,6 +374,13 @@ export class App {
   net: NetSession | null = null;
   private netResult = false;
   private resultHost = false;
+  /** a sub-screen of the lobby (editor, achievements, controls) is open: state patches must not redraw */
+  private lobbySub = false;
+  /** the server gave our seat to the same player's newer connection (another tab / the browser) */
+  private replaced: Room | null = null;
+  /** rare achievements earned in this room and not yet told to the chat (D62) */
+  private pendingShare = new Set<AchievementKey>();
+  private portraits = new Map<string, string>();
 
   serverUrl() {
     if (settings.server) return settings.server;
@@ -318,19 +413,25 @@ export class App {
     this.connect('host', '', d.querySelector('.err')!);
   }
 
+  private joinOptions() {
+    return { name: settings.name, look: settings.look, pid: this.pid(), ach: earnedAchievements().length };
+  }
+
   private async connect(mode: 'host' | 'join', code: string, err: Element): Promise<boolean> {
     try {
       const client = new Client(this.serverUrl());
       if (mode === 'join') await fetch(this.httpBase() + '/api/rooms/resume', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ code }) }).catch(() => null);
       const room = mode === 'host'
-        ? await client.create('game', { name: settings.name, look: settings.look, ...(settings.dev && LEVELS[settings.devLevel] ? { level: settings.devLevel } : {}) })
-        : await client.joinById(code, { name: settings.name, look: settings.look });
+        ? await client.create('game', { ...this.joinOptions(), ...(settings.dev && LEVELS[settings.devLevel] ? { level: settings.devLevel } : {}) })
+        : await client.joinById(code, this.joinOptions());
       this.bindRoom(room, client);
       saveRoom(room.roomId, room.state.level);
+      setActiveRoom(room.roomId);
       if (room.state.phase === 'lobby') this.lobby();
       return true;
     } catch (e) {
-      err.textContent = mode === 'join' ? 'Комната не найдена или заполнена.' : 'Сервер недоступен (запустите npm run server).';
+      const msg = String((e as Error)?.message ?? '');
+      err.textContent = mode === 'join' ? (/заполнена/.test(msg) ? 'Комната заполнена: уже 4 сотрудника.' : 'Комната не найдена или заполнена.') : 'Сервер недоступен (запустите npm run server).';
       console.warn(e);
       return false;
     }
@@ -338,7 +439,9 @@ export class App {
 
   private bindRoom(room: Room, client: Client) {
     this.room = room;
+    this.replaced = null;
     this.netResult = false;
+    this.lobbySub = false;
     let recoveredPhase = '';
     const restorePhase = () => {
       if (this.room !== room) return;
@@ -358,17 +461,44 @@ export class App {
     room.onStateChange(restorePhase);
     room.onMessage('start', (m: { level: string }) => { if (this.room === room) this.netStart(m.level); });
     room.onMessage('snap', (snap: Snapshot) => { if (this.room === room) this.net?.onSnapshot(snap); });
-    room.onMessage('ev', (ev: SimEvent[]) => { if (this.room === room) this.net?.onEvents(ev); });
+    room.onMessage('ev', (ev: SimEvent[]) => {
+      if (this.room !== room) return;
+      for (const e of ev) if (e.e === 'achievement' && e.id === room.sessionId && isRare(e.key)) this.pendingShare.add(e.key as AchievementKey);
+      this.net?.onEvents(ev);
+    });
     room.onMessage('end', (m: NetEnd) => { if (this.room === room) this.netEnd(m); });
     room.onMessage('lobby', () => { if (this.room === room) { this.stopGame(); this.net = null; this.lobby(); } });
-    room.onLeave(() => { if (this.room === room) void this.reconnect(room, client); });
+    room.onMessage('replaced', () => { if (this.room === room) this.replaced = room; });
+    room.onMessage('summoned', (r: { ok?: boolean; error?: string }) => this.lobbyNote(r.ok ? '📣 Позвали чат — ждём коллег!' : r.error ?? 'Не получилось'));
+    room.onMessage('shared', (r: { key: string; ok?: boolean; error?: string }) => {
+      if (r.ok) this.pendingShare.delete(r.key as AchievementKey);
+      this.ui.querySelectorAll<HTMLButtonElement>(`[data-share="${r.key}"]`).forEach((b) => { b.disabled = !!r.ok; b.textContent = r.ok ? 'Отправлено в чат ✓' : (r.error ?? 'Не получилось'); });
+    });
+    room.onLeave(() => {
+      if (this.room !== room) return;
+      if (this.replaced === room) { this.otherWindow(room.roomId); return; }
+      void this.reconnect(room, client);
+    });
     restorePhase();
+  }
+
+  /** D59: the same player continued elsewhere (another tab, the browser after Telegram). */
+  private otherWindow(code: string) {
+    this.stopGame(); this.net = null; this.room = null;
+    const d = this.show(`<div class="panel center"><h2>ИГРА ОТКРЫТА В ДРУГОМ ОКНЕ</h2>
+      <p class="flavor">Вы продолжили в другой вкладке или браузере — место в комнате ${escapeHtml(code)} теперь там. Здесь можно вернуть его себе.</p>
+      <button class="btn primary" data-a="here">Играть здесь</button><button class="btn ghost" data-a="menu">В меню</button></div>`);
+    d.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.a;
+      if (a === 'here') { if (this.tg) this.chatRoom(); else void this.resumeRoom(code); }
+      if (a === 'menu') this.mainMenu();
+    });
   }
 
   private async reconnect(old: Room, client: Client) {
     const token = old.reconnectionToken;
     this.stopGame(); this.net = null;
-    const panel = this.show(`<div class="panel center"><h2>ВОЗВРАЩАЕМСЯ В БОЙ</h2><p class="flavor">Восстанавливаем соединение… Команда ждёт до 25 секунд.</p><button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
+    const panel = this.show(`<div class="panel center"><h2>ВОЗВРАЩАЕМСЯ В БОЙ</h2><p class="flavor">Восстанавливаем соединение… Ваше место в комнате держится за вами.</p><button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
     panel.querySelector('button')!.addEventListener('click', () => this.leaveRoom());
     const deadline = Date.now() + 24000;
     while (this.room === old && Date.now() < deadline) {
@@ -394,7 +524,10 @@ export class App {
       }
     }
     if (this.room !== old) return;
-    this.room = null; this.mainMenu(); this.toastMenu('Не удалось вернуться. Войдите в комнату по коду.');
+    // D59: the reconnection window is over, but the seat is kept by player id — join again by code
+    this.room = null;
+    if (this.tg) { this.chatRoom(); return; }
+    void this.resumeRoom(old.roomId, true);
   }
 
   private toastMenu(text: string) {
@@ -404,45 +537,141 @@ export class App {
 
   leaveRoom() {
     const r = this.room;
-    this.room = null; this.net = null;
+    this.room = null; this.net = null; this.lobbySub = false;
+    clearActiveRoom();
+    this.pendingShare.clear();
     r?.leave(true);
     this.mainMenu();
   }
 
+  private portrait(look: string, slot: number) {
+    const key = look || 'p' + (slot % 4);
+    let url = this.portraits.get(key);
+    if (!url) { url = lookPortrait(key, false, 2); this.portraits.set(key, url); }
+    return url;
+  }
+
+  /** D58: the lobby looks like the main menu — your card, your colleagues' portraits, the host's choice. */
   lobby() {
     const room = this.room;
-    if (!room) return;
+    if (!room || this.lobbySub) return;
     telegramBack(() => this.leaveRoom());
-    const st = room.state;
+    if (this.screen?.dataset.lobby !== room.roomId) this.lobbyShell(room);
+    this.renderLobby(room);
+  }
+
+  private lobbyShell(room: Room) {
+    const st = room.state as any;
+    const chat = st.chat as string;
+    const d = this.show(`<div class="menu lobby">
+      <div class="logo">CHKN<span>OUTBREAK</span></div>
+      ${this.desktopBanner()}
+      <div class="lobby-head">
+        <div><div class="menu-label">${chat ? 'Комната чата · ' + escapeHtml(chat) : 'Комната · продиктуйте код коллегам'}</div>
+        <div class="code">${escapeHtml(st.code)}</div></div>
+        <button class="btn tiny ghost" data-a="invite">Пригласить</button>
+      </div>
+      <div class="me-card">
+        <img class="me-portrait" src="${this.portrait(settings.look, 0)}" alt="">
+        <div class="me-fields">
+          <label class="field"><span>Имя сотрудника</span><input class="name" maxlength="14" value="${escapeHtml(settings.name)}"></label>
+          <button class="btn tiny" data-a="look">Изменить внешность</button>
+        </div>
+      </div>
+      <div class="menu-label lobby-count"></div>
+      <div class="team"></div>
+      <div class="lobby-actions"></div>
+      <div class="lobby-note flavor"></div>
+      <div class="lobby-share"></div>
+      ${st.summon ? '<button class="btn" data-a="summon">📣 Призвать чат</button>' : ''}
+      <div class="menu-extras">
+        <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
+        <button class="btn ghost" data-a="controls">Как управлять</button>
+      </div>
+      <div class="flavor tiny-help">1–4 игрока против стаи. E: нажать — поделиться патронами, держать — лечить или поднять. Опоздавшие подключаются прямо в бой.</div>
+      <button class="btn ghost" data-a="leave">Выйти из комнаты</button></div>`);
+    d.dataset.lobby = room.roomId;
+    const name = d.querySelector<HTMLInputElement>('.name')!;
+    name.addEventListener('change', () => { settings.name = name.value.trim() || 'Сотрудник'; saveSettings(); room.send('profile', { name: settings.name }); });
+    const sub = (fn: (back: () => void) => void) => { this.lobbySub = true; fn(() => { this.lobbySub = false; this.lobby(); }); };
+    d.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-a],[data-share]');
+      if (!btn || (btn instanceof HTMLButtonElement && btn.disabled)) return;
+      if (btn.dataset.share) { (btn as HTMLButtonElement).disabled = true; btn.textContent = 'Отправляем…'; room.send('share', { key: btn.dataset.share }); return; }
+      const a = btn.dataset.a;
+      const me = room.state.players.get(room.sessionId);
+      if (a === 'ready') room.send('ready', { ready: !me?.ready });
+      if (a === 'continue') room.send('start', { fresh: false });
+      if (a === 'fresh') {
+        if (room.state.saved && !btn.classList.contains('confirm')) { btn.classList.add('confirm'); btn.innerHTML = 'Точно заново?<small>сохранение команды сотрётся</small>'; return; }
+        room.send('start', { fresh: true });
+      }
+      if (a === 'summon') { (btn as HTMLButtonElement).disabled = true; room.send('summon'); setTimeout(() => { (btn as HTMLButtonElement).disabled = false; }, 4000); }
+      if (a === 'invite') {
+        const url = `${location.origin}/?room=${room.roomId}`;
+        const r = await shareLink(url, 'CHKN OUTBREAK', `Заходи в комнату ${room.roomId}`);
+        this.lobbyNote(r === 'copied' ? `Ссылка скопирована: ${url}` : r === 'shared' ? 'Приглашение отправлено' : `Код комнаты: ${room.roomId}`);
+      }
+      if (a === 'look') sub((back) => { const host = this.show(''); openEditor(host, () => { room.send('profile', { look: settings.look }); back(); }); });
+      if (a === 'achievements') sub((back) => this.achievements(back));
+      if (a === 'controls') sub((back) => { const p = this.show(`<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup()}<button class="btn primary" data-a="back">Понятно</button></div>`); p.querySelector('[data-a="back"]')!.addEventListener('click', back); });
+      if (a === 'browser') this.openInBrowser(btn);
+      if (a === 'banner-close') this.closeBanner(btn);
+      if (a === 'leave') this.leaveRoom();
+    });
+  }
+
+  private lobbyNote(text: string) {
+    const el = this.screen?.querySelector('.lobby-note');
+    if (el) el.textContent = text;
+  }
+
+  private renderLobby(room: Room) {
+    const d = this.screen!;
+    const st = room.state as any;
     const me = st.players.get(room.sessionId);
-    const list: string[] = [];
-    let allReady = true;
-    st.players.forEach((p: any) => {
-      if (!p.ready && !p.host) allReady = false;
+    const myImg = d.querySelector<HTMLImageElement>('.me-portrait');
+    if (me && myImg) { const src = this.portrait(me.look, me.slot); if (myImg.getAttribute('src') !== src) myImg.src = src; }
+    const players: any[] = [];
+    st.players.forEach((p: any) => players.push(p));
+    players.sort((a, b) => a.slot - b.slot);
+    const host = players.find((p) => p.host);
+    const cards = players.map((p) => {
       const col = '#' + PLAYER_COLORS[p.slot % 4].toString(16).padStart(6, '0');
-      const status = (p.host ? 'ведущий' : p.ready ? 'готов' : 'не готов') + (p.connected ? '' : ' · переподключается');
-      list.push(`<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}${p.id === room.sessionId ? ' (вы)' : ''}</b><span class="st ${p.ready || p.host ? 'ok' : ''}">${status}</span></div>`);
+      const status = !p.connected ? 'переподключается…' : p.host ? '★ ведущий' : p.ready ? 'готов' : 'не готов';
+      return `<div class="mate ${p.id === room.sessionId ? 'me' : ''} ${p.connected ? '' : 'away'}" style="--c:${col}">
+        <img src="${this.portrait(p.look, p.slot)}" alt="">
+        <b>${escapeHtml(p.name)}${p.id === room.sessionId ? ' (вы)' : ''}</b>
+        <span class="st ${p.ready || p.host ? 'ok' : ''}">${status}</span>
+        ${p.ach ? `<span class="ach" title="Достижения">🏅 ${p.ach}</span>` : ''}</div>`;
     });
-    const action = me?.host
-      ? `<button class="btn primary" data-a="start" ${allReady ? '' : 'disabled'}>${allReady ? 'Играть / продолжить' : 'Ждём готовности…'}</button>`
-      : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>`;
-    const chat = (st as any).chat as string;
-    const d = this.show(`<div class="panel center">
-      <h2>${chat ? 'КОМНАТА ЧАТА' : 'ЛОББИ'}</h2>
-      ${chat
-        ? `<div class="flavor">«${escapeHtml(chat)}» — все, кто откроет игру из этого чата, попадут сюда. Код для остальных:</div>`
-        : '<div class="flavor">Код комнаты — продиктуйте коллегам:</div>'}
-      <div class="code">${escapeHtml(st.code)}</div>
-      <div class="plist">${list.join('')}</div>
-      <div class="flavor" style="font-size:13px">1–4 игрока против стаи. E: нажать — поделиться патронами, держать — лечить или поднять. После смерти вы вернётесь человеком в передышку. Берегитесь: даже союзные сотрудники могут превратиться!</div>
-      ${action}
-      <button class="btn ghost" data-a="leave">Выйти</button></div>`);
-    d.addEventListener('click', (e) => {
-      const act = (e.target as HTMLElement).dataset.a;
-      if (act === 'ready') room.send('ready', { ready: !me?.ready });
-      if (act === 'start') room.send('start');
-      if (act === 'leave') this.leaveRoom();
-    });
+    for (let i = players.length; i < 4; i++) cards.push('<div class="mate empty"><div class="slot-empty">?</div><b>свободно</b><span class="st">ждём коллегу</span></div>');
+    const team = cards.join('');
+    const teamEl = d.querySelector('.team')!;
+    if ((teamEl as HTMLElement).dataset.html !== team) { teamEl.innerHTML = team; (teamEl as HTMLElement).dataset.html = team; }
+    d.querySelector('.lobby-count')!.textContent = `Коллеги · ${players.filter((p) => p.connected).length}/4`;
+    const saved = st.saved as string;
+    const notReady = players.filter((p) => p.connected && !p.host && !p.ready).length;
+    const actions = me?.host
+      ? `<div class="row">${saved
+          ? `<button class="btn cont primary" data-a="continue">Продолжить<small>${escapeHtml(levelCaption(saved))}</small></button><button class="btn cont" data-a="fresh">Новая игра<small>с первого этажа</small></button>`
+          : `<button class="btn cont primary" data-a="fresh">Начать<small>${escapeHtml(levelCaption(st.level) || 'с первого этажа')}</small></button>`}</div>
+        <div class="flavor small">${notReady ? `Не готовы: ${notReady}. Можно начать и так — опоздавшие подключатся в бою.` : 'Вы ведущий: выбираете, продолжить или начать заново.'}</div>`
+      : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>
+        <div class="flavor small">Начинает ведущий${host ? ' — ' + escapeHtml(host.name) : ''}: ${saved ? 'продолжить «' + escapeHtml(levelCaption(saved)) + '» или начать заново' : 'новая игра'}.</div>`;
+    const actEl = d.querySelector<HTMLElement>('.lobby-actions')!;
+    const key = actions.replace(/\s+/g, ' ');
+    if (actEl.dataset.html !== key) { actEl.innerHTML = actions; actEl.dataset.html = key; }
+    const share = this.shareButtons(!!st.summon);
+    const shEl = d.querySelector<HTMLElement>('.lobby-share')!;
+    if (shEl.dataset.html !== share) { shEl.innerHTML = share; shEl.dataset.html = share; }
+  }
+
+  /** D62: «tell the chat» buttons for rare achievements earned in this room. */
+  private shareButtons(chat: boolean) {
+    if (!chat || !this.pendingShare.size) return '';
+    return `<div class="share-box"><div class="menu-label">Редкие достижения — рассказать чату?</div>${[...this.pendingShare].map((k) =>
+      `<button class="btn tiny" data-share="${k}">${ACHIEVEMENTS[k].icon} «${escapeHtml(ACHIEVEMENTS[k].name)}» → в чат</button>`).join('')}</div>`;
   }
 
   private netStart(level: string) {
@@ -452,7 +681,9 @@ export class App {
     const json = this.game.cache.tilemap.get('map_' + level)?.data as TiledMap | undefined;
     if (!json) return;
     this.netResult = false;
+    this.lobbySub = false;
     saveRoom(room.roomId, level);
+    setActiveRoom(room.roomId);
     const net = new NetSession(room, level, json);
     this.net = net;
     this.runSession(net);
@@ -472,11 +703,14 @@ export class App {
     this.net = null; this.netResult = true;
     const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
+      ${m.kind !== 'gameover' ? this.shareButtons(!!(this.room?.state as any)?.summon) : ''}
       ${m.kind === 'win' && isHost ? '<button class="btn primary" data-a="lobby">В лобби</button>' : ''}
-      ${m.kind === 'gameover' && isHost ? '<button class="btn primary" data-a="retry-room">Заново с начала этажа</button>' : ''}
+      ${m.kind === 'gameover' && isHost ? '<button class="btn primary" data-a="retry-room">Заново с начала этажа</button><button class="btn" data-a="lobby">В лобби</button>' : ''}
       <button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
     d.addEventListener('click', (e) => {
-      const act = (e.target as HTMLElement).dataset.a;
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-a],[data-share]');
+      if (el?.dataset.share) { (el as HTMLButtonElement).disabled = true; el.textContent = 'Отправляем…'; this.room?.send('share', { key: el.dataset.share }); return; }
+      const act = el?.dataset.a;
       if (act === 'lobby') this.room?.send('lobby');
       if (act === 'retry-room') this.room?.send('retry');
       if (act === 'leave') this.leaveRoom();

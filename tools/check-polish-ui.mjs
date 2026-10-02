@@ -47,7 +47,7 @@ try {
   results.push('solo death panel appears; retry resets the current floor');
   await page.goto(base+'/?loop=timeout');
   await page.locator('button[data-a="host"]').click();
-  await page.locator('button[data-a="start"]').waitFor(); await page.locator('button[data-a="start"]').click();
+  await page.locator('button[data-a="fresh"],button[data-a="continue"]').first().waitFor(); await page.locator('button[data-a="fresh"],button[data-a="continue"]').first().click();
   await page.waitForFunction(()=>__app.net?.gotSnapshot);
   const entry=await page.evaluate(()=>{const p=__app.net.view.players.find(p=>p.id===__app.net.myId);return {x:p.x,y:p.y};});
   await page.keyboard.down('d');await page.waitForTimeout(700);await page.keyboard.up('d');

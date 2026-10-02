@@ -25,7 +25,7 @@ try {
   await friend.getByRole('button',{name:'Войти',exact:true}).click();
   await friend.locator('.code').waitFor();
   await friend.getByRole('button',{name:'Готов',exact:true}).click();
-  await host.locator('button[data-a="start"]').click();
+  await host.locator('button[data-a="fresh"]').click();
   for (const page of [host,friend]) await page.waitForFunction(() => window.__app?.net?.gotSnapshot && window.__game?.scene.isActive('game'));
   results.push('two app menus → ready → playing');
   const id = await friend.evaluate(() => __app.room.sessionId);

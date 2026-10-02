@@ -18,6 +18,8 @@
     "check:coop": "tsx tools/check-coop.ts",
     "check:network": "tsx tools/check-network.ts",
     "check:network-ui": "node tools/check-network-ui.mjs",
+    "check:lobby": "tsx tools/check-lobby.ts",
+    "check:lobby-ui": "node --import tsx tools/check-lobby-ui.mjs",
     "check:art": "node tools/check-art.mjs",
     "check:office": "node tools/office-sample.mjs",
     "check:levels": "tsx tools/check-levels.ts",
@@ -31,7 +33,9 @@
     "check:engagement-ui": "node tools/check-engagement-ui.mjs",
     "qa:play": "node tools/qa-play.mjs",
     "qa:menu": "node tools/qa-menu.mjs",
-    "art:fetch": "node tools/art/lpc-fetch.mjs"
+    "art:fetch": "node tools/art/lpc-fetch.mjs",
+    "icons": "tsx tools/build-icons.ts",
+    "bench:net": "tsx tools/bench-net.ts"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",

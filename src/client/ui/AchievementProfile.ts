@@ -16,3 +16,12 @@ export function rememberAchievements(keys: readonly string[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(earned)); } catch { /* storage unavailable */ }
   return earned;
 }
+
+/** List of all achievements, earned ones marked (main menu, lobby, pause — D58). */
+export function achievementsMarkup() {
+  const earned = new Set(earnedAchievements());
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const entries = (Object.entries(ACHIEVEMENTS) as [AchievementKey, typeof ACHIEVEMENTS[AchievementKey]][]).map(([key, a]) =>
+    `<li class="achievement-entry ${earned.has(key) ? 'earned' : 'locked'}"><span class="achievement-icon" aria-hidden="true">${a.icon}</span><div><b>${esc(a.name)}${earned.has(key) ? ' ✓' : ''}${'rare' in a ? ' <i class="rare">редкое</i>' : ''}</b><p>${esc(a.description)}</p></div></li>`).join('');
+  return `<p class="flavor">${earned.size}/${Object.keys(ACHIEVEMENTS).length} · личная трудовая книжка на этом устройстве</p><ul class="achievement-list">${entries}</ul>`;
+}

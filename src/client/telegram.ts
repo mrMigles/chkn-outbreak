@@ -3,11 +3,17 @@
 // Either way the server answers with the chat's room code and the player's Telegram name, and the app joins
 // that room right away: everyone who opens the game from one chat plays together («чат — это комната»).
 
-export interface TgSession { code: string; name: string; chat: string; chatTitle?: string; verified: boolean; personal?: boolean }
+export interface TgSession {
+  code: string; name: string; chat: string; chatTitle?: string; verified: boolean; personal?: boolean;
+  /** seat key of this Telegram user (same in the Mini App, the game window and the browser) */
+  pid?: string;
+  /** signed ?tg= token: the same session in an ordinary browser tab (D60) */
+  link?: string;
+}
 
 type WebApp = {
   initData: string; platform: string; version: string;
-  ready(): void; expand(): void; close(): void;
+  ready(): void; expand(): void; close(): void; openLink?(url: string, o?: { try_instant_view?: boolean }): void;
   disableVerticalSwipes?(): void; requestFullscreen?(): void; lockOrientation?(): void; isVersionAtLeast?(v: string): boolean;
   setHeaderColor?(c: string): void; setBackgroundColor?(c: string): void;
   BackButton?: { show(): void; hide(): void; onClick(fn: () => void): void; offClick(fn: () => void): void };
@@ -60,6 +66,22 @@ export async function telegramSession(httpBase: string): Promise<TgSession | { e
   } catch {
     return { error: 'Сервер игры недоступен' };
   }
+}
+
+/**
+ * D60: Telegram on a computer opens the game in a small window. Mini App platforms tell us directly;
+ * the HTML5-game window has no SDK, so a mouse-driven page inside Telegram counts as a computer.
+ */
+export function isTelegramDesktop() {
+  if (!isTelegram()) return false;
+  if (app) return /^(tdesktop|macos|web|weba|webk|unigram)$/.test(app.platform);
+  return !matchMedia('(pointer: coarse)').matches;
+}
+
+/** Opens a URL outside Telegram (the system browser); false when only a new tab could be tried. */
+export function openExternal(url: string) {
+  if (app?.openLink) { try { app.openLink(url); return true; } catch { /* fall through */ } }
+  return !!window.open(url, '_blank', 'noopener');
 }
 
 /** Telegram «Назад» in the header: shown in a game/lobby, hidden in the menu. */

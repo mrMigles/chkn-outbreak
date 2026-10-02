@@ -12,6 +12,8 @@ export interface RoomCheckpoint {
   version: 3; level: string; seed: number; carry?: Carry; difficulty?: number;
   members: Member[]; frames: Frame[]; chat?: string; updated?: string;
   seats?: Member[];
+  /** slot → persistent player id: whoever returns (closed tab, new device) reclaims their own seat. */
+  pids?: Record<number, string>;
 }
 const members = (w: World): Member[] => w.players.map(p => ({ id: p.id, name: p.name, slot: p.slot, look: p.look, connected: p.connected }));
 const compact = (id: string, p: PlayerInput): Input => [id, p.x, p.y, p.aim, Number(p.fire) | (Number(p.reload) << 1) | (Number(p.interact) << 2), p.weapon];
@@ -21,6 +23,9 @@ export class RoomRecording {
   private lastInputs = new Map<string, string>();
   private lastMembers: string;
   safeLength = 0;
+  /** Already serialized frames (D59): saving costs only the frames since the last save. */
+  private framesJson = '';
+  private serialized = 0;
   constructor(public world: World, previous?: RoomCheckpoint) {
     this.data = previous ?? { version: 3, level: world.mapId, seed: world.opts.seed!, carry: world.opts.carry, difficulty: world.opts.difficulty, members: members(world), frames: [] };
     this.lastMembers = JSON.stringify(members(world));
@@ -41,6 +46,15 @@ export class RoomRecording {
   }
   checkpoint(): RoomCheckpoint {
     return { ...this.data, frames: this.data.frames.slice(0, this.safeLength), seats: members(this.world), updated: new Date().toISOString() };
+  }
+  /** Same JSON as `JSON.stringify(checkpoint())`, but frames are stringified once and appended. */
+  serialize(extra: Partial<RoomCheckpoint> = {}): string {
+    for (; this.serialized < this.safeLength; this.serialized++) {
+      const f = JSON.stringify(this.data.frames[this.serialized]);
+      this.framesJson = this.framesJson ? this.framesJson + ',' + f : f;
+    }
+    const { frames: _frames, ...head } = { ...this.data, seats: members(this.world), updated: new Date().toISOString(), ...extra };
+    return JSON.stringify(head).slice(0, -1) + ',"frames":[' + this.framesJson + ']}';
   }
   /** Restored seats retain their loadout, keys, companions and exact position under new connection ids. */
   resume(roster: Member[], heal = true) {
@@ -73,9 +87,11 @@ export class RoomRecording {
 function restoreSeats(world: World, roster: Member[], heal: boolean) {
   for (const p of world.players) p.connected = false;
   for (const m of roster) {
-    const old = world.players.find(p => p.slot === m.slot);
+    const old = world.players.find(p => p.slot === m.slot), oldId = old?.id;
     const p = old ? world.rebindPlayer(old.id, m.id, m.name, m.look) : world.addPlayer(m.id, m.name, m.slot, m.look);
     p!.connected = m.connected;
+    // D59: coming back (new tab, reload) to a dead character never respawns it; the next floor does
+    if (!heal && p!.state === 'dead' && oldId !== undefined && oldId !== m.id) p!.benched = true;
     if (heal && m.connected) {
       if (p!.state !== 'alive') world.cure(p!);
       p!.hp = Math.max(60, p!.hp); p!.downT = 0; p!.hurtT = 0; p!.reloadT = 0;

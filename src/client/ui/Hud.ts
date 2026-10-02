@@ -230,6 +230,7 @@ export class Hud {
     const st = this.q('.hud-state');
     if (me.state === 'downed') { st.textContent = `ВЫ РАНЕНЫ — ждите помощи (${Math.ceil(me.downT)})`; st.className = 'hud-state show downed'; }
     else if (me.state === 'chicken') { st.textContent = 'ВЫ — КУРИЦА. Заклюйте бывших коллег!'; st.className = 'hud-state show chicken'; }
+    else if (me.state === 'dead' && !solo && me.benched) { st.textContent = 'НАБЛЮДЕНИЕ · вы вернулись к погибшему персонажу — оживёте на следующем этаже'; st.className = 'hud-state show'; }
     else if (me.state === 'dead' && !solo) { st.textContent = 'НАБЛЮДЕНИЕ · вернётесь к команде в передышку'; st.className = 'hud-state show'; }
     else st.className = 'hud-state';
   }

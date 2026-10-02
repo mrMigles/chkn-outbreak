@@ -4,7 +4,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Client, type Room } from 'colyseus.js';
-import type { Snapshot } from '../src/shared/protocol';
+import { mergeSnapshot, type Snapshot } from '../src/shared/protocol';
 const port = Number(process.env.PROGRESS_TEST_PORT || 2583);
 const http = `http://127.0.0.1:${port}`, client = new Client(`ws://127.0.0.1:${port}`);
 const dir = path.resolve('data/qa-progress');
@@ -34,7 +34,7 @@ async function stop() {
 }
 function bind(room: Room) {
   rooms.push(room);
-  room.onMessage('snap', (s: Snapshot) => snapshots.set(room.sessionId, s));
+  room.onMessage('snap', (s: Snapshot) => snapshots.set(room.sessionId, mergeSnapshot(snapshots.get(room.sessionId), s)));
   for (const kind of ['start', 'end', 'ev', 'lobby']) room.onMessage(kind, () => {});
   return room;
 }

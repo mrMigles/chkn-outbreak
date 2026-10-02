@@ -2,6 +2,12 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 9 (2026-10-02, Claude) — lobby, seats that survive closed tabs, PWA, Telegram summon
+
+User report (11 items), decisions D58–D62. Lobby = main menu with the team (portraits, look/name changes, host by join order with instant transfer, «Продолжить / Новая игра», readiness only a hint). Seats belong to a persistent player id: a closed tab or crash comes back to the same seat/position (reserved for the whole floor), a second window takes the seat over, a dead character stays benched until the next floor, newcomers drop into the running floor. Telegram chat: straight to the lobby, «Призвать чат», rare achievements → chat, «Открыть в браузере» on computers keeps the seat. PWA with `/?install=1` and `/install`. Freezes: delta snapshots (−40 % traffic), incremental async room saves (9 ms → 0.1 ms on the event loop), 100 ms snapshot interpolation on clients.
+
+Checks: build, all sim checks, check:progress, check:network, check:telegram, new **check:lobby** (14, own server + fake Telegram API, in CI), new **check:lobby-ui** (8, real browsers on the production build; screenshots in `docs/qa/lobby/`), network-ui, polish-ui, telegram-ui, engagement-ui, qa-phone, smoke. Not tried: a real Telegram desktop client (the hand-over is tested with a signed game link in Chromium), real iOS/Android install prompts, internet latency.
+
 ## Iteration 8 (2026-10-02, Claude) — floor bonuses, nudges, threat arrows
 
 D57: an optional «★ Бонус этажа» per floor (sim-side, one payout, 5 new achievements + 2 skill achievements), situational alerts/quips/companion jokes (`ui/Coach.ts`), off-screen threat arrows, ghost stick hints, left-handed mode, vibration, HUD size, release of stuck touches, one-popup-at-a-time in portrait. Builds on Codex's `docs/design/engagement.md`. All checks + `qa-phone` (5 viewports incl. large HUD) pass. Not tried on a real phone.

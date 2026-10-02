@@ -27,6 +27,10 @@ the network/Telegram checks against a real server, then builds and pushes `ghcr.
 
 Room progress is saved under its code every five seconds and when the room closes. If everyone dies, the death screen waits for the host to restart the current floor from its entrance and entry loadout. Leaving a living room or restarting the server still preserves its actual progress. Use «Продолжить последнюю комнату» or enter the original code, then start from the lobby. Saves include the current floor, inventory, companions, enemies and story events. Docker keeps them in the `chkn-progress` volume; outside Docker the default is `data/rooms` (`CHKN_SAVE_DIR` overrides it). Victory clears the room save. Older version-one saves retain their code, floor and entry loadout, but restart that floor because their input recording uses obsolete rules.
 
+**Lobby and seats (D58–D59).** The lobby looks like the main menu: your card (name, «Изменить внешность»), your colleagues' portraits, achievement counts and readiness. The host is whoever joined first; when the host leaves or drops, the next connected player leads at once. The host chooses **Продолжить** (the saved floor) or **Новая игра**; readiness is only a hint. Colleagues can join a running floor as fresh employees. Every browser profile (or Telegram user) has a persistent player id: closing the tab, crashing or reopening the game later goes straight back to the same seat, position and loadout (the seat stays reserved for the whole floor; only «Выйти» gives it up). Opening the game in a second window/browser moves the seat there and tells the old window. Coming back to a character that died waits for the next floor.
+
+**Install as an app (D61).** The game is a PWA: «📲 Установить игру» in the menu, or share `https://<host>/?install=1` (the bot's `/install` posts it). The service worker caches nothing but an offline notice, so installs never run stale builds.
+
 Options go into `.env` next to `docker-compose.yml`:
 
 | variable | default | |
@@ -44,6 +48,12 @@ Add the bot to a group and write `/play`: the bot posts the game card «Игра
 for the Mini App: opened from a chat (`/app` link with the chat as start parameter, attachment menu or the bot's menu button) it joins
 the chat room straight away. Opened outside a chat, the player gets a personal room. Inside Telegram the game goes fullscreen,
 the header «Назад» pauses / leaves the lobby, and taking damage vibrates.
+
+Everyone from the chat lands straight in its lobby (or in the running floor). In the lobby **«📣 Призвать чат»** makes the bot post an
+invitation with a play button (once a minute). Rare achievements (marked «редкое») can be told to the chat from the result screen
+after a floor. On a computer Telegram opens a small window: a banner offers **«Открыть в браузере»** — the browser tab gets the same
+Telegram identity and seat, the small window steps aside. The bot learns which chat a room belongs to from the game button or a
+Mini App opened in the chat; `/play` once in the chat is enough. Commands: `/play`, `/app`, `/install`.
 
 BotFather setup: `/newbot` → token; `/newgame` → short name (= `TELEGRAM_GAME`) with the game URL = `PUBLIC_URL`;
 optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/setinline` to offer the game in any chat via `@bot`.
@@ -68,6 +78,10 @@ optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/se
 | `npm run check:network` | real Colyseus clients; requires `npm run server` |
 | `npm run check:telegram` | chat rooms via the Telegram endpoints; requires a server (`SESSION_SECRET` for the game-link part) |
 | `npm run check:network-ui` | two app browser pages: menus, keyboard E revival and automatic reconnect |
+| `npm run check:lobby` | self-contained (own server + fake Telegram API): host election, profiles, continue/new, closed-tab seat recovery, window takeover, dead seats, mid-floor join, summon, achievement sharing, `/install`, delta snapshots, PWA files |
+| `npm run check:lobby-ui` | real browsers on the production build (own server): lobby portraits, look change, reopen-to-seat, pause achievements, Telegram desktop → browser hand-over, install page/service worker, phone lobby |
+| `npm run bench:net -- office7 10` | snapshot traffic full vs delta and room-save cost on a long floor |
+| `npm run icons` | PWA icons from the LPC chicken-person |
 | `npm run smoke` | short fights in all six scenes |
 | `node tools/qa-campaign.mjs <dir> [levels] [mobile]` | E2E autopilot through the campaign via the real UI (objective arrow, E, «Дальше») |
 | `node tools/qa-gun.mjs <prefix> [look]` | close-ups of the armed pose in 8 directions |

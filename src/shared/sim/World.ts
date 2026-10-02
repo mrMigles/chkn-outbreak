@@ -432,7 +432,7 @@ export class World implements WorldView {
   rallyTeam() {
     const lead = this.humanPlayers.find(p => p.connected);
     if (!lead || this.over) return;
-    for (const p of this.players) if (p.state === 'dead' && p.connected) {
+    for (const p of this.players) if (p.state === 'dead' && p.connected && !p.benched) {
       const [x, y] = this.map.move(lead.x, lead.y, HUMAN_R, 0, 0);
       p.x = x; p.y = y; p.input.x = x; p.input.y = y; p.tp++;
       p.state = 'alive'; p.hp = 60; p.downT = 0; p.reviveT = 0;

@@ -21,17 +21,18 @@ async function phone(user, chatInstance) {
 }
 const lobbyOf = async (page) => {
   await page.waitForSelector('.code', { timeout: 150000 });
-  return page.evaluate(() => ({ title: document.querySelector('.panel h2')?.textContent, code: document.querySelector('.code')?.textContent, players: [...document.querySelectorAll('.plist .pl b')].map((b) => b.textContent) }));
+  await page.waitForSelector('.lobby .code', { timeout: 150000 });
+  return page.evaluate(() => ({ title: document.querySelector('.lobby .menu-label')?.textContent, code: document.querySelector('.lobby .code')?.textContent, players: [...document.querySelectorAll('.team .mate:not(.empty) b')].map((b) => b.textContent) }));
 };
 try {
   const a = await phone({ id: 9001, first_name: 'Аня', last_name: 'Петухова' }, chat);
   const la = await lobbyOf(a);
-  assert.equal(la.title, 'КОМНАТА ЧАТА'); assert.match(la.code, /^T[A-Z]{3}$/);
+  assert.match(la.title, /^Комната чата/); assert.match(la.code, /^T[A-Z]{3}$/);
   console.log('PASS Mini App opened from a chat goes straight to the chat room lobby', la.code);
   const b = await phone({ id: 9002, first_name: 'Борис' }, chat);
   const lb = await lobbyOf(b);
   assert.equal(lb.code, la.code);
-  await a.waitForFunction(() => document.querySelectorAll('.plist .pl').length === 2, null, { timeout: 15000 });
+  await a.waitForFunction(() => document.querySelectorAll('.team .mate:not(.empty)').length === 2, null, { timeout: 15000 });
   const names = (await lobbyOf(a)).players.join(' | ');
   assert.ok(names.includes('Аня П.') && names.includes('Борис'), names);
   console.log('PASS second member joins the same room; Telegram names in the lobby:', names);
@@ -41,8 +42,8 @@ try {
   console.log('PASS a member of another chat gets another room');
   // host starts after the guest is ready: both are in the game
   await b.click('button[data-a="ready"]');
-  await a.waitForSelector('button[data-a="start"]:not([disabled])', { timeout: 15000 });
-  await a.click('button[data-a="start"]');
+  await a.waitForSelector('button[data-a="fresh"]', { timeout: 15000 });
+  await a.click('button[data-a="fresh"]');
   for (const p of [a, b]) await p.waitForFunction(() => window.__game?.scene?.getScene('game')?.session?.view?.players?.length === 2, null, { timeout: 150000 });
   console.log('PASS the chat room starts a co-op game for both phones');
   if (out) { await a.waitForTimeout(3000); await a.screenshot({ path: out + '-tg-a.png' }); await b.screenshot({ path: out + '-tg-b.png' }); }

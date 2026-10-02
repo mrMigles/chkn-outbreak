@@ -56,7 +56,7 @@ export function encodeSnapshot(w: WorldView): Snapshot {
       downT: Math.round(p.downT * 10) / 10, reviveT: Math.round(p.reviveT * 100) / 100, respawnT: Math.round(p.respawnT * 10) / 10,
       weapons: p.weapons, cur: p.cur, ammo: p.ammo, reloadT: Math.round(p.reloadT * 100) / 100, firing: p.firing,
       kills: p.kills, score: Math.floor(p.score), combo: p.combo, tp: p.tp, keys: p.keys, hurtT: Math.round(p.hurtT * 100) / 100, bloom: Math.round(p.bloom * 1000) / 1000,
-      supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected, buffs: p.buffs, achievements: p.achievements,
+      supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected, buffs: p.buffs, achievements: p.achievements, ...(p.benched ? { benched: true } : {}),
     })),
     e, bm, appearances: Object.fromEntries(w.enemies.filter(x => x.appearance).map(x => [x.id, x.appearance!])),
     n: w.npcs.filter((x) => x.mode !== 'gone').map((x) => ({ id: x.id, kind: x.kind, name: x.name, x: r1(x.x), y: r1(x.y), angle: Math.round(x.angle * 100) / 100, hp: Math.ceil(x.hp), maxHp: x.maxHp, mode: x.mode, weapon: x.weapon, rescued: x.rescued, follow: x.follow, hurtT: x.hurtT > 0 ? 0.2 : 0, mutation: x.mutation })),
@@ -64,6 +64,65 @@ export function encodeSnapshot(w: WorldView): Snapshot {
     d: w.doors.flatMap((d) => [d.id, d.open ? 1 : 0, d.locked ? 1 : 0]),
     br: w.barrels.flatMap((b) => [b.id, r1(b.x), r1(b.y)]),
     pd: w.pods.flatMap((p) => [p.id, r1(p.x), r1(p.y), p.broken ? 1 : 0]),
+  };
+}
+
+/** Player/NPC fields that rarely change: sent only when they differ from the last snapshot (D59). */
+const P_STICKY = ['slot', 'name', 'look', 'maxHp', 'weapons', 'ammo', 'keys', 'supplies', 'achievements', 'buffs', 'connected', 'benched', 'supportVersion'] as const;
+const N_STICKY = ['kind', 'name', 'maxHp', 'weapon', 'rescued', 'follow'] as const;
+export const KEYFRAME_EVERY = 40;
+
+/**
+ * Per-room snapshot stream (D59). Most of a full snapshot repeats itself 20 times a second — names,
+ * looks, inventories, enemy appearances — and on phones that was enough traffic to stall the stream.
+ * Every KEYFRAME_EVERY-th snapshot (and the next one after `keyframe()`, e.g. when someone joins) is
+ * complete; the others omit sticky fields that did not change. Messages are ordered and reliable, so
+ * a client merges a delta into what it already has.
+ */
+export class SnapshotEncoder {
+  private n = 0;
+  private force = true;
+  private players = new Map<string, Record<string, string>>();
+  private npcs = new Map<string, Record<string, string>>();
+  private looks = new Set<number>();
+  keyframe() { this.force = true; }
+  encode(w: WorldView): Snapshot & { kf?: 1 } {
+    const s: Snapshot & { kf?: 1 } = encodeSnapshot(w);
+    const key = this.force || this.n++ % KEYFRAME_EVERY === 0;
+    this.force = false;
+    if (key) { this.players.clear(); this.npcs.clear(); this.looks.clear(); s.kf = 1; }
+    const strip = (seen: Map<string, Record<string, string>>, list: Record<string, any>[], keys: readonly string[]) => {
+      const alive = new Set<string>();
+      for (const o of list) {
+        alive.add(o.id);
+        let last = seen.get(o.id);
+        if (!last) { last = {}; seen.set(o.id, last); }
+        for (const k of keys) {
+          const j = JSON.stringify(o[k] ?? null);
+          if (last[k] === j) delete o[k];
+          else { last[k] = j; if (o[k] === undefined) o[k] = null; }
+        }
+      }
+      for (const id of [...seen.keys()]) if (!alive.has(id)) seen.delete(id);
+    };
+    strip(this.players, s.p as Record<string, any>[], P_STICKY);
+    strip(this.npcs, s.n as Record<string, any>[], N_STICKY);
+    const looks: Snapshot['appearances'] = {};
+    for (const [id, a] of Object.entries(s.appearances)) if (!this.looks.has(+id)) { looks[+id] = a; this.looks.add(+id); }
+    s.appearances = looks;
+    return s;
+  }
+}
+
+/** Rebuilds a complete snapshot from a delta and the previous complete one (tools, bots, tests). */
+export function mergeSnapshot(prev: Snapshot | undefined, s: Snapshot): Snapshot {
+  const byId = <T extends { id?: unknown }>(list: T[] | undefined) => new Map((list ?? []).map((o) => [o.id, o]));
+  const pp = byId(prev?.p), pn = byId(prev?.n);
+  return {
+    ...s,
+    p: s.p.map((o) => ({ ...(pp.get(o.id) ?? {}), ...o })),
+    n: s.n.map((o) => ({ ...(pn.get(o.id) ?? {}), ...o })),
+    appearances: { ...(prev?.appearances ?? {}), ...s.appearances },
   };
 }
 
@@ -81,7 +140,7 @@ export function decodeEnemies(s: Snapshot, prev: Map<number, Enemy>): Enemy[] {
       x = { id, type, variant: e[i + 2], x: e[i + 3], y: e[i + 4], angle: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, state: 'idle', t: 0, cd: 0, aggro: true, target: null, speedMul: 1, burnT: 0, stunT: 0, flashT: 0, wanderA: 0, phase: 0, abilityCd: 0, ability: '', dormant: false };
     }
     x.type = type;
-    x.appearance = s.appearances?.[id];
+    x.appearance = s.appearances?.[id] ?? x.appearance;
     x.variant = e[i + 2];
     x.x = e[i + 3]; x.y = e[i + 4];
     x.angle = e[i + 5] / 100;

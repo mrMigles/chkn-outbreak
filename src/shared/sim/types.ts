@@ -46,6 +46,8 @@ export interface Player {
   downT: number;          // bleed-out timer
   reviveT: number;        // revive progress 0..1
   respawnT: number;       // chicken respawn countdown
+  /** D59: returned to a dead character mid-floor — spectates until the next floor (no rally). */
+  benched?: boolean;
   weapons: WeaponId[];
   cur: number;
   ammo: Partial<Record<WeaponId, AmmoState>>;

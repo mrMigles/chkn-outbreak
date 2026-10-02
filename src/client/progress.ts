@@ -45,3 +45,28 @@ export function levelCaption(id?: string) {
   const i = order.indexOf(lvl.id);
   return (i >= 0 ? `Этап ${i + 1}/${order.length} · ` : '') + lvl.title;
 }
+
+// D59: the room this browser is playing in. A closed tab or a crash comes back to it on the next start;
+// only «Выйти» forgets it. Six hours later it is stale.
+const ACTIVE = 'chkn-active-room';
+export function setActiveRoom(code: string) { try { localStorage.setItem(ACTIVE, JSON.stringify({ code, at: Date.now() })); } catch { /* ignore */ } }
+export function clearActiveRoom() { try { localStorage.removeItem(ACTIVE); } catch { /* ignore */ } }
+export function activeRoom(): string | null {
+  try {
+    const a = JSON.parse(localStorage.getItem(ACTIVE) || 'null') as { code?: string; at?: number } | null;
+    return a?.code && /^[A-Z]{4}$/.test(a.code) && Date.now() - (a.at ?? 0) < 6 * 3600e3 ? a.code : null;
+  } catch { return null; }
+}
+
+/** Persistent player id of this browser profile: the server gives the same seat back to it (D59). */
+export function browserPid() {
+  try {
+    let id = localStorage.getItem('chkn-pid');
+    if (!id || !/^[\w-]{8,64}$/.test(id)) {
+      const b = new Uint8Array(12); crypto.getRandomValues(b);
+      id = 'b-' + [...b].map((x) => x.toString(36).padStart(2, '0')).join('');
+      localStorage.setItem('chkn-pid', id);
+    }
+    return id;
+  } catch { return 'b-' + Math.random().toString(36).slice(2, 14); }
+}

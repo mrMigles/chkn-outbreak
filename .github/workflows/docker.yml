@@ -36,6 +36,8 @@ jobs:
       - run: npm run check:levels
       - run: npm run check:art
       - run: npm run build
+      # own server + fake Telegram API: lobby, seats, summon/share, PWA files (needs the build above)
+      - run: npm run check:lobby
       # real Colyseus clients against the production server
       - name: network checks
         run: |
