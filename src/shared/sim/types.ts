@@ -108,6 +108,7 @@ export interface Npc {
   weapon: WeaponId | null;
   fireCd: number;
   follow: string | null;      // player id
+  followMoving?: boolean;
   goal: { x: number; y: number } | null;
   lines: string[];
   talkCd: number;

@@ -25,6 +25,9 @@ p.rect(19, 27, 20, 27, 'c'); p.rect(8, 27, 10, 27, 'c');
 p.rect(44, 27, 46, 27, 'c'); p.rect(54, 27, 56, 27, 'c');
 p.rect(49, 8, 49, 10, 'c'); p.rect(49, 19, 49, 25, 'c');
 p.rect(59, 24, 61, 26, 'c');
+// Castor's last office has a single card-reader entrance. No northern/southern bypass.
+p.rect(59, 22, 67, 22, '#'); p.rect(59, 23, 59, 31, '#'); p.rect(60, 31, 64, 31, '#');
+p.rect(59, 25, 59, 26, 'D');
 const objects: ObjSpec[] = [];
 const obj = (type: string, name: string, x: number, y: number, props?: ObjSpec['props'], size?: [number, number]) => objects.push({ type, name, at: [x, y], props, size });
 const prop = (name: string, x: number, y: number) => obj('prop', name, x, y);
@@ -51,22 +54,29 @@ for (let i = 0; i < 4; i++) obj('spawn', 'player', 44 + (i % 2) * 1.5, 35 - Math
 for (const [id, title, x, y] of [
   ['andrey', 'Андрей', 61.5, 27], ['sergey', 'Серёга', 63, 27],
   ['vlad', 'Влад', 46, 9], ['stas', 'Стас', 6, 9], ['pasha', 'Паша', 10, 9],
-] as const) obj('npc', id, x, y, { title, mode: id === 'stas' || id === 'pasha' ? 'idle' : 'cower', hp: 200, story: true, essential: true, weapon: id === 'andrey' ? 'smg' : '', angle: id === 'stas' ? 0 : id === 'pasha' ? 180 : 90, lines: id === 'stas' || id === 'pasha' ? 'До одиннадцати! Потом эвакуация.|Петух под сеткой? Это фол!' : 'Мы тут!|Это всё корпоративный напиток!' });
+] as const) obj('npc', id, x, y, { title, mode: id === 'stas' || id === 'pasha' ? 'idle' : 'cower', hp: 200, story: true, essential: true, rescueLock: id === 'andrey' || id === 'sergey' ? 'f7_pass' : '', weapon: id === 'andrey' ? 'smg' : '', angle: id === 'stas' ? 0 : id === 'pasha' ? 180 : 90, lines: id === 'stas' || id === 'pasha' ? 'До одиннадцати! Потом эвакуация.|Петух под сеткой? Это фол!' : 'Мы тут!|Это всё корпоративный напиток!' });
+obj('npc', 'elena', 46, 17, { title: 'Елена · офис-администратор', kind: 'womanGreen', mode: 'idle', hp: 100, story: true, essential: true, lines: 'Пропуск у меня. Только через корпоративный портал.|Сначала разгоните стаю у Castor!' });
+for (const [i, [x, y]] of [[54, 24], [56, 24], [57.4, 25], [55, 26], [57, 28], [54, 29]].entries()) obj('npc', 'gate_worker' + i, x, y, { title: 'Сотрудник у Castor', kind: i % 2 ? 'worker' : 'manBrown', tag: 'gate_workers', turn: i === 0 ? 'armored' : i % 2 ? 'fast' : 'normal' });
 obj('npc', 'root_manager', 45, 29, { title: 'Лысый менеджер', mode: 'idle', hp: 300, story: true, essential: true, lines: 'Вы куда? Рабочий день ещё не окончен.|У меня root-доступ к вашему отпуску.' });
 const workers = [[21, 6], [31, 11], [36, 16], [55, 6], [61, 11], [57, 17], [30, 32], [6, 33], [54, 33]];
 workers.forEach(([x, y], i) => obj('npc', 'f7_worker' + i, x, y, { title: ['Скрам-мастер', 'Ко-коуч', 'Стажёр', 'Куриный евангелист'][i % 4], kind: i % 2 ? 'manBrown' : 'womanGreen', tag: 'worker7', turn: i % 4 === 0 ? 'fast' : 'normal', lines: 'Это не баг, это перья.|Митинг можно было заменить яйцом.' }));
 obj('npc', 'coffee_intern', 47, 7.8, { title: 'Стажёр с кофе', kind: 'worker', mode: 'cower', hp: 100, weapon: 'pistol', lines: 'Я только чашки помыть зашёл!' });
 for (const [x, y] of [[4, 24], [27, 24], [55, 24], [42, 5], [20, 37], [35, 32], [62, 5]]) obj('spawner', 'escort', x, y, { how: 'rise', corridorOnly: true });
 obj('trigger', 'east', 50, 3, {}, [17, 19]);
+obj('trigger', 'siege7', 52, 23, { once: false }, [7, 5]);
+obj('spawner', 'siege7', 55, 21, { how: 'rise', corridorOnly: true });
+obj('spawner', 'siege7', 42, 24, { how: 'rise', corridorOnly: true });
 obj('trigger', 'pingpong', 2, 3, {}, [13, 15]);
 obj('trigger', 'root_ambush', 41, 28, { once: false }, [9, 4]);
 obj('trigger', 'evacuation', 41, 34, { once: false, all: true }, [9, 7]);
 obj('pickup', 'weapon', 43, 33, { weapon: 'shotgun' });
+obj('pickup', 'weapon', 46, 33, { weapon: 'smg' });
 for (const [x, y] of [[45, 34], [42, 24], [46, 9], [8, 14], [63, 25]]) obj('pickup', 'ammo', x, y);
 obj('pickup', 'health', 44, 33);
 obj('note', '', 44, 30, { text: 'План эвакуации: 1. Сохраняйте спокойствие. 2. Не сохраняйте Excel. 3. Бегите.' });
 obj('note', '', 46, 4, { text: 'КУКАРЕКС — пилотная партия лаборатории −3. Не смешивать с кофе. Не выдавать сотрудникам. Подпись: менеджер.' });
 const level: LevelSource = { id: 'office7', theme: 'office7', mapProps: { ambient: 0, wallFace: 'office7' }, grid: p.rows(), legend: {
   '#': { wall: true }, g: { floor: [500] }, c: { floor: [501] }, k: { floor: F.white },
+  D: { floor: [501], door: { id: 'castor_lock', locked: 'f7_pass', theme: 'office7' } },
 }, objects };
 export default level;

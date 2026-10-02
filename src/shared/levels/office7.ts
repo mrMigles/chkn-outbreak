@@ -5,6 +5,25 @@ export const FRIENDS = ['andrey', 'sergey', 'vlad', 'stas', 'pasha'];
 const allFound = (w: World) => FRIENDS.every(id => w.npc(id)?.rescued);
 function objective(w: World) {
   if (w.finished) return;
+  const gate = w.doors.find(d => d.id === 'castor_lock');
+  if (!w.flags.siegeStarted) { w.setObjective('Пробиться к запертому Castor: Андрей и Серёга в окружении', 'siege7'); return; }
+  if (!w.flags.siegeCleared) {
+    const enemies = w.enemies.filter(e => w.enemyTags.get(e.id) === 'siege7');
+    enemies.sort((a, b) => Math.min(...w.humanPlayers.map(p => dist(p.x, p.y, a.x, a.y))) - Math.min(...w.humanPlayers.map(p => dist(p.x, p.y, b.x, b.y))));
+    const e = enemies[0];
+    w.setObjective('Разогнать стаю у двери Castor', e ? { x: e.x, y: e.y } : 'siege7'); return;
+  }
+  if (!w.flags.elenaStarted) { w.setObjective('Найти Елену: нужен пропуск в Castor', 'elena'); return; }
+  if (!w.flags.elenaDead) {
+    const elena = w.npc('elena')!;
+    const enemy = w.enemies.find(e => e.appearance?.npcId === 'elena');
+    w.setObjective('Елена превращается! Отбить пропуск', { x: enemy?.x ?? elena.x, y: enemy?.y ?? elena.y }); return;
+  }
+  if (!w.players.some(p => p.keys.includes('f7_pass')) && !gate?.open) {
+    const card = w.pickups.find(k => k.key === 'f7_pass');
+    w.setObjective('Подобрать пропуск Елены', card ? { x: card.x, y: card.y } : 'elena'); return;
+  }
+  if (!gate?.open && gate?.locked) { w.setObjective('Открыть Castor пропуском Елены', 'castor_lock'); return; }
   const left = FRIENDS.filter(id => !w.npc(id)?.rescued);
   if (left.length) w.setObjective(`Найти друзей (${5 - left.length}/5) · кухня, Phoenix, Castor`, left);
   else if (!w.flags.rootStarted) w.setObjective('Все пятеро с нами. Провести их к лифтам', 'root_ambush');
@@ -24,15 +43,15 @@ const level: LevelScript = {
   subtitle: 'Capella · Castor · Phoenix. Эвакуация без записи в календаре', next: 'lab', enemyDamage: .8,
   onStart(w) {
     objective(w);
-    w.flags.escortWaveAt = w.time + 24;
-    w.say('radio', 'Серёга: Мы этажом выше! Андрей со мной у Castor, Влад на кухне, Стас и Паша в Phoenix. Забери нас!', 7);
+    w.flags.escortWaveAt = w.time + 10;
+    w.say('radio', 'Серёга: Мы с Андреем заперлись в Castor! Снаружи стая! Разгони их и найди пропуск у офис-администратора Елены!', 7);
     w.after(6, () => w.say('radio', 'Влад: На банке написано «проект ЯЙЦО, лаборатория −3». Они разослали опытную партию по офису!', 6));
   },
   onTick(w, dt) {
     for (const id of ['stas', 'pasha']) {
       const n = w.npc(id)!;
       const p = w.humanPlayers.find(p => dist(p.x, p.y, n.x, n.y) < 160 && w.map.lineOfSight(p.x, p.y, n.x, n.y, false));
-      if (!n.rescued && p && !w.enemies.some(e => dist(e.x, e.y, n.x, n.y) < 380 && w.map.lineOfSight(e.x, e.y, n.x, n.y, false))) {
+      if (w.npc('andrey')?.rescued && w.npc('sergey')?.rescued && !n.rescued && p && !w.enemies.some(e => dist(e.x, e.y, n.x, n.y) < 380 && w.map.lineOfSight(e.x, e.y, n.x, n.y, false))) {
         n.rescued = true; level.onRescue!(w, n, p);
       }
     }
@@ -43,13 +62,25 @@ const level: LevelScript = {
       }
     }
     if (w.time >= w.flags.escortWaveAt && !w.flags.evacuated && !w.flags.rootStarted) {
-      w.flags.escortWaveAt = w.time + (allFound(w) ? 15 : 24);
-      w.spawnWave('escort', ['normal', 'normal', 'fast', 'spitter'], allFound(w) ? 7 : 4, .5, true, 'escort7', true);
+      w.flags.escortWaveAt = w.time + (allFound(w) ? 9 : 12);
+      if (w.enemies.length < 65) w.spawnWave('escort', ['normal', 'fast', 'fast', 'spitter', 'armored'], allFound(w) ? 12 : 8, .3, true, 'escort7', true);
     }
+    if (w.flags.siegeStarted && !w.flags.siegeCleared && !w.countTag('siege7')) {
+      w.flags.siegeCleared = true;
+      w.say('sergey', 'У двери чисто! Елена в офисной службе рядом с кухней. У неё мастер-пропуск. И характер.', 6);
+      objective(w);
+    }
+    const admin = w.enemies.find(e => e.appearance?.npcId === 'elena');
+    if (admin && !w.flags.elenaScaled) { w.flags.elenaScaled = true; admin.hp = admin.maxHp = 320; admin.speedMul = 1.3; }
     const boss = w.enemies.find(e => e.appearance?.npcId === 'root_manager');
     if (boss && !w.flags.rootScaled) {
-      w.flags.rootScaled = true; boss.hp = boss.maxHp = 850 * (1 + .3 * (w.players.length - 1)); boss.speedMul = 1.12;
+      w.flags.rootScaled = true; boss.hp = boss.maxHp = 2200 * (1 + .4 * (w.players.length - 1)); boss.speedMul = 1.8; boss.abilityCd = 2.5;
       boss.appearance!.name = 'Рутовый петушок · sudo ко-ко';
+    }
+    if (boss && w.time >= w.flags.rootSupportAt && w.countTag('root_attack') < 48) {
+      w.flags.rootSupportAt = w.time + 9;
+      w.spawnWave('escort', ['fast', 'armored', 'spitter', 'normal'], 8, .25, true, 'root_attack', true);
+      w.say(String(boss.id), 'СРОЧНЫЙ ДЕЙЛИ! Всем клевать сотрудника!', 2.5);
     }
     if (Math.floor(w.time) !== Math.floor(w.time - dt)) objective(w);
     const lift = w.object('evacuation');
@@ -66,15 +97,23 @@ const level: LevelScript = {
     }
   },
   onTrigger(w, id, by) {
+    if (id === 'siege7' && !w.flags.siegeStarted) {
+      w.flags.siegeStarted = true;
+      for (const n of w.npcs.filter(n => n.tag === 'gate_workers')) w.infect(n, n.props?.turn || 'normal', 'siege7');
+      w.spawnWave('siege7', ['normal', 'fast', 'armored', 'spitter'], 16, .25, true, 'siege7', true);
+      w.say('andrey', 'Мы за этой дверью! Они заполнили весь коридор!', 4);
+      objective(w);
+    }
     if (id === 'east') w.say('sergey', 'Андрей говорит, это просто очередная реорганизация. Андрей, у них клювы!', 4);
     if (id === 'pingpong') w.say('stas', 'Паша, партия до одиннадцати! Даже если конец света!', 4);
     if (id === 'root_ambush' && allFound(w) && !w.flags.rootStarted) {
       w.flags.rootStarted = true;
+      w.flags.rootSupportAt = w.time + 8;
       const n = w.npc('root_manager')!;
       w.say(n.id, 'Эвакуация? Тикет согласован? Сейчас вы получите ROOT-ПЕТУШКА!', 4);
       w.infect(n, 'armored', 'root_attack');
       w.setAlarm(true);
-      w.spawnWave('escort', ['fast', 'normal', 'armored', 'spitter'], 16, .4, true, 'root_attack', true);
+      w.spawnWave('escort', ['fast', 'normal', 'armored', 'spitter'], 28, .25, true, 'root_attack', true);
       w.say(by.id, 'sudo увольнение. Без пароля.', 3);
       objective(w);
     }
@@ -86,7 +125,25 @@ const level: LevelScript = {
     w.say(n.id, lines[n.id], 4);
     objective(w);
   },
+  onNpcUse(w, n) {
+    if (n.id !== 'elena') return;
+    if (!w.flags.siegeCleared) { w.say(n.id, 'Сначала разгоните петухов у Castor. Пропуска в клюв не выдаём!'); return true; }
+    if (!w.flags.elenaStarted) {
+      w.flags.elenaStarted = true;
+      w.say(n.id, 'Вот ваш пропуск… минуточку… КО-КО-КОМПЛАЕНС!', 4);
+      w.infect(n, 'spitter', 'admin7');
+      w.spawnWave('escort', ['fast', 'normal', 'spitter'], 12, .3, true, 'admin7', true);
+      objective(w);
+    }
+    return true;
+  },
   onKill(w, e) {
+    if (e.appearance?.npcId === 'elena' && !w.flags.elenaDead) {
+      w.flags.elenaDead = true;
+      w.addPickup('keycard', e.x, e.y, { key: 'f7_pass', ttl: -1 });
+      w.say('radio', 'Елена оставила пропуск. Подбери его и открывай Castor — Андрей и Серёга ещё внутри!', 5);
+      objective(w);
+    }
     if (e.appearance?.npcId !== 'root_manager') return;
     w.flags.rootDead = true; w.setAlarm(false);
     w.addPickup('achievement', e.x, e.y, { key: 'root_rooster', ttl: -1 });

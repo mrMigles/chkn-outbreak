@@ -53,6 +53,24 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
 }
 {
   const w = make('office7'); w.god = true;
+  const elena = w.npc('elena')!, gate = w.doors.find(d => d.id === 'castor_lock')!;
+  w.script.onNpcUse!(w, elena, w.players[0]); assert.ok(!elena.mutation, 'no pass until the siege is cleared');
+  const trapped = w.npc('andrey')!; place(w, trapped.x - 30, trapped.y); step(w, .2);
+  assert.equal(trapped.rescued, false, 'cannot recruit through a locked door');
+  assert.equal(w.npcTargetable(trapped), false, 'siege does not get stuck attacking immortal friends behind a locked door');
+  assert.equal(w.npcTargetable(elena), false, 'waves hunt players instead of an immortal idle administrator');
+  w.script.onTrigger!(w, 'siege7', w.players[0]); assert.ok(w.countTag('siege7') >= 22);
+  step(w, 3.2); w.devKillAll('me'); step(w, .2); assert.ok(w.flags.siegeCleared);
+  place(w, elena.x - 40, elena.y); w.script.onNpcUse!(w, elena, w.players[0]);
+  assert.ok(elena.mutation); assert.ok(!w.pickups.some(k => k.key === 'f7_pass'));
+  step(w, 3.2); const admin = w.enemies.find(e => e.appearance?.npcId === 'elena')!;
+  assert.ok(admin.maxHp >= 320); w.killEnemy(admin, 0, 'me', false, false);
+  const pass = w.pickups.find(k => k.key === 'f7_pass')!; assert.ok(pass);
+  place(w, pass.x, pass.y); step(w, .1); assert.ok(w.players[0].keys.includes('f7_pass'));
+  place(w, gate.x - 45, gate.y + gate.h / 2);
+  w.setInput('me', { ...w.players[0].input, interact: true }); step(w, .03);
+  w.setInput('me', { ...w.players[0].input, interact: false }); step(w, .5);
+  assert.ok(gate.open, 'the recovered pass opens the actual door');
   for (const id of FRIENDS) {
     w.cancelWaves(); w.enemies = [];
     const n = w.npc(id)!; place(w, n.x - 40, n.y + 20); step(w, .2);
@@ -64,7 +82,12 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   const manager = w.npc('root_manager')!; place(w, manager.x, manager.y + 100); step(w, .2);
   assert.ok(w.flags.rootStarted); step(w, 3.2);
   const root = w.enemies.find(e => e.appearance?.npcId === 'root_manager')!;
-  assert.ok(root && root.maxHp >= 850); assert.notEqual(root.type, 'boss');
+  assert.ok(root && root.maxHp >= 2200); assert.notEqual(root.type, 'boss');
+  w.cancelWaves(); w.enemies = [root]; root.x = 2800; root.y = 1550;
+  place(w, 2950, 1550); root.abilityCd = 0;
+  step(w, .7); assert.equal(root.state, 'charge');
+  w.god = false; const hp = w.players[0].hp; step(w, 1.3);
+  assert.ok(w.players[0].hp < hp, 'root actively rushes and damages the player'); w.god = true;
   w.killEnemy(root, 0, 'me', false, false); w.devKillAll('me');
   const trophy = w.pickups.find(k => k.kind === 'achievement')!; assert.ok(trophy);
   place(w, trophy.x, trophy.y); step(w, .1); assert.ok(w.players[0].achievements?.includes('root_rooster'));
@@ -74,7 +97,7 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   step(w, .1); assert.equal(w.finished, true);
   assert.ok(w.events.some(e => e.e === 'level' && e.next === 'lab'));
   assert.equal(w.carryOut().npcs.length, 0, 'friends evacuated, not carried into the lab');
-  console.log('PASS all five rescues, protected story cast, manager mutation, loot, real escort and lab transition');
+  console.log('PASS Castor siege, locked rescue, Elena mutation/drop, door, five rescues, root charge, trophy, escort and lab');
 }
 {
   const w = make('lab'); w.god = true;

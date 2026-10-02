@@ -6,6 +6,7 @@ import { MUTATION, type Enemy, type Npc, type Player } from '../../shared/sim/ty
 import type { EnemyType } from '../../shared/enemies';
 import { enemyLook, resolveLook, SKIN_TONES, LOOK_PRESETS } from '../../shared/look';
 import { lookTexture } from './Looks';
+import { WalkingCycle } from './WalkingCycle';
 
 export const PLAYER_COLORS = [0x4fc3f7, 0xff6b6b, 0xffd54f, 0x81c784];
 const GUNS = (artMeta as any).guns as Record<string, { gripX: number; gripY: number; muzzle: number; w: number; h: number }>;
@@ -45,7 +46,7 @@ export class Rig {
   hand: Phaser.GameObjects.Rectangle;
   shadow: Phaser.GameObjects.Ellipse;
   recoil = 0;
-  bob = 0;
+  private walk = new WalkingCycle();
   w: WeaponId | null = null;
   tex: string;
   mutTex: string;
@@ -74,9 +75,9 @@ export class Rig {
   /** dir/frame selection + gun placement. `frame` overrides the walking frame (e.g. hurt poses). */
   layout(x: number, y: number, a: number, moving: boolean, dt: number, frame?: string) {
     this.recoil *= Math.exp(-dt * 18);
-    if (moving) this.bob += dt * 11;
     const dir = direction(a);
-    const f = moving ? 1 + Math.floor(this.bob) % 8 : 0;
+    const f = this.walk.update(x, y, dt, moving && !frame);
+    moving = f !== 0;
     // Torso, fists and gun share the same integer gait offset. No independent weapon bob.
     const gait = moving ? [0, -2, -2, 0, 0, -2, -2, 0][(f - 1) % 8] : 0;
     this.root.setPosition(x, y).setDepth(worldDepth(y));
@@ -226,7 +227,7 @@ export class NpcView {
     const moving = Number.isFinite(this.lastX) && Math.hypot(x - this.lastX, y - this.lastY) > .5;
     this.lastX = x; this.lastY = y;
     this.rig.setWeapon(n.weapon);
-    if (n.mode === 'dead' || n.mode === 'gone') { this.rig.root.setVisible(false); this.label.setVisible(false); return; }
+    if (n.mode === 'dead' || n.mode === 'gone') { this.warn?.clear().setVisible(false); this.rig.root.setVisible(false); this.label.setVisible(false); return; }
     this.rig.root.setVisible(true);
     const a = n.angle;
     if (n.mutation) {

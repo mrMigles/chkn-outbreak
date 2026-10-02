@@ -808,7 +808,7 @@ export class GameScene extends Phaser.Scene {
         if (!this.ended) { this.ended = true; this.time.delayedCall(1800, () => this.onEnd({ kind: 'level', next: ev.next, win: ev.win })); }
         break;
       case 'gameover':
-        if (!this.ended) { this.ended = true; this.time.delayedCall(1500, () => this.onEnd({ kind: 'gameover', reason: ev.reason })); }
+        if (!this.ended) { this.ended = true; queueMicrotask(() => this.onEnd({ kind: 'gameover', reason: ev.reason })); }
         break;
     }
   }

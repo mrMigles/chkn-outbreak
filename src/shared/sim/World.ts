@@ -32,7 +32,7 @@ interface Timer { t: number; fn: () => void; every?: number }
 interface Wave { group: string; types: EnemyType[]; left: number; interval: number; t: number; aggro: boolean; tag: string; waited: number; corridorOnly?: boolean }
 
 const HUMAN_R = PLAYER.radius;
-const BARREL_BOX: BodyBox = { hw: 18, h: 50, head: 0 };
+const BARREL_BOX: BodyBox = { hw: 26, h: 68, head: 0 };
 const POD_BOX: BodyBox = { hw: 22, h: 64, head: 0 };
 
 export class World implements WorldView {
@@ -491,6 +491,8 @@ export class World implements WorldView {
   /** Survivors chickens hunt. Cowering ones are left alone until a player shows up (staged rescues). */
   npcTargetable(n: Npc) {
     if (n.mode === 'dead' || n.mode === 'gone') return false;
+    // Waiting story characters cannot die; don't strand waves at their closed rooms.
+    if (this.script.id === 'office7' && n.props?.essential && n.mode !== 'follow') return false;
     if (n.mode === 'cower') return this.players.some((p) => p.state === 'alive' && dist(p.x, p.y, n.x, n.y) < 420);
     return true;
   }
@@ -693,7 +695,7 @@ export class World implements WorldView {
       for (const p of this.players) if (p.state === 'alive') list.push({ kind: 'player', ref: p, x: p.x, y: p.y, r: HUMAN_R + 2, box: HUMAN_BOX });
       for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone') list.push({ kind: 'npc', ref: n, x: n.x, y: n.y, r: HUMAN_R + 2, box: HUMAN_BOX });
     }
-    for (const b of this.barrels) list.push({ kind: 'barrel', ref: b, x: b.x, y: b.y, r: 18, box: BARREL_BOX });
+    for (const b of this.barrels) list.push({ kind: 'barrel', ref: b, x: b.x, y: b.y + 16, r: 18, box: BARREL_BOX });
     if (team === 'human') for (const p of this.pods) if (!p.broken) list.push({ kind: 'pod', ref: p, x: p.x, y: p.y, r: 22, box: POD_BOX });
     for (const d of this.dprops) if (!d.blocksBullets) list.push({ kind: 'dprop', ref: d, x: d.x, y: d.y, r: d.box.hw, box: d.box });
     return list;
@@ -1167,7 +1169,7 @@ export function pickupReach(map: GameMap, x: number, y: number) {
 function inRect(x: number, y: number, o: MapObject) { return x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h; }
 
 export function keyName(k: string) {
-  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной' } as Record<string, string>)[k] ?? k;
+  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной', f7_pass: 'Елены' } as Record<string, string>)[k] ?? k;
 }
 
 export { TILE };

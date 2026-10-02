@@ -14,7 +14,7 @@ function findTarget(w: World, e: Enemy, sight: number): { t: Target | null; d: n
     const d = dist(e.x, e.y, p.x, p.y);
     if (d < bd) { bd = d; best = { id: p.id, x: p.x, y: p.y, ref: p, isPlayer: true }; }
   }
-  for (const n of w.npcs) {
+  for (const n of e.appearance?.npcId === 'root_manager' ? [] : w.npcs) {
     if (!w.npcTargetable(n)) continue;
     const d = dist(e.x, e.y, n.x, n.y) * 1.15; // players are juicier
     if (d < bd) { bd = d; best = { id: n.id, x: n.x, y: n.y, ref: n, isPlayer: false }; }
@@ -55,7 +55,8 @@ function steer(w: World, e: Enemy, t: Target, td: number, speed: number, dt: num
 }
 
 export function updateEnemy(w: World, e: Enemy, dt: number) {
-  const def = ENEMIES[e.type];
+  const root = e.appearance?.npcId === 'root_manager';
+  const def = root ? { ...ENEMIES[e.type], damage: 42, attackRange: 60, attackCd: .8, windup: .35 } : ENEMIES[e.type];
   e.flashT -= dt; e.stunT -= dt; e.cd -= dt;
   if (e.burnT > 0) {
     e.burnT -= dt;
@@ -95,6 +96,27 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
   }
   if (!t) return;
   if (e.type === 'boss') return updateBoss(w, e, t, td, dt);
+  if (root) {
+    e.abilityCd -= dt;
+    if (e.state === 'charge') {
+      e.t -= dt;
+      if (e.ability === 'charge_wind') {
+        e.angle = Math.atan2(t.y - e.y, t.x - e.x);
+        if (e.t <= 0) { e.ability = 'charge_run'; e.t = .75; }
+      } else {
+        [e.x, e.y] = w.map.move(e.x, e.y, def.radius * .8, Math.cos(e.angle) * 460 * dt, Math.sin(e.angle) * 460 * dt);
+        if (dist(e.x, e.y, t.x, t.y) <  70 && los(w, e, t)) { hurt(w, e, t, 48); e.t = 0; e.cd = .9; }
+        if (e.t <= 0) { e.state = 'chase'; e.ability = ''; }
+      }
+      return;
+    }
+    if (e.abilityCd <= 0 && td < 850 && los(w, e, t)) {
+      e.abilityCd = 6.5; e.state = 'charge'; e.ability = 'charge_wind'; e.t = .6;
+      w.say(String(e.id), 'ROOT идёт без согласования!', 1.5);
+      w.emit({ e: 'swing', id: e.id, x: e.x, y: e.y, a: Math.atan2(t.y - e.y, t.x - e.x) });
+      return;
+    }
+  }
 
   const burning = e.burnT > 0 ? 1.25 : 1;
   const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * (w.opts.difficulty ?? 1) ** 0.3;

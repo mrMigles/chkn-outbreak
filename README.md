@@ -25,7 +25,7 @@ docker compose up -d --build         # or build locally
 Health check: `GET /healthz`. CI (`.github/workflows/docker.yml`) runs the typecheck, the headless checks, a production build,
 the network/Telegram checks against a real server, then builds and pushes `ghcr.io/<owner>/chkn-outbreak` (`latest` on `main`, short SHA, tags).
 
-Room progress is saved under its code every five seconds and when the room closes. After a team wipe, play resumes at the last living position with recovery health. Use «Продолжить последнюю комнату» or enter the original code after a server restart, then start from the lobby. Saves include the current floor, inventory, companions, enemies and story events. Docker keeps them in the `chkn-progress` volume; outside Docker the default is `data/rooms` (`CHKN_SAVE_DIR` overrides it). Victory clears the room save.
+Room progress is saved under its code every five seconds and when the room closes. If everyone dies, the death screen waits for the host to restart the current floor from its entrance and entry loadout. Leaving a living room or restarting the server still preserves its actual progress. Use «Продолжить последнюю комнату» or enter the original code, then start from the lobby. Saves include the current floor, inventory, companions, enemies and story events. Docker keeps them in the `chkn-progress` volume; outside Docker the default is `data/rooms` (`CHKN_SAVE_DIR` overrides it). Victory clears the room save. Older version-one saves retain their code, floor and entry loadout, but restart that floor because their input recording uses obsolete rules.
 
 Options go into `.env` next to `docker-compose.yml`:
 
@@ -61,6 +61,8 @@ optionally `/newapp` (Mini App, URL = `PUBLIC_URL`) → `TELEGRAM_APP_URL`; `/se
 | `npm run check:coop` | authoritative support/mutation/death regressions |
 | `npm run check:campaign` | all five rescues, manager/trophy/escort, buffs, generator waves and exact room replay on six maps |
 | `npm run check:progress` | team wipe, empty-room disposal and real server restart preserve progress |
+| `npm run check:polish` | distance-based gait, stationary followers and explosive barrel hitboxes/chains |
+| `npm run check:polish-ui` | real-browser idle/walk, mutation cleanup and solo/room death panels; debug server required |
 | `npm run check:levels` | story-order flood fill, pickups within reach, every door walkable |
 | `npm run check:art` | source hashes, atlas bounds, direction/frame completeness |
 | `npm run check:network` | real Colyseus clients; requires `npm run server` |
@@ -92,7 +94,7 @@ docs/            DECISIONS, HANDOFF, ASSETS, plans
 - The yellow arrow at your feet and the objective panel point along the path to the current goal.
 
 ## Levels
-Office «Курникс Групп», floor 6 → floor 7 (rescue Андрей, Серёга, Влад, Стас and Паша; escort to the lifts; bald manager ambush and «Рутовый петушок» trophy) → dark lab of project «ЯЙЦО» → «Курникс-Агро» plant → hangar boss «Генеральный Петух». The separate `arena` remains the weapon sandbox.
+Office «Курникс Групп», floor 6 → floor 7 (clear the siege outside locked Castor; office administrator Елена mutates before handing over its pass; defeat her and unlock Андрей/Серёга, gather Влад, Стас and Паша, escort everyone past the charging bald manager and collect «Рутовый петушок») → dark lab of project «ЯЙЦО» → «Курникс-Агро» plant → hangar boss «Генеральный Петух». The separate `arena` remains the weapon sandbox.
 Strong enemies sometimes drop ten-second invincibility, triple damage, infinite ammunition or sprint buffs. Non-story companions can turn more frequently; the named floor-7 friends safely evacuate before the lab.
 Maps are Tiled JSON (`public/assets/maps/*.tmj`, editable in Tiled) compiled from `tools/levels`.
 

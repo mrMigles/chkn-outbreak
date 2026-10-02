@@ -9,7 +9,7 @@ for (const [x, y] of [[8, 7], [26, 7], [8, 19], [26, 19]]) P.rect(x, y, x + 1, y
 
 const objs: ObjSpec[] = [];
 const at = (x: number, y: number): [number, number] => [x, y];
-const prop = (name: string, x: number, y: number, rot = 0) => objs.push({ type: 'prop', name, at: at(x, y), rot });
+const prop = (name: string, x: number, y: number, rot = 0) => objs.push(name === 'hazard_barrel' ? { type: 'barrel', at: at(x, y + .25) } : { type: 'prop', name, at: at(x, y), rot });
 const pickup = (name: string, x: number, y: number, props?: ObjSpec['props']) => objs.push({ type: 'pickup', name, at: at(x, y), props });
 const light = (x: number, y: number, kind: string, color: string, radius: number) => objs.push({ type: 'light', at: at(x, y), props: { kind, color, radius } });
 

@@ -278,3 +278,34 @@ Each entry: what was decided, why, and consequences. Newest at the bottom.
 - Outside the unchanged first floor, 12% of ordinary spawns can have comic coworker looks/names: Ко-коуч, петух-отпускник, директор по корму, служба петушиной безопасности, бухгалтер and DevOops. Their original combat type remains intact. Occasional speech and PA jokes use existing bubbles/radio UI, with an 18–28 second cooldown.
 - The ping-pong ball moves until both players are rescued; rescue dialogue, manager dialogue, kitchen label and evacuation plan explain the story with office humour.
 - Minor fixes: unchanged objective text no longer emits redundant events, blinks or repeats its sound when only the target moves; floor-7 guide follows moving ambush enemies; grenade damage respects buffs; recreated scenes clear their old ping-pong ball reference. Buff labels are compact and avoid the objective on narrow phones; the portrait weapon panel sits below the objective. New comic looks are precomposed before gameplay. QA reports capture per-floor health before entering the next level. Container image name matches `mrMigles/chkn-outbreak`.
+
+## D50 — NPC gait follows distance; idle means idle (2026-10-02)
+
+- User reported frantic legs and walking in place. Human rigs advance one walking pose per 28 world units, using the same cycle for body and gun, instead of eleven poses per second regardless of speed. Settling jitter and teleports do not advance the cycle. Verified at 30/60/120 FPS.
+- Followers stop at their formation distance and resume only when the gap grows by another 18 units. This hysteresis prevents separation and following from continually pushing against each other. Five companions settle beside a stationary player; browser checks verify an unchanged idle frame and real keyboard walking.
+
+## D51 — Castor siege and Елена's last pass
+
+- Supersedes the direct Castor rescue in D43. Андрей and Серёга remain behind an actual locked door. Six workers mutate outside it and sixteen more enemies arrive. Clear the tagged siege, visit office administrator Елена, and interact to ask for the pass.
+- She visibly mutates during the handover, becomes a 320-HP spitter and brings twelve attackers. Only her defeat drops a permanent pass; pick it up and open Castor. The two friends cannot be recruited through the wall or before unlocking. The guide follows each stage, including a moving last siege enemy and a dropped pass.
+- Waiting protected floor-7 characters are excluded from chicken targets: otherwise immortal administrators and inaccessible friends attracted enemies indefinitely. Recruited companions remain targets. Friendly rescue requires actual line of sight. Door hints display «Елены» instead of the internal key name.
+- Added an SMG beside the shotgun near the entrance. The new enclosure and pass route pass structural reachability checks; the first floor's layout/balance is unchanged.
+
+## D52 — More floor-seven action and a dangerous root manager
+
+- Supersedes D43's patrol and manager tuning. Patrols begin at ten seconds, bring eight enemies every twelve seconds, then twelve every nine seconds after all friends are found. Spawn batches are gated at 65 active enemies. Patrols stop at the manager encounter.
+- Root manager has 2200 solo HP, +40% per extra player, faster pursuit, heavier/faster melee and a telegraphed charge (0.6-second warning, then 460 units/second). He targets players instead of spending the fight attacking protected friends. Charge damage and actual player targeting are tested.
+- The ambush opens with 28 attackers and calls eight more every nine seconds while root lives, gated by 48 tagged attackers. Killing him stops new support, leaving a finite wave to clear before the trophy and evacuation. He remains an enhanced regular enemy, not the final boss.
+
+## D53 — Mutation graphics and all red barrels
+
+- Red rings/bars left at a transformed human's previous position were the NPC's warning graphics. The hidden/gone branch now clears and hides them before returning. A browser check observes the warning during mutation and its disappearance afterward.
+- Explosive barrel bullet bounds now cover the actual 52×68 sprite at its rendered vertical offset, so its visible top/base can be shot. Red `hazard_barrel` decorations in lab/factory/boss are now real explosive barrels; no visually identical inert red barrels remain. Bullets and chained explosions are tested.
+
+## D54 — Death screen and retry from the current floor
+
+- Explicitly supersedes D48's recovery at the death position. Solo death opens its screen immediately and stops the scene. If all room players die, the room enters a persistent `defeat` phase, displays the death screen and waits for the host's retry button; there is no automatic restart.
+- Retry restores the entrance of the current floor with its entry loadout/story state. The entry checkpoint is rebuilt/rebound even when the room originally resumed mid-floor with new connection IDs. A wipe saves this entrance checkpoint, so leaving/restarting after defeat also cannot restore the death spot.
+- Normal saving while alive still preserves actual progress by room code. Reconnecting while defeated restores the panel. Client guards prevent a stale `playing` patch from reopening gameplay over the result screen.
+- If the host leaves while the death panel is open, the promoted host receives the retry button immediately; the room cannot be stranded waiting for a departed host.
+- Save format is version 2 because movement, targeting and floor-seven replay rules changed. Version-one saves retain the room code, current floor and entry loadout, but discard obsolete input frames and begin that floor. Tests cover disk replay for all six maps, actual server restart, host retry, migration and browser death/reconnection flows.

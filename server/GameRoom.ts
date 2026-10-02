@@ -39,9 +39,9 @@ export class GameRoom extends Room<RoomState> {
   private snapAcc = 0;
   private timer: NodeJS.Timeout | null = null;
   private carry: Carry | undefined;
-  private levelCarry: Carry | undefined;
   private recording: RoomRecording | null = null;
   private savedProgress: RoomCheckpoint | undefined;
+  private entryCheckpoint: RoomCheckpoint | undefined;
   private saveAcc = 0;
 
   override onCreate(options: { level?: string; code?: string; chat?: string }) {
@@ -79,6 +79,9 @@ export class GameRoom extends Room<RoomState> {
     this.onMessage('lobby', (client) => {
       const p = this.state.players.get(client.sessionId);
       if (p?.host && this.state.phase === 'over') this.toLobby();
+    });
+    this.onMessage('retry', (client) => {
+      if (this.state.players.get(client.sessionId)?.host && this.state.phase === 'defeat') this.startLevel(this.state.level, this.savedProgress);
     });
     // QA helpers (only with --debug, i.e. npm run server)
     this.onMessage('debug', (client, m: { cmd?: string }) => {
@@ -145,7 +148,6 @@ export class GameRoom extends Room<RoomState> {
 
   private startLevel(id: string, checkpoint?: RoomCheckpoint) {
     const map = new GameMap(id, loadMap(id));
-    this.levelCarry = this.carry;
     let world: World;
     const players = [...this.state.players.values()].sort((a, b) => a.slot - b.slot);
     if (checkpoint) {
@@ -158,7 +160,11 @@ export class GameRoom extends Room<RoomState> {
       world.start(); this.recording = new RoomRecording(world);
     }
     this.world = world;
+    const entry = RoomRecording.restore(loadMap(id), { ...this.recording!.data, frames: [] });
+    entry.resume(players.map(p => ({ id: p.id, name: p.name, slot: p.slot, look: p.look, connected: p.connected })), false);
+    this.entryCheckpoint = entry.checkpoint();
     this.state.level = id;
+    this.state.reason = '';
     this.state.phase = 'playing';
     this.snapAcc = 0;
     this.saveAcc = 0;
@@ -227,14 +233,11 @@ export class GameRoom extends Room<RoomState> {
   }
 
   private onGameOver(reason: string) {
-    const level = this.world!.mapId;
-    this.saveProgress();
-    const checkpoint = this.savedProgress;
-    this.state.phase = 'between';
-    this.timer = setTimeout(() => {
-      this.broadcast('end', { kind: 'gameover', reason, stats: this.stats() });
-      this.timer = setTimeout(() => { this.carry = this.levelCarry; this.startLevel(level, checkpoint); }, 6000);
-    }, 2000);
+    this.state.phase = 'defeat';
+    this.state.reason = reason;
+    this.savedProgress = this.entryCheckpoint;
+    if (this.savedProgress) { this.savedProgress.chat = this.state.chat; writeCheckpoint(this.state.code, this.savedProgress); }
+    this.broadcast('end', { kind: 'gameover', reason, stats: this.stats() });
   }
   private saveProgress() {
     if (this.recording && this.state.phase === 'playing' && !this.world?.finished) {

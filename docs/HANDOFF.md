@@ -2,6 +2,14 @@
 
 _Last updated: 2026-10-02_
 
+## Iteration 6 (2026-10-02, Codex) — Castor siege and six reported fixes
+
+Decisions D50–D54 supersede iteration 5 where applicable. Floor seven now starts with an actual locked Castor and a 22-enemy siege, then Елена mutates during the pass handover. Her defeat drops the key; unlock Андрей/Серёга and continue the five-friend evacuation. Patrols arrive more often. Root has 2200 solo HP, a telegraphed player-targeting charge, stronger melee, 28 initial attackers and support until his death.
+
+NPC walking is distance-based, followers settle with hysteresis, mutation warnings clear when the human disappears, and all red hazard barrels are explosive with sprite-matched hitboxes. Waiting protected NPCs no longer strand waves at inaccessible or immortal targets.
+
+After a team wipe the death panel waits for the host to retry **from the current floor entrance**. Living-room progress still saves normally. Version 2 checkpoints preserve the new deterministic simulation; old version-one rooms migrate to their current floor's entry. Death panels, idle/walk, mutation cleanup, actual room retry/reconnection and disk/server recovery have executable regressions. See [polish/report.md](qa/polish/report.md) for the final verification evidence and limits.
+
 ## Iteration 5 (2026-10-02, Codex) — floor 7, room saves, buffs and larger encounters
 
 Current campaign: `office` (floor 6, original layout/balance) → `office7` → `lab` → `factory` → `boss`; `arena` remains separate. Decisions D43–D49 in [DECISIONS.md](DECISIONS.md) supersede historical notes below where applicable.

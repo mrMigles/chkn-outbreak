@@ -221,6 +221,7 @@ export class App {
   }
 
   gameOver(reason: string) {
+    this.stopGame();
     const d = this.show(`<div class="panel center">
       <h2 class="bad">КО-КО-КОНЕЦ</h2>
       <p class="flavor">${escapeHtml(reason)}</p>
@@ -236,6 +237,8 @@ export class App {
   // ------------------------------------------------------------------ multiplayer (Colyseus)
   room: Room | null = null;
   net: NetSession | null = null;
+  private netResult = false;
+  private resultHost = false;
 
   serverUrl() {
     if (settings.server) return settings.server;
@@ -288,20 +291,22 @@ export class App {
 
   private bindRoom(room: Room, client: Client) {
     this.room = room;
+    this.netResult = false;
     let recoveredPhase = '';
     const restorePhase = () => {
       if (this.room !== room) return;
       if (room.state.phase === 'lobby' && !this.game.scene.isActive('game')) this.lobby();
       // Initial state also recovers if the start message arrived during rejoin.
-      if (room.state.phase === 'playing' && !this.net) this.netStart(room.state.level);
+      if (room.state.phase === 'playing' && !this.net && (!this.netResult || recoveredPhase === 'defeat' || recoveredPhase === 'between')) this.netStart(room.state.level);
       if (!this.net && room.state.phase !== recoveredPhase) {
-        if (room.state.phase === 'between') {
+        if (room.state.phase === 'between' && !this.netResult) {
           const panel = this.show('<div class="panel center"><h2>КОМАНДА НА ПЕРЕДЫШКЕ</h2><p class="flavor">Соединение восстановлено. Ждём начала следующего боя…</p><button class="btn ghost">Выйти в меню</button></div>');
           panel.querySelector('button')!.addEventListener('click', () => this.leaveRoom());
         }
         if (room.state.phase === 'over') this.netEnd({ kind: 'win', stats: [] });
-        recoveredPhase = room.state.phase;
       }
+      if (!this.net && room.state.phase === 'defeat' && (!this.netResult || !!room.state.players.get(room.sessionId)?.host !== this.resultHost)) this.netEnd({ kind: 'gameover', reason: room.state.reason, stats: [] });
+      recoveredPhase = room.state.phase;
     };
     room.onStateChange(restorePhase);
     room.onMessage('start', (m: { level: string }) => { if (this.room === room) this.netStart(m.level); });
@@ -399,6 +404,7 @@ export class App {
     if (this.net?.levelId === level && this.game.scene.isActive('game')) return;
     const json = this.game.cache.tilemap.get('map_' + level)?.data as TiledMap | undefined;
     if (!json) return;
+    this.netResult = false;
     const net = new NetSession(room, level, json);
     this.net = net;
     this.runSession(net);
@@ -410,17 +416,21 @@ export class App {
       return `<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}</b><span class="st">☠ ${p.kills} · ★ ${p.score}</span></div>`;
     }).join('');
     const isHost = !!this.room?.state.players.get(this.room.sessionId)?.host;
+    this.resultHost = isHost;
     const title = m.kind === 'win' ? 'ПОБЕДА!' : m.kind === 'level' ? 'ЭТАП ПРОЙДЕН' : 'КО-КО-КОНЕЦ';
     const sub = m.kind === 'win' ? 'Корпорация повержена. Понедельник отменён.'
-      : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Продолжим с места гибели через 6 секунд…`;
+      : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Повтор — с начала этого этажа. ${isHost ? 'Начните, когда команда готова.' : 'Ждём решения ведущего.'}`;
     this.stopGame();
+    this.net = null; this.netResult = true;
     const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
       ${m.kind === 'win' && isHost ? '<button class="btn primary" data-a="lobby">В лобби</button>' : ''}
+      ${m.kind === 'gameover' && isHost ? '<button class="btn primary" data-a="retry-room">Заново с начала этажа</button>' : ''}
       <button class="btn ghost" data-a="leave">Выйти в меню</button></div>`);
     d.addEventListener('click', (e) => {
       const act = (e.target as HTMLElement).dataset.a;
       if (act === 'lobby') this.room?.send('lobby');
+      if (act === 'retry-room') this.room?.send('retry');
       if (act === 'leave') this.leaveRoom();
     });
   }

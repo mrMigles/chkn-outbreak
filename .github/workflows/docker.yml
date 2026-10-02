@@ -29,6 +29,7 @@ jobs:
       # headless simulation checks (no browser, no server)
       - run: npm run check:combat
       - run: npm run check:campaign
+      - run: npm run check:polish
       - run: npm run check:progress
       - run: npm run check:coop
       - run: npm run check:levels

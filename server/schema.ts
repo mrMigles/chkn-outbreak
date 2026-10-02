@@ -13,7 +13,8 @@ export class LobbyPlayer extends Schema {
 /** Lobby / meta state (Colyseus schema). The world itself is sent as snapshots. */
 export class RoomState extends Schema {
   @type('string') code = '';
-  @type('string') phase = 'lobby'; // lobby | playing | between | over
+  @type('string') phase = 'lobby'; // lobby | playing | between | defeat | over
+  @type('string') reason = '';
   @type('string') level = '';
   /** Telegram chat room: the chat's title (empty for ordinary rooms). */
   @type('string') chat = '';

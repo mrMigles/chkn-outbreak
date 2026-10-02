@@ -29,8 +29,10 @@ function follow(w: World, n: Npc, dt: number) {
   const speed = SPEED * (d > 250 ? 1.25 : 1);
   // each companion keeps its own distance so a group spreads into a loose ring (see World.separateNpcs)
   const keep = 64 + (hash(n.id) % 4) * 14;
-  if (d < keep) return;
-  if (w.map.lineOfSight(n.x, n.y, p.x, p.y, false)) { moveTo(w, n, p.x, p.y, speed, dt, keep - 6); return; }
+  if (d <= keep + 4) n.followMoving = false;
+  else if (d > keep + 22) n.followMoving = true;
+  if (!n.followMoving) return;
+  if (w.map.lineOfSight(n.x, n.y, p.x, p.y, false)) { moveTo(w, n, p.x, p.y, speed, dt, keep + 4); return; }
   const tr = w.trail(p.id);
   for (let i = tr.length - 1; i >= 0; i--) {
     if (w.map.lineOfSight(n.x, n.y, tr[i].x, tr[i].y, false)) { moveTo(w, n, tr[i].x, tr[i].y, speed, dt, 4); return; }
@@ -87,8 +89,9 @@ export function updateNpc(w: World, n: Npc, dt: number) {
       }
       break;
     case 'cower': {
+      if (n.props?.rescueLock && w.doors.some(d => d.locked === n.props!.rescueLock && !d.open)) break;
       // waiting to be rescued: becomes rescued when no chickens nearby and a player comes close
-      const p = w.players.find((q) => q.state === 'alive' && dist(q.x, q.y, n.x, n.y) < 160);
+      const p = w.players.find((q) => q.state === 'alive' && dist(q.x, q.y, n.x, n.y) < 160 && w.map.lineOfSight(q.x, q.y, n.x, n.y, false));
       // chickens that can actually reach the survivor (not the ones behind a wall)
       const near = w.enemies.filter((e) => { const d = dist(e.x, e.y, n.x, n.y); return d < 380 && (d < 150 || w.map.lineOfSight(e.x, e.y, n.x, n.y, false)); });
       const danger = near.length > 0;

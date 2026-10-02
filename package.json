@@ -25,6 +25,8 @@
     "check:telegram": "tsx tools/check-telegram.ts",
     "check:campaign": "tsx tools/check-campaign.ts",
     "check:progress": "tsx tools/check-room-progress.ts",
+    "check:polish": "tsx tools/check-polish.ts",
+    "check:polish-ui": "node tools/check-polish-ui.mjs",
     "qa:play": "node tools/qa-play.mjs",
     "qa:menu": "node tools/qa-menu.mjs",
     "art:fetch": "node tools/art/lpc-fetch.mjs"

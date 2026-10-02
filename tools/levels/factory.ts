@@ -26,7 +26,7 @@ P.rect(27, 37, 30, 37, 'H');   // hall → storage (after antidote)
 
 const objs: ObjSpec[] = [];
 const at = (x: number, y: number): [number, number] => [x, y];
-const prop = (name: string, x: number, y: number, rot = 0, props?: ObjSpec['props']) => objs.push({ type: 'prop', name, at: at(x, y), rot, props });
+const prop = (name: string, x: number, y: number, rot = 0, props?: ObjSpec['props']) => objs.push(name === 'hazard_barrel' ? { type: 'barrel', at: at(x, y + .25) } : { type: 'prop', name, at: at(x, y), rot, props });
 const note = (x: number, y: number, text: string) => objs.push({ type: 'note', at: at(x, y), props: { text } });
 const label = (x: number, y: number, text: string, size = 26) => objs.push({ type: 'label', at: at(x, y), props: { text, size, color: '#ffd27a' } });
 const enemy = (type: string, x: number, y: number, tag = '') => objs.push({ type: 'enemy', name: type, at: at(x, y), props: { tag } });
