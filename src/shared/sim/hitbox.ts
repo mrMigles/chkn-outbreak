@@ -8,7 +8,7 @@ import { ENEMIES } from '../enemies';
 /** Height of the gun above the feet (world units). Mirrors the client's hand placement. */
 export const HAND_H = 36;
 /** Display scale per enemy type (LPC 64-px frames). */
-export const ENEMY_SCALE: Record<EnemyType, number> = { normal: 2, fast: 1.85, fat: 2.35, spitter: 2, armored: 2.15, exploder: 2, chick: 1.6, boss: 3.4 };
+export const ENEMY_SCALE: Record<EnemyType, number> = { normal: 2, fast: 1.85, fat: 2.35, spitter: 2, armored: 2.15, exploder: 2, chick: 1.6, boss: 3.4, jumper: 2.05 };
 
 export interface BodyBox { hw: number; h: number; head: number }
 

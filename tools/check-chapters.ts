@@ -55,3 +55,38 @@ console.log('PASS chapters: 1 «Офис» (6, 7, 8, 11, 12) · 2 «Город»
   assert.equal(s.am, 0.05); assert.equal(s.bnm, 'Петух Тёмной Темы · Валера'); assert.equal(s.b, e.id);
   console.log('PASS snapshots carry the darkness override and the elite boss bar name');
 }
+// D71
+const mk = (id: string, n = 1, solo = n === 1) => { const w = new World(new GameMap(id, json(id)), LEVELS[id], { solo, seed: 9 }); for (let i = 0; i < n; i++) w.addPlayer('p' + i, 'P' + i, i); w.start(); return w; };
+const run = (w: World, s: number) => { for (let i = 0; i < s * 30; i++) w.step(1 / 30); };
+{
+  const w = mk('lab', 2); w.god = true;
+  w.script.onTrigger!(w, 'decon', w.players[0]); run(w, 1);
+  assert.ok(w.doors.every(d => !d.locked || d.locked === 'lab' || d.id === 'freight'), 'decontamination doors never lock (rules 6)');
+  console.log('PASS lab: the decontamination trap is an alarm and a wave, no locked doors');
+}
+{
+  const duo = mk('office8', 2); duo.god = true; duo.players[1].state = 'dead'; run(duo, 9);
+  assert.equal(!!duo.flags.nelyaHelps, false, 'two connected players: Неля stays (even if one is down)');
+  assert.equal(duo.npc('nelya')!.mode, 'idle');
+  const solo = mk('office8', 1); solo.god = true; run(solo, 9);
+  assert.equal(solo.flags.nelyaHelps, true); assert.equal(solo.npc('nelya')!.mode, 'goto');
+  console.log('PASS office8: Неля explains and stays with a team, walks to the east release for a lone player');
+}
+{
+  const w = mk('arena'); const p = w.players[0]; w.enemies = []; w.cancelWaves();
+  w.giveWeapon(p, 'minigun', true); p.ammo.minigun!.mag = 2; p.input.weapon = p.cur; p.input.fire = true; run(w, 0.5);
+  assert.ok(!p.weapons.includes('minigun'), 'a spent minigun is dropped');
+  w.giveWeapon(p, 'laser', true); assert.equal(p.ammo.laser!.reserve, 20); w.addPickup('ammo', p.x, p.y); run(w, .1); assert.equal(p.ammo.laser!.reserve, 20, 'ammo boxes do not refill the laser');
+  const e = w.spawnEnemy('jumper', p.x + 260, p.y, { aggro: true }); p.input.fire = false;
+  let leapt = false; for (let i = 0; i < 60; i++) { w.step(1 / 30); if (e.state === 'charge') leapt = true; }
+  assert.ok(leapt, 'a jumper leaps at mid range'); assert.ok(p.hp < 100, 'and lands a peck');
+  console.log('PASS minigun dropped when spent, laser not refilled by boxes, jumper leaps and bites');
+}
+{
+  const w = mk('boss'); w.god = true; run(w, 6);
+  const b = w.enemies.find(e => e.type === 'boss')!; w.events = [];
+  w.killEnemy(b, 0, 'p0', false, false);
+  assert.ok(w.events.some(e => e.e === 'cine' && e.k === 'victory'), 'finale cutscene');
+  run(w, 10); assert.ok(w.finished, 'the campaign ends after the finale');
+  console.log('PASS boss: victory cutscene, then the campaign ends');
+}

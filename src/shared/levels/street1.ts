@@ -36,6 +36,16 @@ const street1: LevelScript = {
 
   onTick(w, dt) {
     const sec = Math.floor(w.time) !== Math.floor(w.time - dt);
+    // D71 (rules 6): now and then a pack of «прыгуны» — street parkour couriers, quicker and tougher
+    if (w.rules >= 6 && !w.finished && !(w.flags.pilotMet && !w.flags.radioDone) && w.time >= (w.flags.jumpAt ?? 40)) {
+      w.flags.jumpAt = w.time + w.rng.range(42, 58);
+      const groups = w.objects('spawner').map(o => o.name);
+      const g = 'street';
+      if (groups.includes(g) && w.countTag('jump') < 3 && w.enemies.length < 14) {
+        w.spawnWave(g, ['jumper'], 1 + Math.ceil(w.players.length / 2), .6, true, 'jump');
+        if (!w.flags.jumpSaid) { w.flags.jumpSaid = true; w.emit({ e: 'notice', tone: 'danger', text: 'ПРЫГУНЫ!', sub: 'Уличные петухи-паркурщики: прыгают издалека. Отходите в сторону, когда они присели.' }); }
+      }
+    }
     if (sec) objective(w);
     if (!w.flags.pilotMet && w.time >= w.flags.streetAt) {
       w.flags.streetAt = w.time + 22;
@@ -51,6 +61,7 @@ const street1: LevelScript = {
       }
       if (t >= RADIO) {
         w.flags.radioDone = true;
+        w.flags.jumpAt = w.time + 25;
         w.say('pilot', 'Штаб на связи! Эпицентр — завод «Провансаль», цех номер три. Там всё началось! Дорога — на юг, через рынок.', 7);
         w.after(7, () => w.say('pilot', 'Держите автомат — без вертолёта он мне ни к чему. Я останусь, буду наводить вертушки… ну, когда они снова начнут летать.', 6));
         const n = w.npc('pilot')!;
@@ -109,6 +120,12 @@ const street1: LevelScript = {
       w.setAlarm(true);
       w.say(n.id, 'Живые! Мне нужна минута, чтобы пробиться к штабу. Держите площадь!', 5);
       w.msg('ОБОРОНА ВЕРТОЛЁТА', '60 секунд, пока работает рация', 3);
+      if (w.rules >= 6) {
+        // D71: the helicopter's door gun — plenty of bullets, but no more where those came from
+        const wr = w.objects('prop', 'heli_wreck')[0];
+        w.addPickup('weapon', (wr?.cx ?? n.x) - 30, (wr?.cy ?? n.y) + 70, { weapon: 'minigun', ttl: -1 });
+        w.after(2.5, () => w.say(n.id, 'С борта снимите миниган! Он ещё крутится. Патронов — сколько есть, больше не будет.', 5));
+      }
       w.after(RADIO, () => w.setAlarm(false));
       objective(w);
     }

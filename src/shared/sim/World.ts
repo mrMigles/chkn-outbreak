@@ -247,8 +247,8 @@ export class World implements WorldView {
   /** D69: darkness override for scripted light (0 = fully lit, 0.95 = pitch black; −1 = back to the map's). */
   setLight(v: number) { if (this.light === v) return; this.light = v; this.emit({ e: 'light', v }); }
   /** D69: horror beat / cutscene prop for clients (no rules). */
-  scare(k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark', x: number, y: number) { this.emit({ e: 'scare', k, x: Math.round(x), y: Math.round(y) }); }
-  cine(k: 'heli' | 'chapter', text?: string, sub?: string) { this.emit({ e: 'cine', k, ...(text ? { text } : {}), ...(sub ? { sub } : {}) }); }
+  scare(k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock', x: number, y: number) { this.emit({ e: 'scare', k, x: Math.round(x), y: Math.round(y) }); }
+  cine(k: 'heli' | 'chapter' | 'victory' | 'intro', text?: string, sub?: string) { this.emit({ e: 'cine', k, ...(text ? { text } : {}), ...(sub ? { sub } : {}) }); }
   /** D69: an elite chicken gets the boss bar. */
   setBoss(e: Enemy, name: string) { this.bossId = e.id; this.bossName = name; if (e.appearance) e.appearance.name = name; }
   /** D69 floor 8: sleeping chickens, flashlight-shy wake-ups, surprise damage. */
@@ -349,7 +349,7 @@ export class World implements WorldView {
     const def = ENEMIES[type];
     const diff = this.opts.difficulty ?? 1;
     // D70 (rules 5): the final boss has 7500 HP solo instead of 9000 (still +40 % of that per extra player)
-    const hpMul = (type === 'boss' ? (0.6 + 0.4 * Math.max(1, this.players.length)) * (this.rules >= 5 ? 7500 / 9000 : 1) : 1) * (this.script.enemyHp ?? 1);
+    const hpMul = (type === 'boss' ? (0.6 + 0.4 * Math.max(1, this.players.length)) * (this.rules >= 6 ? 8000 / 9000 : this.rules >= 5 ? 7500 / 9000 : 1) : 1) * (this.script.enemyHp ?? 1);
     const e: Enemy = {
       id: this.nextId++, type, variant: this.rng.int(0, def.sprite.length - 1), x, y, angle: this.rng.range(0, TAU), vx: 0, vy: 0,
       hp: def.hp * hpMul * diff, maxHp: def.hp * hpMul * diff, state: o.how ? 'rise' : 'idle', t: o.how ? 0.55 : 0, cd: this.rng.range(0, 0.6),
@@ -362,6 +362,7 @@ export class World implements WorldView {
         normal: ['Ко-коуч · требует дейли', 'manBlue'], fast: ['Петух-отпускник · без согласования', 'worker'],
         fat: ['Директор по корму · всё включено', 'arkady'], armored: ['Служба петушиной безопасности', 'guard'],
         spitter: ['Бухгалтер · плюётся отчётами', 'scientist'], exploder: ['DevOops · горячий релиз', 'scientist'],
+        jumper: ['Паркурщик · без лифта', 'courier'], chick: ['', ''], boss: ['', ''],
       };
       const [name, kind] = odd[type]; e.appearance = { npcId: 'odd_' + e.id, kind, name };
     }
@@ -382,7 +383,8 @@ export class World implements WorldView {
     if (!p.weapons.includes(w)) {
       p.weapons.push(w);
       p.weapons.sort((a, b) => WEAPON_ORDER.indexOf(a) - WEAPON_ORDER.indexOf(b));
-      p.ammo[w] = { mag: def.mag, reserve: def.reserveMax < 0 ? -1 : Math.min(def.reserveMax, def.pickupAmmo * 2) };
+      // limited specials (no ammo from boxes) come with their whole reserve
+      p.ammo[w] = { mag: def.mag, reserve: def.reserveMax < 0 ? -1 : def.pickupAmmo > 0 ? Math.min(def.reserveMax, def.pickupAmmo * 2) : def.reserveMax };
       if (select) { p.cur = p.weapons.indexOf(w); p.reloadT = 0; }
     } else {
       const a = p.ammo[w]!;
@@ -644,6 +646,12 @@ export class World implements WorldView {
       if (p.fireCd > 0) p.firing = true;
     }
     if (p.fireCd < 0) p.fireCd = 0;
+    // D71: a spent limited-ammo special (minigun, laser: ammo boxes never refill them) is dropped
+    if (def.pickupAmmo === 0 && def.reserveMax >= 0 && ammo.mag === 0 && ammo.reserve === 0 && p.reloadT <= 0 && !infinite && p.weapons.length > 1 && this.rules >= 6) {
+      p.weapons.splice(p.cur, 1); delete p.ammo[w];
+      p.cur = Math.max(0, p.weapons.length - 1); p.reloadT = 0; p.fireCd = Math.max(p.fireCd, 0.2);
+      this.say(p.id, w === 'minigun' ? 'Миниган пуст. Прощай, вертушка.' : w === 'laser' ? 'Лазер сел. Омлетов, ты обещал батарейки!' : 'Пусто. Бросаю.', 2.5);
+    }
 
     // interact with NPCs (toggle follow), locked doors, use-objects
 

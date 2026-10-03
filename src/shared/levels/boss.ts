@@ -55,7 +55,9 @@ const boss: LevelScript = {
     }
   },
 
-  onBossDead(w) {
+  onBossDead(w, e) {
+    // D71: the finale cutscene (fanfare, feathers, the camera on the fallen CEO) — client only
+    w.cine('victory', 'ГЕНЕРАЛЬНЫЙ ПЕТУХ ПОВЕРЖЕН', `${Math.round(e.x)},${Math.round(e.y)}`);
     for (const p of w.players) {
       if (p.state !== 'alive') w.cure(p);
       (p.buffs ??= {}).invincible = Math.max(10, p.buffs.invincible ?? 0);
@@ -64,9 +66,10 @@ const boss: LevelScript = {
     w.setAlarm(false);
     for (const e of [...w.enemies]) w.killEnemy(e, 0, '', true, false);
     w.enemies.length = 0; w.projectiles.length = 0;
-    w.after(4, () => {
+    w.after(2.5, () => w.say('radio', 'Капитан Крылов: Вижу дым над «Провансалем»! Антидот пошёл по трубам. Город… кукарекать перестаёт. Вы сделали это!', 6));
+    w.after(5, () => {
       w.msg('ПОБЕДА', 'Антидот разлит по банкам. Понедельник отменён', 4);
-      w.after(3, () => w.completeLevel(''));
+      w.after(4, () => w.completeLevel(''));
     });
   },
 };

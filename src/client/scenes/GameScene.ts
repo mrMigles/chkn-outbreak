@@ -31,9 +31,9 @@ import artMeta from '../../shared/generated/artMeta.json';
 
 export interface GameSceneData { session: Session; onEnd: (ev: { kind: 'level' | 'gameover' | 'quit'; next?: string; win?: boolean; reason?: string }) => void }
 
-const SHOT_SOUND: Record<WeaponId, string> = { pistol: 'pistol', smg: 'smg', rifle: 'rifle', shotgun: 'shotgun', machinegun: 'machinegun', grenade: 'grenade_launch', flamethrower: 'flame' };
-const SHAKE: Record<WeaponId, number> = { pistol: 0.13, smg: 0.055, rifle: 0.11, shotgun: 0.42, machinegun: 0.1, grenade: 0.3, flamethrower: 0.02 };
-const KICK: Record<WeaponId, number> = { pistol: 3, smg: 2, rifle: 3.5, shotgun: 10, machinegun: 3.5, grenade: 8, flamethrower: 0.5 };
+const SHOT_SOUND: Record<WeaponId, string> = { pistol: 'pistol', smg: 'smg', rifle: 'rifle', shotgun: 'shotgun', machinegun: 'machinegun', grenade: 'grenade_launch', flamethrower: 'flame', minigun: 'minigun', laser: 'laser' };
+const SHAKE: Record<WeaponId, number> = { pistol: 0.13, smg: 0.055, rifle: 0.11, shotgun: 0.42, machinegun: 0.1, grenade: 0.3, flamethrower: 0.02, minigun: 0.09, laser: 0.25 };
+const KICK: Record<WeaponId, number> = { pistol: 3, smg: 2, rifle: 3.5, shotgun: 10, machinegun: 3.5, grenade: 8, flamethrower: 0.5, minigun: 3, laser: 7 };
 
 /** D69: story NPCs behind a counter/desk are talked to from across it (mirrors map prop `reach`). */
 const NPC_REACH: Record<string, number> = { zhanna: 150, chef: 150, valya: 150, ashot: 130, valera: 130 };
@@ -89,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   hitstop = 0;
   wallFaces: Phaser.GameObjects.Image[] = [];
   private cineFocus: { x: number; y: number; until: number } | null = null;
+  private heartAt = 0;
   private fadeProps: { img: Phaser.GameObjects.Image; x: number; y: number; hw: number; h: number }[] = [];
   /** D69 floor 8: chickens' eyes glow above the darkness */
   redEyes = false;
@@ -110,7 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.pingPong = undefined;
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
-    this.wallFaces = []; this.fadeProps = [];
+    this.wallFaces = []; this.fadeProps = []; this.introState = 'wait'; this.cineFocus = null;
     this.incidentMarkers = new Map(); this.lastCombatPop = 0;
   }
 
@@ -208,15 +209,48 @@ export class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => telegramBack(null));
     this.time0 = this.time.now;
     sfx.resume();
-    if (this.input2.touch) {
-      // the weapon panel is the switch button on phones (D55)
-      this.hud.el.querySelector('.hud-weapon')!.addEventListener('touchstart', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        this.input2.state.weaponDelta = 1;
-        haptic('hit');
-      }, { passive: false });
-    }
+    if (this.input2.touch) this.bindWeaponButton();
     this.firstRunHelp();
+  }
+
+  /**
+   * The weapon panel is the switch button on phones (D55). D71: a tap takes the next gun; holding it opens a
+   * picker with every gun — slide onto one and let go (or tap one) to take it.
+   */
+  private bindWeaponButton() {
+    const btn = this.hud.el.querySelector<HTMLElement>('.hud-weapon')!;
+    let timer = 0, picker: HTMLElement | null = null, chosen = -1;
+    const close = () => { picker?.remove(); picker = null; btn.classList.remove('held'); };
+    const itemAt = (x: number, y: number) => (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('.wp-item');
+    const mark = (el: HTMLElement | null | undefined) => { picker?.querySelectorAll('.wp-item').forEach(q => q.classList.toggle('hover', q === el)); chosen = el ? Number(el.dataset.i) : -1; };
+    const open = () => {
+      const me = this.session.view.players.find(p => p.id === this.session.myId);
+      if (!me || me.weapons.length < 2) return;
+      haptic('hit');
+      btn.classList.add('held');
+      picker = document.createElement('div');
+      picker.className = 'weapon-picker';
+      picker.innerHTML = '<div class="wp-title">Оружие</div>' + me.weapons.map((w, i) => {
+        const a = me.ammo[w], def = WEAPONS[w];
+        return `<div class="wp-item ${i === me.cur ? 'cur' : ''}" data-i="${i}"><i style="background-image:url(${this.hud.icons['w_' + w] ?? ''})"></i><b>${def.name}</b><span>${a ? a.mag + (a.reserve >= 0 ? ' / ' + a.reserve : ' / ∞') : ''}</span></div>`;
+      }).join('');
+      picker.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); const it = itemAt(e.touches[0].clientX, e.touches[0].clientY); if (it) { this.input2.state.weaponSlot = Number(it.dataset.i); close(); } else close(); }, { passive: false });
+      this.hud.el.appendChild(picker);
+    };
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(timer);
+      if (picker) { close(); return; }
+      timer = window.setTimeout(() => { timer = 0; open(); }, 330);
+    }, { passive: false });
+    btn.addEventListener('touchmove', (e) => { e.preventDefault(); if (picker) mark(itemAt(e.touches[0].clientX, e.touches[0].clientY)); }, { passive: false });
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (timer) { clearTimeout(timer); timer = 0; this.input2.state.weaponDelta = 1; haptic('hit'); return; }
+      if (picker && chosen >= 0) { this.input2.state.weaponSlot = chosen; close(); }
+      // released on the button itself: the picker stays open for a tap
+    }, { passive: false });
+    this.events.once('shutdown', () => { clearTimeout(timer); close(); });
   }
 
   /** «Как управлять» before the very first fight; the portrait hint only now and then. */
@@ -243,7 +277,7 @@ export class GameScene extends Phaser.Scene {
     const v = this.session.view;
     for (const n of v.npcs) { lookTexture(this, n.kind); lookTexture(this, n.kind, true); }
     for (const p of v.players) lookTexture(this, p.look || 'p' + (p.slot % 4));
-    const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder'] as const;
+    const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'jumper'] as const;
     for (const type of types) for (let i = 0; i < LOOK_POOL; i++) lookTexture(this, enemyLookKey({ type, id: i, appearance: undefined }), true);
     if (this.session.levelId !== 'office') for (const kind of ['manBlue', 'worker', 'arkady', 'guard', 'scientist']) lookTexture(this, kind, true);
     if (this.session.levelId === 'boss') lookTexture(this, enemyLookKey({ type: 'boss', id: 0, appearance: undefined }), true);
@@ -276,6 +310,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cleanup() {
+    document.getElementById('ui')?.classList.remove('cine-bars');
+    this.introCaption?.remove();
     this.input2?.destroy();
     this.tutorial?.destroy();
     this.threats?.destroy();
@@ -334,6 +370,13 @@ export class GameScene extends Phaser.Scene {
       if (this.desiredWeapon !== me.cur && (inp.weaponDelta || inp.weaponSlot >= 0)) sfx.play('switch', { vol: 0.6 });
       if (this.pendingWeapon && me.weapons.includes(this.pendingWeapon)) { this.desiredWeapon = me.weapons.indexOf(this.pendingWeapon); this.pendingWeapon = null; }
       if (this.desiredWeapon < 0 || this.desiredWeapon >= me.weapons.length) this.desiredWeapon = me.cur;
+      // D71: an empty gun (no rounds, no reserve) is put away for the best one that still shoots
+      const held = me.weapons[this.desiredWeapon], ha = held ? me.ammo[held] : undefined;
+      if (ha && ha.mag === 0 && ha.reserve === 0 && me.reloadT <= 0 && !(me.buffs?.infinite)) {
+        let best = me.weapons.indexOf('pistol');
+        me.weapons.forEach((wid, i) => { const a = me.ammo[wid]; if (a && (a.mag > 0 || a.reserve !== 0) && wid !== 'grenade') best = i; });
+        if (best >= 0 && best !== this.desiredWeapon) { this.desiredWeapon = best; sfx.play('switch', { vol: 0.6 }); }
+      }
       if (fire && w && (me.ammo[w]?.mag ?? 0) === 0 && (me.ammo[w]?.reserve ?? 0) === 0 && Math.random() < 0.08) sfx.play('empty', { vol: 0.5 });
       s.send({ seq: ++this.seq, x: this.px, y: this.py, aim: this.aim, fire, reload: inp.reload, interact: inp.interact, weapon: this.desiredWeapon });
       if (!s.solo) this.predictFire(dt, me, fire && !(inp.interact && (supportTarget(view0, s.map, me)?.state === 'downed' || me.support?.kind === 'heal')));
@@ -349,6 +392,7 @@ export class GameScene extends Phaser.Scene {
     for (const wall of this.wallFaces) wall.setAlpha(this.py < wall.y && wall.y - this.py < 155 && Math.abs(this.px - wall.x) < 72 ? 0.28 : 1);
     for (const f of this.fadeProps) f.img.setAlpha(this.py < f.y - 4 && f.y - this.py < f.h && Math.abs(this.px - f.x) < f.hw ? 0.4 : 1);
 
+    this.updateIntro(inp);
     // ---- camera
     this.updateSpectate(inp);
     this.updateCamera(dt, inp);
@@ -626,16 +670,22 @@ export class GameScene extends Phaser.Scene {
     for (const [id, pv] of this.players) if (!seenP.has(id)) { pv.destroy(); this.players.delete(id); }
 
     // enemies
+    let nearSleeper = false;
     const seenE = new Set<number>();
     for (const e of v.enemies) {
       seenE.add(e.id);
       let ev = this.enemies.get(e.id);
       if (!ev) { ev = new EnemyView(this, e); this.enemies.set(e.id, ev); }
       ev.sync(e, e.x, e.y, dt, time);
-      if (this.redEyes) ev.eyes(this, e, this.lighting.ambient, time);
+      if (this.redEyes) {
+        ev.eyes(this, e, this.lighting.ambient, time);
+        if (e.state === 'idle' && this.lighting.ambient > 0.5 && Math.abs(e.x - this.px) < 260 && Math.abs(e.y - this.py) < 260) nearSleeper = true;
+      }
       if (e.burnT > 0) this.fx.burning(e.x, e.y, dt, e.type === 'boss' ? 3 : e.type === 'fat' ? 1.4 : 1);
     }
     for (const [id, ev] of this.enemies) if (!seenE.has(id)) { ev.destroy(); this.enemies.delete(id); }
+    // D71: a heartbeat while a sleeping chicken is close in the dark
+    if (nearSleeper && this.time.now - this.heartAt > 900) { this.heartAt = this.time.now; sfx.play('heartbeat', { vol: 0.7 }); }
 
     // npcs
     const seenN = new Set<string>();
@@ -786,7 +836,7 @@ export class GameScene extends Phaser.Scene {
         }
         const rig = pose?.view?.rig ?? pose?.npc?.rig;
         if (rig) rig.recoil = def.recoil;
-        sfx.play(SHOT_SOUND[ev.w], { x: m.x, y: m.y, vol: pose?.mine ? 0.9 : 0.7, max: ev.w === 'smg' || ev.w === 'machinegun' ? 8 : 5 });
+        sfx.play(SHOT_SOUND[ev.w], { x: m.x, y: m.y, vol: pose?.mine ? 0.9 : 0.7, max: ev.w === 'smg' || ev.w === 'machinegun' || ev.w === 'minigun' ? 8 : 5 });
         if (ev.w === 'shotgun') setTimeout(() => sfx.play('pump', { x: m.x, y: m.y, vol: 0.6 }), 280);
         if (pose?.mine) { fx.shake(SHAKE[ev.w]); fx.kick(a, KICK[ev.w]); }
         else fx.shake(SHAKE[ev.w] * 0.15 * clamp(1 - dist(sx, sy, this.px, this.py) / 900, 0, 1));
@@ -926,6 +976,7 @@ export class GameScene extends Phaser.Scene {
       case 'scare': this.scare(ev); break;
       case 'cine':
         if (ev.k === 'heli') this.heliCrash();
+        else if (ev.k === 'victory') this.victory(ev.sub ?? '');
         else this.hud.message(ev.text ?? '', ev.sub ?? '', 5);
         break;
       case 'blackout':
@@ -947,7 +998,7 @@ export class GameScene extends Phaser.Scene {
       }
       case 'fuse': {
         const e = this.session.view.enemies.find((q) => q.id === ev.id);
-        sfx.play(e?.type === 'boss' ? 'boss_roar' : 'fuse', { x: e?.x, y: e?.y, vol: 0.8 });
+        sfx.play(e?.type === 'boss' ? 'boss_roar' : e?.type === 'jumper' ? 'hop' : 'fuse', { x: e?.x, y: e?.y, vol: 0.8 });
         break;
       }
       case 'level':
@@ -967,6 +1018,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (ev.k === 'flicker') { this.lighting.flicker(1.1); sfx.play('spark', { x: ev.x, y: ev.y, vol: 0.9 }); return; }
+    if (ev.k === 'knock') { sfx.play('knock', { x: ev.x, y: ev.y, vol: 1 }); return; }
+    if (ev.k === 'eyes') {
+      // D71: two red eyes open in the dark, stare for a moment and are gone
+      const eyes = [-7, 7].map(dx => this.add.rectangle(ev.x + dx, ev.y - 84, 6, 4, 0xff2a1a).setDepth(31).setAlpha(0));
+      const glow = this.add.image(ev.x, ev.y - 84, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff2010).setDepth(31).setScale(0.6).setAlpha(0);
+      this.tweens.add({ targets: [...eyes, glow], alpha: { from: 0, to: 1 }, duration: 350, yoyo: true, hold: 1100, onComplete: () => { eyes.forEach(e => e.destroy()); glow.destroy(); } });
+      this.time.delayedCall(1300, () => sfx.play('whoosh', { x: ev.x, y: ev.y, vol: 0.8 }));
+      return;
+    }
     if (ev.k === 'spark') { this.fx.impact('wall', ev.x, ev.y - 40, -Math.PI / 2, 0xffe08a, true); sfx.play('spark', { x: ev.x, y: ev.y, vol: 0.8 }); return; }
     if (!near) return;
     if (ev.k === 'scream') { sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1, rate: 0.55 }); this.fx.shake(0.25); return; }
@@ -981,6 +1041,66 @@ export class GameScene extends Phaser.Scene {
       document.getElementById('ui')!.appendChild(f);
       setTimeout(() => f.remove(), 700);
     }
+  }
+
+  /**
+   * D71: a short intro at the start of every floor: letterbox bars, the camera glides to the first objective
+   * and back, a caption says what to do. Never blocks: any movement or shot ends it at once.
+   */
+  private introState: 'wait' | 'show' | 'done' = 'wait';
+  private introEnd = 0;
+  private introCaption: HTMLElement | null = null;
+  private updateIntro(inp: ReturnType<Input['poll']>) {
+    if (this.introState === 'done') return;
+    const t = (this.time.now - this.time0) / 1000;
+    const v = this.session.view;
+    const moved = Math.hypot(inp.mx, inp.my) > 0.2 || inp.fire;
+    if (this.introState === 'wait') {
+      if (this.session.levelId === 'arena' || moved || t > 6) { this.introState = 'done'; return; }
+      if (t < 1.3 || !v.objective || this.paused) return;
+      this.introState = 'show'; this.introEnd = this.time.now + 3200;
+      const target = this.resolveTarget(v.objectiveTarget[0]);
+      if (target && Math.hypot(target.x - this.px, target.y - this.py) > 300) this.cineFocus = { x: target.x, y: target.y - 40, until: this.introEnd - 700 };
+      document.getElementById('ui')!.classList.add('cine-bars');
+      const c = document.createElement('div');
+      c.className = 'cine-caption';
+      c.innerHTML = `<small>ЗАДАЧА</small><b></b><i>${this.input2.touch ? 'коснитесь стика' : 'двигайтесь'} — пропустить</i>`;
+      c.querySelector('b')!.textContent = v.objective;
+      document.getElementById('ui')!.appendChild(c);
+      this.introCaption = c;
+      return;
+    }
+    if (moved || this.time.now > this.introEnd) {
+      this.introState = 'done'; this.cineFocus = null;
+      document.getElementById('ui')?.classList.remove('cine-bars');
+      this.introCaption?.remove(); this.introCaption = null;
+    }
+  }
+  private resolveTarget(t?: string): { x: number; y: number } | null {
+    if (!t) return null;
+    if (t.startsWith('@')) { const [x, y] = t.slice(1).split(',').map(Number); return { x, y }; }
+    const n = this.session.view.npcs.find(q => q.id === t);
+    if (n) return n;
+    const o = ['use', 'trigger', 'npc', 'door'].map(type => this.session.map.objects.find(q => q.name === t && q.type === type)).find(Boolean);
+    return o ? { x: o.cx, y: o.cy } : null;
+  }
+
+  /** D71: the finale — fanfare, a slow camera on the fallen CEO, bursts of feathers and confetti. */
+  private victory(at: string) {
+    const [x, y] = at.split(',').map(Number);
+    this.cineFocus = { x: x || this.px, y: (y || this.py) - 60, until: this.time.now + 7000 };
+    sfx.play('fanfare', { vol: 1 }); music.want('calm', 99);
+    this.time.delayedCall(1600, () => sfx.play('fanfare', { vol: 0.8 }));
+    this.hud.message('ГЕНЕРАЛЬНЫЙ ПЕТУХ ПОВЕРЖЕН', 'Корпорация переходит на удалёнку', 5);
+    document.getElementById('ui')!.classList.add('cine-bars');
+    this.time.delayedCall(7000, () => document.getElementById('ui')?.classList.remove('cine-bars'));
+    const colors = [0xffd54f, 0xff6b6b, 0x4fc3f7, 0x81c784, 0xffffff];
+    let k = 0;
+    this.time.addEvent({ delay: 180, repeat: 34, callback: () => {
+      const cx = this.cameras.main.midPoint.x + (Math.random() - 0.5) * 700, cy = this.cameras.main.worldView.y - 20;
+      for (let i = 0; i < 6; i++) this.fx.high.emit({ frame: i % 2 ? 'feather_0' : 'feather_1', x: cx + (Math.random() - 0.5) * 120, y: cy, vx: (Math.random() - 0.5) * 120, vy: 140 + Math.random() * 160, life: 2.6, s0: 1.2, s1: 0.8, a0: 1, a1: 0, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, tint: colors[(k + i) % colors.length] });
+      if (k++ % 6 === 0) { this.fx.light(x || this.px, (y || this.py) - 60, 400, colors[k % colors.length], 0.9, 0.6); this.fx.shake(0.1); }
+    } });
   }
 
   /** Cafe, floor 12: a smoking helicopter crosses the panoramic windows and falls into the street. */

@@ -1,4 +1,4 @@
-export type EnemyType = 'normal' | 'fast' | 'fat' | 'spitter' | 'armored' | 'exploder' | 'chick' | 'boss';
+export type EnemyType = 'normal' | 'fast' | 'fat' | 'spitter' | 'armored' | 'exploder' | 'chick' | 'boss' | 'jumper';
 
 export interface EnemyDef {
   type: EnemyType;
@@ -46,6 +46,11 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   chick: {
     type: 'chick', name: 'Цыплёнок', hp: 14, speed: 235, radius: 11, damage: 5, attackRange: 26, attackCd: 0.5, windup: 0.1,
     armor: 0, mass: 0.5, sight: 800, score: 4, sprite: ['ck_fast'], scale: 0.7,
+  },
+  // D71: the street «прыгун» — tougher and quicker than an office chicken, closes the distance with a leap
+  jumper: {
+    type: 'jumper', name: 'Прыгун-курьер', hp: 95, speed: 175, radius: 16, damage: 14, attackRange: 34, attackCd: 0.8, windup: 0.18,
+    armor: 0, mass: 1.3, sight: 760, score: 30, sprite: ['ck_fast'], scale: 1,
   },
   boss: {
     type: 'boss', name: 'Генеральный Петух', hp: 9000, speed: 95, radius: 62, damage: 35, attackRange: 110, attackCd: 1.4, windup: 0.5,

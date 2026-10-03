@@ -59,6 +59,16 @@ const street2: LevelScript = {
 
   onTick(w, dt) {
     const sec = Math.floor(w.time) !== Math.floor(w.time - dt);
+    // D71 (rules 6): now and then a pack of «прыгуны» — street parkour couriers, quicker and tougher
+    if (w.rules >= 6 && !w.finished && w.time >= (w.flags.jumpAt ?? 40)) {
+      w.flags.jumpAt = w.time + w.rng.range(42, 58);
+      const groups = w.objects('spawner').map(o => o.name);
+      const g = w.flags.atGate ? 'yard' : w.flags.parkSeen ? 'park2' : 'market';
+      if (groups.includes(g) && w.countTag('jump') < 3 && w.enemies.length < 14) {
+        w.spawnWave(g, ['jumper'], 1 + Math.ceil(w.players.length / 2), .6, true, 'jump');
+        if (!w.flags.jumpSaid) { w.flags.jumpSaid = true; w.emit({ e: 'notice', tone: 'danger', text: 'ПРЫГУНЫ!', sub: 'Уличные петухи-паркурщики: прыгают издалека. Отходите в сторону, когда они присели.' }); }
+      }
+    }
     if (sec) objective(w);
     // Стёпа streams; somewhere in the park he may turn live on stream (seeded, once)
     const s = stepa(w);

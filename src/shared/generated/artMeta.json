@@ -1540,6 +1540,20 @@
    "w": 46,
    "h": 14
   },
+  "minigun": {
+   "gripX": 18,
+   "gripY": 12,
+   "muzzle": 48,
+   "w": 68,
+   "h": 18
+  },
+  "laser": {
+   "gripX": 16,
+   "gripY": 10,
+   "muzzle": 40,
+   "w": 60,
+   "h": 16
+  },
   "flamethrower": {
    "gripX": 18,
    "gripY": 12,

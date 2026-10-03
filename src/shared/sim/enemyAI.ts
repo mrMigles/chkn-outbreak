@@ -177,6 +177,26 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
   const burning = e.burnT > 0 ? 1.25 : 1;
   const speed = def.speed * e.speedMul * burning * (e.stunT > 0 ? 0.25 : 1) * ((e.blindT ?? 0) > 0 ? .7 : 1) * (w.opts.difficulty ?? 1) ** 0.3;
 
+  if (e.type === 'jumper') {
+    // D71: «прыгун» — leaps at its target from mid range and lands with a heavy peck
+    if (e.state === 'charge') {
+      e.t -= dt;
+      [e.x, e.y] = w.map.move(e.x, e.y, def.radius * 0.8, Math.cos(e.angle) * e.wanderA * dt, Math.sin(e.angle) * e.wanderA * dt);
+      if (e.t <= 0) {
+        e.state = 'chase'; e.ability = ''; e.cd = 1.5;
+        w.emit({ e: 'swing', id: e.id, x: Math.round(e.x), y: Math.round(e.y), a: e.angle });
+        if (dist(e.x, e.y, t.x, t.y) < 62) hurt(w, e, t, def.damage * 1.6);
+      }
+      return;
+    }
+    if (e.cd <= 0 && td > 110 && td < 380 && e.stunT <= 0 && los(w, e, t)) {
+      e.state = 'charge'; e.ability = 'leap'; e.t = 0.55;
+      e.angle = Math.atan2(t.y - e.y, t.x - e.x); e.wanderA = Math.min(680, (td - 20) / 0.55);
+      w.emit({ e: 'fuse', id: e.id });
+      return;
+    }
+  }
+
   switch (e.state) {
     case 'windup': {
       e.t -= dt;

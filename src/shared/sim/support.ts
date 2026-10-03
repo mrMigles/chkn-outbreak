@@ -10,7 +10,8 @@ export const HELP_RADIUS = 80;
  * D66 rules: a downed teammate can be picked up from 110 units (80 was barely more than a body width on a
  * phone) and bleeds out in 15 s. Earlier room saves replay with their own rules (RoomCheckpoint.rules).
  */
-export const RULES = 5;
+// 5: D68–D70 (root manager, wide doors, boss relief…); 6: D71 (lab doors never lock, jumpers, new guns, floor-8 horror)
+export const RULES = 6;
 const rulesOf = (v: unknown) => ((v as { rules?: number }).rules ?? RULES);
 export const helpRadius = (v: unknown) => (rulesOf(v) >= 4 ? 110 : HELP_RADIUS);
 export const BLEEDOUT = 15;

@@ -101,6 +101,11 @@ export function botStep(w: World, b: Bot, skill: number) {
   const targets = resolveTargets(w, w.objectiveTarget);
   const slotTargets = targets.length > 1 && w.players.length > 1 ? [targets[p.slot % targets.length]] : targets;
   let goal = downed ? { x: downed.x, y: downed.y } : slotTargets.sort((a, c) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(c.x - p.x, c.y - p.y))[0];
+  // a gun lying close by that we do not have yet: a human picks it up
+  if (!downed && (!best || bd > 300)) {
+    const g = w.pickups.find(k => k.kind === 'weapon' && k.weapon && !p.weapons.includes(k.weapon) && k.weapon !== 'grenade' && Math.hypot(k.x - p.x, k.y - p.y) < 450);
+    if (g) goal = { x: g.x, y: g.y };
+  }
   // low on health: grab a nearby medkit / buff first
   if (!downed && p.hp < 65) {
     const k = w.pickups.filter(k => (k.kind === 'health' || k.kind === 'invincible') && Math.hypot(k.x - p.x, k.y - p.y) < 500).sort((a, c) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(c.x - p.x, c.y - p.y))[0];
@@ -171,7 +176,7 @@ export function playLevel(level: string, players: number, seed: number, carry?: 
   let retries = 0, downs = 0, kills = 0, stuck = 0, minHp = 100;
   for (let attempt = 0; attempt < 6; attempt++) {
     R = new Rng(seed * 7919 + attempt);
-    const w = new World(new GameMap(level, json(level)), LEVELS[level], { solo: players === 1, seed: seed * 1000 + attempt, carry });
+    const w = new World(new GameMap(level, json(level)), LEVELS[level], { solo: players === 1, seed: seed * 1000 + attempt, carry, ...(process.env.RULES ? { rules: +process.env.RULES } : {}) });
     const bots: Bot[] = [];
     for (let i = 0; i < players; i++) {
       const id = carry ? Object.keys(carry.players)[i] ?? 'bot' + i : 'bot' + i;

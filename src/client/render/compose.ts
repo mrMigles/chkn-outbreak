@@ -23,7 +23,7 @@ export interface ComposeEnv {
 const rgb = (hex: string) => [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
 const mix = (a: number[], b: number[], k: number) => a.map((v, i) => v + (b[i] - v) * k);
 
-/** The boss (Генеральный Петух): big body + red-hair look becomes a rooster with wings. */
+/** The boss (Генеральный Петух): big body + red-hair look becomes a mega rooster (D71: no wings — a huge comb, wattles and sickle tail). */
 export const isRooster = (l: Look) => l.body === 'big' && l.hairColor === 'c2452d';
 
 /** Which concrete layer ids a look uses, back to front. */
@@ -37,7 +37,6 @@ export function layersOf(l: Look, mutant: boolean): { id: string; tint: 'skin' |
   const head = big ? 'head_plump' : l.old ? `head_old_${g}` : `head_${g}`;
   const out: ReturnType<typeof layersOf> = [];
   const rooster = mutant && isRooster(l);
-  if (rooster) out.push({ id: 'wings_bg', tint: 'none', part: 'wings' });
   if (l.hair === 'ponytail' && !mutant) out.push({ id: 'hair_ponytail_bg', tint: 'hair', part: 'hair' });
   out.push({ id: big ? 'body_big' : `body_${g}`, tint: 'skin', part: 'body' });
   out.push({ id: `feet_${g}`, tint: 'feet', part: 'feet' });
@@ -48,7 +47,6 @@ export function layersOf(l: Look, mutant: boolean): { id: string; tint: 'skin' |
   if (!mutant && (l.acc === 'beard' || l.acc === 'mustache')) out.push({ id: 'acc_' + l.acc, tint: 'hair', part: 'hair' });
   if (!mutant) out.push({ id: 'hair_' + l.hair, tint: 'hair', part: 'hair' });
   if (l.acc === 'glasses') out.push({ id: 'acc_glasses', tint: 'none', part: 'acc' });
-  if (rooster) out.push({ id: 'wings', tint: 'none', part: 'wings' });
   return out;
 }
 
@@ -151,7 +149,7 @@ function headBox(d: Uint8ClampedArray, cx: number, cy: number): Box | null {
 function px(g: Ctx, hex: string, x: number, y: number, w = 1, h = 1) { g.fillStyle = '#' + hex; g.fillRect(x, y, w, h); }
 
 /** Draws comb/beak/wattle/tufts/tail for one cell. dir: 0 n, 1 w, 2 s, 3 e. */
-function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: boolean, pl: Plumage) {
+function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: boolean, pl: Plumage, mega = false) {
   const cx = Math.round((b.x0 + b.x1) / 2);
   const top = b.y0;
   const eyeY = b.eyes.length ? Math.round(b.eyes.reduce((s, e) => s + e[1], 0) / b.eyes.length) : top + 13;
@@ -163,6 +161,7 @@ function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: 
     if (b.eyes.length) { px(g, outline, X(cx - 2), Y(eyeY + 2), 4, 3); px(g, BEAK, X(cx - 1), Y(eyeY + 2), 2, 2); }
     return;
   }
+  if (mega) { megaBits(g, X, Y, cx, top, eyeY, dir, b, pl, outline); return; }
   // comb: three serrations on top of the head
   const combX = dir === 1 ? cx + 1 : dir === 3 ? cx - 1 : cx;
   px(g, outline, X(combX - 4), Y(top - 3), 9, 4);
@@ -191,6 +190,60 @@ function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: 
     if (dir === 1 && dx > 0 || dir === 3 && dx < 0) continue;
     px(g, pl.mid, X(cx + dx), Y(neckY + dy), 1, l + 1);
     px(g, pl.lighter, X(cx + dx), Y(neckY + dy), 1, l);
+  }
+}
+
+/** D71: the boss's mega-rooster head: a tall five-point comb, long double wattles, a hooked beak, a ruff of hackles. */
+function megaBits(g: Ctx, X: (x: number) => number, Y: (y: number) => number, cx: number, top: number, eyeY: number, dir: number, b: Box, pl: Plumage, outline: string) {
+  const combX = dir === 1 ? cx + 1 : dir === 3 ? cx - 1 : cx;
+  const RED = 'e0302a', HI = 'ff6a52';
+  // comb: a solid base and five tall points
+  px(g, outline, X(combX - 6), Y(top - 4), 13, 5); px(g, RED, X(combX - 5), Y(top - 3), 11, 3);
+  for (const [dx, h] of [[-5, 3], [-3, 5], [-1, 7], [1, 6], [3, 4]] as const) {
+    px(g, outline, X(combX + dx - 1), Y(top - 3 - h), 3, h + 1); px(g, RED, X(combX + dx), Y(top - 3 - h + 1), 1, h);
+  }
+  px(g, HI, X(combX - 2), Y(top - 3), 3, 1); px(g, HI, X(combX - 1), Y(top - 8), 1, 2);
+  if (dir === 2) {
+    px(g, outline, X(cx - 4), Y(eyeY + 1), 8, 4); px(g, BEAK, X(cx - 3), Y(eyeY + 1), 6, 2); px(g, 'c97a1a', X(cx - 1), Y(eyeY + 3), 2, 1);
+    // two long wattles
+    for (const dx of [-3, 1]) { px(g, outline, X(cx + dx - 1), Y(eyeY + 4), 4, 7); px(g, RED, X(cx + dx), Y(eyeY + 4), 2, 6); px(g, HI, X(cx + dx), Y(eyeY + 4), 1, 2); }
+  } else if (dir === 1 || dir === 3) {
+    const s = dir === 3 ? 1 : -1, edge = dir === 3 ? b.x1 : b.x0;
+    for (let k = 0; k < 5; k++) px(g, outline, X(edge + s * (1 + k)), Y(eyeY - (k < 4 ? 1 : 0)), 1, k < 4 ? 4 : 3);
+    for (let k = 0; k < 4; k++) px(g, BEAK, X(edge + s * (1 + k)), Y(eyeY), 1, k < 3 ? 2 : 1);
+    px(g, outline, X(edge - s * 1 - 1), Y(eyeY + 3), 4, 7); px(g, RED, X(edge - s * 1), Y(eyeY + 3), 2, 6);
+  }
+  // hackles: a golden-orange ruff around the neck
+  const neckY = b.y1 + 1;
+  for (let dx = -8; dx <= 8; dx += 2) {
+    if (dir === 1 && dx > 2 || dir === 3 && dx < -2) continue;
+    const l = 3 + ((dx + 8) % 4 === 0 ? 1 : 0);
+    px(g, pl.mid, X(cx + dx), Y(neckY - 1), 2, l + 1); px(g, 'f2b24a', X(cx + dx), Y(neckY - 1), 1, l);
+  }
+}
+
+/** D71: a rooster's sickle tail: long dark-green arcs rising behind the hips (seen around the body from the front). */
+function megaTail(g: Ctx, ox: number, oy: number, dir: number, b: Box) {
+  const cx = Math.round((b.x0 + b.x1) / 2), y = b.y1 + 14;
+  const X = (x: number) => ox + x, Y = (v: number) => oy + v;
+  const DARK = '14241f', GREEN = '1f5a4a', SHINE = '3f9a7a';
+  // a sickle feather: rises from the hips, bends outwards and droops at the tip
+  const arc = (sx: number, dirX: number, len: number, spread: number) => {
+    const n = len * 2;
+    for (let k = 0; k <= n; k++) {
+      const t = k / n;
+      const x = sx + dirX * Math.round(spread * Math.sin(t * Math.PI * 0.75));
+      const yy = y - Math.round(len * Math.sin(t * Math.PI * 0.62));
+      const w = t < 0.8 ? 3 : 2;
+      px(g, DARK, X(x - 1), Y(yy - 1), w + 2, 3);
+      px(g, t > 0.3 && t < 0.55 ? SHINE : GREEN, X(x), Y(yy), w, 1);
+    }
+  };
+  if (dir === 2 || dir === 0) {
+    for (const [dx, len, sp] of [[-4, 20, 16], [-2, 26, 11], [-1, 22, 6], [1, 22, 6], [2, 26, 11], [4, 20, 16]] as const) arc(cx + dx, Math.sign(dx), len, sp);
+  } else {
+    const s = dir === 3 ? -1 : 1;
+    for (const [dx, len, sp] of [[6, 18, 14], [7, 24, 12], [8, 21, 8]] as const) arc(cx + s * dx, s, len, sp);
   }
 }
 
@@ -260,13 +313,18 @@ export function composeLook(env: ComposeEnv, look: Look, mutant: boolean): Canva
   }
   const boxes: (Box | null)[] = [];
   for (let row = 0; row < 5; row++) for (let f = 0; f < 9; f++) boxes.push(headRaw && (row < 4 || f < 6) ? headBox(headRaw, f * CELL, row * CELL) : null);
-  for (let row = 0; row < 4; row++) for (let f = 0; f < 9; f++) { const b = boxes[row * 9 + f]; if (b && row !== 0) tail(g, f * CELL, row * CELL, row, b, pl); }
+  const mega = isRooster(look);
+  for (let row = 0; row < 4; row++) for (let f = 0; f < 9; f++) {
+    const b = boxes[row * 9 + f];
+    if (b && mega && row !== 0) megaTail(g, f * CELL, row * CELL, row, b);
+    else if (b && row !== 0) tail(g, f * CELL, row * CELL, row, b, pl);
+  }
   layers.forEach(paint);
   for (let row = 0; row < 5; row++) for (let f = 0; f < (row < 4 ? 9 : 6); f++) {
     const b = boxes[row * 9 + f];
     if (!b) continue;
-    if (row === 0) tail(g, f * CELL, row * CELL, 0, b, pl);
-    chickenBits(g, f * CELL, row * CELL, row < 4 ? row : 2, b, row === 4 && f >= 3, pl);
+    if (row === 0) { if (mega) megaTail(g, f * CELL, row * CELL, 0, b); else tail(g, f * CELL, row * CELL, 0, b, pl); }
+    chickenBits(g, f * CELL, row * CELL, row < 4 ? row : 2, b, row === 4 && f >= 3, pl, mega);
   }
   return out;
 }

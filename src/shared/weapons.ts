@@ -1,6 +1,6 @@
-export type WeaponId = 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'machinegun' | 'grenade' | 'flamethrower';
+export type WeaponId = 'pistol' | 'smg' | 'rifle' | 'shotgun' | 'machinegun' | 'grenade' | 'flamethrower' | 'minigun' | 'laser';
 
-export const WEAPON_ORDER: WeaponId[] = ['pistol', 'smg', 'shotgun', 'rifle', 'machinegun', 'grenade', 'flamethrower'];
+export const WEAPON_ORDER: WeaponId[] = ['pistol', 'smg', 'shotgun', 'rifle', 'machinegun', 'grenade', 'flamethrower', 'minigun', 'laser'];
 
 export interface WeaponDef {
   id: WeaponId;
@@ -72,5 +72,16 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     range: 260, mag: 160, reserveMax: 480, pickupAmmo: 160, reload: 2.2, knockback: 40, pierce: 99, speedMul: 0.95,
     recoil: 1.5, shake: 0.0025, flash: 'flash_flame', flashScale: 1, tracer: 0, tracerWidth: 0, casing: null, light: 300,
     projSpeed: 520, fuel: true,
+  },
+  // D71: limited-ammo specials — no reserve, ammo boxes do not refill them
+  minigun: {
+    id: 'minigun', name: 'Миниган «Вертушка МЧС»', kind: 'hitscan', damage: 17, rof: 20, pellets: 1, spread: 0.075, bloom: 0.006, maxBloom: 0.12,
+    range: 1000, mag: 280, reserveMax: 0, pickupAmmo: 0, reload: 99, knockback: 130, pierce: 1, speedMul: 0.72,
+    recoil: 5, shake: 0.007, flash: 'flash_long', flashScale: 1.4, tracer: 0xffc04a, tracerWidth: 1.6, casing: 'casing', light: 260,
+  },
+  laser: {
+    id: 'laser', name: 'Лазерное ружьё «Омлет-3000»', kind: 'hitscan', damage: 70, rof: 2.2, pellets: 1, spread: 0.004, bloom: 0, maxBloom: 0,
+    range: 1300, mag: 10, reserveMax: 20, pickupAmmo: 0, reload: 1.6, knockback: 260, pierce: 99, speedMul: 0.95,
+    recoil: 6, shake: 0.008, flash: 'flash_star', flashScale: 1.2, tracer: 0x6ff6ff, tracerWidth: 4, casing: null, light: 320,
   },
 };

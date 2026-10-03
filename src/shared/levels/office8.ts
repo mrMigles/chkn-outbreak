@@ -11,7 +11,9 @@ import { dist } from '../math';
  */
 const WINDOW = 6;
 const SCARES = ['scare_printer', 'scare_phone', 'scare_flicker', 'scare_vent'];
-const team = (w: World) => w.humanPlayers.filter(p => p.connected).length;
+// D71 (rules 6): the team is who is connected (a downed or dead teammate still counts) — Неля only walks
+// to the east release for a lone player, or when the second one has really left
+const team = (w: World) => w.rules >= 6 ? w.players.filter(p => p.connected && !p.benched).length : w.humanPlayers.filter(p => p.connected).length;
 const valeraEnemy = (w: World) => w.enemies.find(e => e.appearance?.npcId === 'valera');
 
 function objective(w: World) {
@@ -74,6 +76,27 @@ function pull(w: World, id: 'lock_w' | 'lock_e', who: string) {
   objective(w);
 }
 
+/** D71: ambient horror while the floor is dark — eyes in the beam, knocks, whispers, a phone far away. */
+const CREEPY = ['Неля: Ты тоже слышишь? Будто кто-то печатает в темноте… «ко… ко… ко…»', 'Неля: У меня на мониторе сама открылась вкладка «как стать курицей». Я её не открывала.',
+  'Неля: Кулер булькнул. Кулер пустой с понедельника.', 'Неля: Кто-то дышит в рацию. Это ты? Скажи, что это ты.', 'Неля: Я досчитала до ста. Потом кто-то досчитал до ста одного.'];
+function horror(w: World) {
+  if (w.time < (w.flags.horrorAt ?? 16)) return;
+  w.flags.horrorAt = w.time + w.rng.range(15, 24);
+  const p = w.rng.pick(w.humanPlayers);
+  if (!p) return;
+  const k = w.rng.int(0, 4);
+  if (k === 0 || k === 1) {
+    // a pair of red eyes stares from the dark ahead, then blinks out
+    const d = w.rng.range(300, 460), a = p.aim + w.rng.range(-0.5, 0.5);
+    const ray = w.map.raycast(p.x, p.y, a, d, false);
+    const r = Math.max(160, ray.d - 40);
+    w.scare('eyes', p.x + Math.cos(a) * r, p.y + Math.sin(a) * r);
+  } else if (k === 2) w.scare('knock', p.x + w.rng.range(-200, 200), p.y + w.rng.range(-200, 200));
+  else if (k === 3) { const ph = w.rng.pick(w.objects('prop', 'desk_phone')); if (ph) w.scare('ring', ph.cx, ph.cy); }
+  else w.say('radio', w.rng.pick(CREEPY), 5);
+  if (w.rng.chance(.35)) w.after(1.2, () => w.scare('flicker', p.x, p.y));
+}
+
 const office8: LevelScript = {
   id: 'office8', title: 'Этаж 8. Тёмная тема',
   subtitle: 'Здесь работает человек, который не любит свет',
@@ -87,7 +110,14 @@ const office8: LevelScript = {
     w.after(8, () => {
       w.flags.plan = true;
       if (team(w) < 2) nelyaGo(w);
-      else { w.say('nelya', 'Вас много — разделитесь! Одни на запад, другие на восток. А я посторожу лифт… и свою психику.', 6); objective(w); }
+      else {
+        const [a, b] = w.players.filter(p => p.connected);
+        w.say('nelya', w.rules >= 6 && a && b
+          ? `Вас двое — значит, я никуда не иду! ${a.name} — на запад, в бухгалтерию. ${b.name} — на восток, в продажи. Тяните размыкатели одновременно, по рации!`
+          : 'Вас много — разделитесь! Одни на запад, другие на восток. А я посторожу лифт… и свою психику.', 7);
+        if (w.rules >= 6) w.after(7.5, () => w.say('nelya', 'А я тут, у лифта. С фонариком. Одна. В темноте. Всё нормально. Всё. Нормально.', 5));
+        objective(w);
+      }
     });
     w.after(19, () => w.say('radio', 'Неля: Тсс. Петушки в темноте спят. Не подходите близко и не светите им в глаза — проснутся. Спящего бейте первым: он не ждёт.', 7));
   },
@@ -104,6 +134,7 @@ const office8: LevelScript = {
         objective(w);
       }
     }
+    if (w.rules >= 6 && !w.flags.valeraDead) horror(w);
     // the night shift: a few awake chickens roam the corridor until the den is open
     if (!w.flags.doorOpen && w.time >= (w.flags.patrolAt ?? 25)) {
       w.flags.patrolAt = w.time + 24;

@@ -43,9 +43,11 @@ const lab: LevelScript = {
       case 'decon':
         // doors lock behind, lights die, vents open. D69: a door only locks once every living teammate is past it
         // (a lagging colleague used to be shut out in the lift lobby for good)
-        if (w.rules >= 5) { w.flags.deconLock = true; lockBehind(w); }
+        // D71 (rules 6): the doors no longer lock at all — the trap is the alarm and the wave, not a cage for teammates
+        if (w.rules >= 6) { /* no lock */ }
+        else if (w.rules >= 5) { w.flags.deconLock = true; lockBehind(w); }
         else { w.lockDoor('decon'); w.lockDoor('arrival'); }
-        w.say(by.id, 'Двери заблокировались… Это ловушка?', 2.5);
+        w.say(by.id, w.rules >= 6 ? 'Сирена… и вентиляция открылась. Это ловушка!' : 'Двери заблокировались… Это ловушка?', 2.5);
         w.say('pa', 'Внимание. Обнаружено заражение. Запуск протокола «Курятник».', 4);
         w.spawnWave('decon', ['fast', 'normal', 'fast', 'normal', 'spitter'], 12, 0.3, true, 'decon');
         w.flags.deconWave = true;
@@ -88,6 +90,11 @@ const lab: LevelScript = {
     w.flags.omletov = true;
     w.say(n.id, 'Спасены! КУКАРЕКС — это мы. Простите. Антидот наверху уже льётся, но источник — Генеральный: он пьёт КУКАРЕКС литрами. Пропуск в оружейную — держите. И я иду с вами!', 7);
     const card = w.addPickup('keycard', n.x - 40, n.y, { key: 'lab', ttl: -1 });
+    if (w.rules >= 6) {
+      // D71: Омлетов's prototype — pierces everything in a line, twenty-odd charges for the whole floor
+      w.addPickup('weapon', n.x - 40, n.y + 60, { weapon: 'laser', ttl: -1 });
+      w.after(6.5, () => w.say(n.id, 'И возьмите «Омлет-3000». Лазерное ружьё. Прошивает всех в ряд. Зарядов мало — берегите для толстых.', 6));
+    }
     n.mode = 'follow'; n.follow = by.id;
     void card;
     labObjective(w);

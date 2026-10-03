@@ -42,7 +42,7 @@ export class Input {
     kb.on('keydown-R', () => { this.state.reload = true; });
     kb.on('keydown-Q', () => { this.state.weaponDelta = -1; });
     kb.on('keydown-ESC', () => { this.state.pause = true; });
-    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN'].forEach((k, i) => kb.on('keydown-' + k, () => { this.state.weaponSlot = i; }));
+    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'].forEach((k, i) => kb.on('keydown-' + k, () => { this.state.weaponSlot = i; }));
     scene.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       this.wheelAcc += dy;
       if (Math.abs(this.wheelAcc) > 40) { this.state.weaponDelta = Math.sign(this.wheelAcc); this.wheelAcc = 0; }

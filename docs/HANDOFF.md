@@ -2,6 +2,12 @@
 
 _Last updated: 2026-10-03_
 
+## Iteration 13 (2026-10-03, Claude) — feedback round (D71)
+
+Lab doors never lock (co-op), phone weapon button (tap = next, hold = picker grid), street «прыгуны» (leaping chickens), minigun at the helicopter and laser from Омлетов (limited ammo), the final boss is a wingless mega rooster (8000 HP solo), browser/PWA back needs two presses (first one pauses), finale with fanfare/confetti and a victory screen listing the run's achievements, a 3-s non-blocking intro (camera to the objective) on every floor, Неля stays with a team and explains, more floor-8 horror, companions unstick around corners. Rules version 6. Details: [DECISIONS.md](DECISIONS.md) D71.
+
+Checks: all sim checks, `check:chapters` (+5 scenarios), build, `qa-d71` screenshots, autopilot matrix (solo 4 runs / duo 3 / quad 2 over the whole campaign: no floor needed more than one retry except one 3-retry floor-7 solo run; the final boss 0 retries solo, near-death in teams), browser autopilot: floor 8 alone, then street 1 → street 2 → factory → lab → boss in one chain (one death on street 1, none after, the finale ends the run); the back button (first press pauses and warns, second leaves) checked in Chromium; check:lobby, check:lobby-ui.
+
 ## Iteration 12 (2026-10-03, Claude) — three chapters: floors 8, 11, 12, the city; balance by autopilot
 
 User request (10 items), decisions D68–D70, story/level design in [design/chapters.md](design/chapters.md).

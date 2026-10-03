@@ -72,7 +72,8 @@ await page.addInitScript(() => {
     for (const o of map.objects) if (o.type === 'use' && near(o.cx, o.cy, 85)) wantE = true;
     for (const d of v.doors) if (!d.open && d.locked && me.keys.includes(d.locked) && near(d.x + d.w / 2, d.y + d.h / 2, 105)) wantE = true;
     for (const n of v.npcs) if (n.mode !== 'follow' && n.mode !== 'dead' && n.mode !== 'gone' && !n.mutation && (n.rescued || n.weapon || v.objectiveTarget.includes(n.id)) && near(n.x, n.y, 75)) wantE = true;
-    if (me.hp < 45 && me.supplies.medkit && !best) { inp.interact = true; inp.mx = 0; inp.my = 0; }
+    // self-heal is a hold of E: release now and then so the next medkit starts (holding forever never heals again)
+    if (me.hp < 50 && me.supplies.medkit && (!best || bd > 260) && (performance.now() % 1600) < 1350) { inp.interact = true; inp.mx = 0; inp.my = 0; inp.fire = false; }
     else if (wantE && interactPulse <= 0) { inp.interact = true; interactPulse = 8; }
     // reload when idle
     window.__input = inp;

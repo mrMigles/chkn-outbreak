@@ -191,6 +191,18 @@ const RECIPES: Record<string, { dur: number; vars: number; fn: Recipe }> = {
   spark: { dur: 0.5, vars: 3, fn: (c, v) => { for (let i = 0; i < 6; i++) noise(c, { t: i * 0.05 + v * 0.01, dur: 0.03, type: 'highpass', f: 3500, gain: 0.5, seed: 210 + i + v }); } },
   breaker: { dur: 0.7, vars: 1, fn: (c) => { noise(c, { dur: 0.08, type: 'lowpass', f: 900, gain: 0.9, seed: 230 }); tone(c, { dur: 0.25, f: 90, f2: 40, gain: 0.8 }); noise(c, { t: 0.1, dur: 0.5, type: 'bandpass', f: 120, q: 2, gain: 0.3, seed: 231 }); } },
   heli: { dur: 0.5, vars: 1, fn: (c) => { for (let i = 0; i < 4; i++) noise(c, { t: i * 0.12, dur: 0.08, type: 'lowpass', f: 260, gain: 0.6, seed: 240 + i }); } },
+  // D71: more horror and the finale
+  knock: { dur: 1.1, vars: 1, fn: (c) => { for (let i = 0; i < 3; i++) { noise(c, { t: i * 0.28, dur: 0.07, type: 'lowpass', f: 380, gain: 0.9, seed: 260 + i }); tone(c, { t: i * 0.28, dur: 0.08, f: 110, f2: 70, gain: 0.5 }); } } },
+  heartbeat: { dur: 0.7, vars: 1, fn: (c) => { tone(c, { dur: 0.12, f: 62, f2: 44, gain: 0.9 }); tone(c, { t: 0.22, dur: 0.12, f: 58, f2: 40, gain: 0.7 }); } },
+  whoosh: { dur: 0.8, vars: 1, fn: (c) => noise(c, { dur: 0.7, type: 'bandpass', f: 300, f2: 1400, q: 2, gain: 0.35, a: 0.2, seed: 270 }) },
+  fanfare: { dur: 3.2, vars: 1, fn: (c) => {
+    const notes = [[0, 523], [0.18, 659], [0.36, 784], [0.6, 1047], [1.0, 784], [1.15, 1047], [1.35, 1319]];
+    for (const [t, f] of notes) { tone(c, { t, dur: t > 1.3 ? 1.6 : 0.3, type: 'square', f, gain: 0.13 }); tone(c, { t, dur: t > 1.3 ? 1.6 : 0.3, type: 'triangle', f: f / 2, gain: 0.18 }); }
+    for (let i = 0; i < 6; i++) noise(c, { t: 1.35 + i * 0.05, dur: 0.6, type: 'highpass', f: 6000, gain: 0.08, seed: 280 + i });
+  } },
+  laser: { dur: 0.5, vars: 2, fn: (c, v) => { tone(c, { dur: 0.35, type: 'sawtooth', f: 2400 + v * 200, f2: 300, gain: 0.35 }); tone(c, { dur: 0.25, type: 'sine', f: 1200, f2: 2600, gain: 0.25 }); noise(c, { dur: 0.15, type: 'highpass', f: 5000, gain: 0.3, seed: 290 + v }); } },
+  minigun: { dur: 0.25, vars: 3, fn: (c, v) => gun(c, v, { body: 4200, bodyDur: 0.05, thump: 140, thumpDur: 0.06, tail: 2000, tailDur: 0.12, crack: 2600, drive: 4, gain: 0.7 }) },
+  hop: { dur: 0.4, vars: 2, fn: (c, v) => { tone(c, { dur: 0.25, type: 'triangle', f: 300 + v * 40, f2: 900, gain: 0.3 }); noise(c, { dur: 0.1, type: 'bandpass', f: 1500, gain: 0.3, seed: 300 + v }); } },
   chomp: { dur: 0.4, vars: 2, fn: (c, v) => { noise(c, { dur: 0.06, type: 'bandpass', f: 700, q: 2, gain: 0.6, seed: 250 + v }); noise(c, { t: 0.16, dur: 0.06, type: 'bandpass', f: 600, q: 2, gain: 0.5, seed: 252 + v }); } },
 };
 

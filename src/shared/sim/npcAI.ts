@@ -32,6 +32,17 @@ function follow(w: World, n: Npc, dt: number) {
   if (d <= keep + 4) n.followMoving = false;
   else if (d > keep + 22) n.followMoving = true;
   if (!n.followMoving) return;
+  // D71 (rules 6): a companion pressed against a corner for a second walks the corridors to the leader instead
+  if (w.rules >= 6) {
+    const st = (n.stuck ??= { x: n.x, y: n.y, t: 0, nav: 0 });
+    if (Math.hypot(n.x - st.x, n.y - st.y) > 12) { st.x = n.x; st.y = n.y; st.t = 0; } else st.t += dt;
+    if (st.t > 1) { st.nav = 2.5; st.t = 0; }
+    if (st.nav > 0) {
+      st.nav -= dt;
+      const dir = w.navDir(n.x, n.y, Math.round(p.x / 64) * 64 + 32, Math.round(p.y / 64) * 64 + 32);
+      if (dir) { moveTo(w, n, n.x + dir[0] * 40, n.y + dir[1] * 40, speed, dt, 1); return; }
+    }
+  }
   if (w.map.lineOfSight(n.x, n.y, p.x, p.y, false)) { moveTo(w, n, p.x, p.y, speed, dt, keep + 4); return; }
   const tr = w.trail(p.id);
   for (let i = tr.length - 1; i >= 0; i--) {

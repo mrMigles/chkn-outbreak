@@ -41,6 +41,35 @@ export class App {
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
     initPwa();
+    this.guardBackButton();
+  }
+
+  /**
+   * D71: the browser / PWA «Назад» never closes the game on the first press. A history entry is pushed after
+   * the first touch (browsers ignore entries added without user activation); the first back press pauses
+   * the game (or just warns in menus) and only a second press within a few seconds leaves.
+   */
+  private backArmed = false;
+  private guardBackButton() {
+    if (new URLSearchParams(location.search).has('nobackguard')) return;
+    const arm = () => { if (this.backArmed) return; try { history.pushState({ chknGuard: 1 }, ''); this.backArmed = true; } catch { /* ignore */ } };
+    const first = () => { arm(); window.removeEventListener('pointerdown', first); window.removeEventListener('keydown', first); };
+    window.addEventListener('pointerdown', first); window.addEventListener('keydown', first);
+    window.addEventListener('popstate', () => {
+      if (!this.backArmed) return;
+      this.backArmed = false;
+      const scene = this.game.scene.getScene('game') as unknown as { paused?: boolean; togglePause?: () => void } | null;
+      if (this.game.scene.isActive('game') && scene && !scene.paused) scene.togglePause?.();
+      this.backToast('Нажмите «Назад» ещё раз, чтобы выйти из игры');
+      setTimeout(arm, 3500);
+    });
+  }
+  private backToast(text: string) {
+    document.querySelectorAll('.back-toast').forEach(e => e.remove());
+    const t = document.createElement('div');
+    t.className = 'back-toast'; t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
   }
 
   /** Seat key on the server: the Telegram user, else this browser profile (D59). */
@@ -342,6 +371,18 @@ export class App {
     return end ? `<div class="chapter-banner"><b>${escapeHtml(end.title)}</b><span>${escapeHtml(end.text)}</span></div>` : '';
   }
 
+  /** D71: the end of the campaign — what happened, every achievement earned on the way, the credits. */
+  private finaleMarkup(keys: string[]) {
+    const mine = keys.filter((k): k is AchievementKey => k in ACHIEVEMENTS);
+    const list = mine.map(k => `<li><span>${ACHIEVEMENTS[k].icon}</span><b>${escapeHtml(ACHIEVEMENTS[k].name)}</b></li>`).join('');
+    return `<div class="finale">
+      <p class="flavor">Генеральный Петух уволен. Антидот течёт по трубам «Провансаля», город перестаёт кукарекать. Понедельник отменяется навсегда.</p>
+      <div class="menu-label">Ачивки этого прохождения · ${mine.length}/${Object.keys(ACHIEVEMENTS).length}</div>
+      <ul class="finale-ach">${list || '<li><span>🐣</span><b>Без ачивок — зато живой</b></li>'}</ul>
+      <p class="finale-credits">Офис «Курникс Групп» · город · завод «Провансаль». Спасибо, что играли! Авторы графики — <a href="credits.html" target="_blank" rel="noopener">в титрах</a>.</p>
+    </div>`;
+  }
+
   titleCard(title: string, sub: string, chapter?: string) {
     this.ui.querySelectorAll('.title-card').forEach(card => card.remove());
     const d = document.createElement('div');
@@ -359,7 +400,7 @@ export class App {
       <h2>${win ? 'ПОБЕДА!' : 'ЭТАП ПРОЙДЕН'}</h2>
       ${this.chapterBanner(session.levelId)}
       <div class="stats"><div><b>${me?.kills ?? 0}</b><span>куриц оптимизировано</span></div><div><b>${Math.floor(me?.score ?? 0)}</b><span>KPI</span></div></div>
-      ${win ? '<p class="flavor">Вы выбрались из «Курятника». Понедельник отменяется навсегда.</p>' : ''}
+      ${win ? this.finaleMarkup(me?.achievements ?? []) : ''}
       <button class="btn primary" data-a="${win || !next || !LEVELS[next] ? 'menu' : 'next'}">${win || !next || !LEVELS[next] ? 'В главное меню' : 'Дальше'}</button></div>`);
     d.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).dataset.a;
@@ -706,8 +747,10 @@ export class App {
 
   /** level the last networked game ran (chapter banner on its result panel) */
   private lastNetLevel = '';
+  private lastAchievements: string[] = [];
   private netEnd(m: NetEnd) {
     const ended = this.net?.levelId ?? this.lastNetLevel;
+    const mine = this.net?.view.players.find(p => p.id === this.net!.myId)?.achievements ?? this.lastAchievements;
     const rows = [...m.stats].sort((a, b) => b.score - a.score).map((p) => {
       const col = '#' + PLAYER_COLORS[p.slot % 4].toString(16).padStart(6, '0');
       return `<div class="pl" style="--c:${col}"><b>${escapeHtml(p.name)}</b><span class="st">☠ ${p.kills} · ★ ${p.score}</span></div>`;
@@ -721,6 +764,7 @@ export class App {
     this.net = null; this.netResult = true;
     const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
       ${m.kind !== 'gameover' ? this.chapterBanner(ended) : ''}
+      ${m.kind === 'win' ? this.finaleMarkup(mine) : ''}
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
       ${m.kind !== 'gameover' ? this.shareButtons(!!(this.room?.state as any)?.summon) : ''}
       ${m.kind === 'win' && isHost ? '<button class="btn primary" data-a="lobby">В лобби</button>' : ''}

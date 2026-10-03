@@ -155,6 +155,7 @@ export function enemyLook(type: EnemyType, seed: number): string {
     case 'spitter': return encodeLook({ ...base, acc: 'glasses', topColor: '6d8b4e', top: base.body === 'f' ? 'blouse' : 'shirt' });
     case 'armored': return encodeLook({ ...base, body: 'm', old: false, top: 'plate', topColor: 'a39a86', legs: 'pants', legsColor: '1f1f24', acc: 'none' });
     case 'exploder': return encodeLook({ ...base, body: 'm', top: 'apron', topColor: '9be22e', legs: 'pants', acc: 'glasses' });
+    case 'jumper': return encodeLook({ ...base, body: 'm', old: false, top: 'tee', topColor: ['d9a33a', '3c7f9a', 'b04a42'][seed % 3], legs: 'pants', legsColor: '2b2e36', acc: 'none' });
     case 'boss': return L('big', 0, 'balding', 'c2452d', 'jacket', '1f2a3a', 'formal', '1f1f24');
     default: return encodeLook(base);
   }

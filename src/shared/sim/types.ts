@@ -127,6 +127,8 @@ export interface Npc {
   mutation?: Mutation;
   betrayal?: BetrayalPlan;
   props?: Record<string, any>;  // raw Tiled properties (server only)
+  /** D71: follow-stuck detector (sim only). */
+  stuck?: { x: number; y: number; t: number; nav: number };
 }
 
 export type ProjKind = 'grenade' | 'spit' | 'egg';
@@ -192,9 +194,9 @@ export type SimEvent =
   | { e: 'fuse'; id: number }
   | { e: 'propbreak'; id: number; x: number; y: number; m: string }
   /** D69: scripted horror beats (floor 8) and cutscene props (floor 12). */
-  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark'; x: number; y: number }
+  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock'; x: number; y: number }
   | { e: 'light'; v: number }
-  | { e: 'cine'; k: 'heli' | 'chapter'; text?: string; sub?: string };
+  | { e: 'cine'; k: 'heli' | 'chapter' | 'victory' | 'intro'; text?: string; sub?: string };
 
 /** Render-facing view of the world (identical for local sim and network snapshots). */
 export interface WorldView {

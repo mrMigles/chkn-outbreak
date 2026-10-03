@@ -8,7 +8,7 @@ export const MAX_PLAYERS = 4;
 export const TICK_HZ = 30;
 export const SNAP_HZ = 20;
 
-const ETYPES: EnemyType[] = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'chick', 'boss'];
+const ETYPES: EnemyType[] = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'chick', 'boss', 'jumper'];
 const ESTATES: EnemyState[] = ['idle', 'chase', 'windup', 'fuse', 'charge', 'rise'];
 const PKINDS: ProjKind[] = ['grenade', 'spit', 'egg'];
 const KKINDS: PickupKind[] = ['ammo', 'health', 'armor', 'weapon', 'keycard', 'antidote', 'invincible', 'damage', 'infinite', 'sprint', 'achievement'];
@@ -129,7 +129,7 @@ export function mergeSnapshot(prev: Snapshot | undefined, s: Snapshot): Snapshot
   };
 }
 
-export const WEAPON_IDS: WeaponId[] = ['pistol', 'smg', 'shotgun', 'rifle', 'machinegun', 'grenade', 'flamethrower'];
+export const WEAPON_IDS: WeaponId[] = ['pistol', 'smg', 'shotgun', 'rifle', 'machinegun', 'grenade', 'flamethrower', 'minigun', 'laser'];
 
 /** Decode enemies of a snapshot into Enemy-shaped view objects (reusing `prev` objects by id). */
 export function decodeEnemies(s: Snapshot, prev: Map<number, Enemy>): Enemy[] {
