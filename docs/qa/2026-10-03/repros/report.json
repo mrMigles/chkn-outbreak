@@ -1,0 +1,49 @@
+[
+  {
+    "id": "MOBILE-RELOAD-005",
+    "mode": "portrait",
+    "before": "pistol",
+    "after": "pistol",
+    "expected": "laser",
+    "hit": {
+      "x": 315,
+      "y": 703.5390625,
+      "pointer": "none",
+      "actualTarget": "weapon-picker"
+    },
+    "fail": true,
+    "setup": "dev arsenal only; real CDP touch; no injected fire/input"
+  },
+  {
+    "id": "MOBILE-RELOAD-005",
+    "mode": "landscape",
+    "before": "pistol",
+    "after": "pistol",
+    "expected": "laser",
+    "hit": {
+      "x": 736,
+      "y": 267.703125,
+      "pointer": "none",
+      "actualTarget": "weapon-picker"
+    },
+    "fail": true,
+    "setup": "dev arsenal only; real CDP touch; no injected fire/input"
+  },
+  {
+    "id": "BOSS-SUPPLY-002",
+    "state": {
+      "time": 30.049999999999574,
+      "rules": 6,
+      "medkitAt": null,
+      "health": [],
+      "boss": 8000,
+      "players": [
+        {
+          "hp": 100,
+          "state": "alive"
+        }
+      ]
+    },
+    "setup": "God for timer survival; initial health pickups removed to represent consumed supplies. Actual browser time and original boss onTick."
+  }
+]
