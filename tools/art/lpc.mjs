@@ -8,6 +8,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { LAYERS, layerFile } from './lpc-layers.mjs';
 import { buildCity } from './city.mjs';
+import { buildD72 } from './d72.mjs';
 
 function canvas(w, h) { const c = createCanvas(w, h); c.getContext('2d').imageSmoothingEnabled = false; return c; }
 function cut(img, x, y, w, h, scale = 2) {
@@ -430,6 +431,7 @@ export async function buildLpc(root) {
   props.push({ name: 'door_locked', canvas: doorFace('g', 'l', 'R') });
   props.push({ name: 'door_locked_side', canvas: doorSide('g', 'R') });
   await buildCity(root, { add, floors, props });
+  await buildD72(root, { add, floors });
   return { people, props, meta, floors, gunMeta };
 }
 

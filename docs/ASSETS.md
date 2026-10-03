@@ -34,6 +34,13 @@
 | Фонтан, кирпич, забор, цветы, дисковые телефоны, барные стулья, картины, тележка, кружка | LPC office / structure (уже в `vendor/lpc-office`) | CC BY-SA 3.0 / OGA-BY 3.0 | `fountain`, `wall_face_street`, `fence`, `flowers_*`, `desk_phone`, `bar_stool`, `portrait_ceo`, `painting_*`, `shopping_cart`, `coffee_cup` |
 | Собственная пиксель-графика (палитра LPC, ×2) | `tools/art/city.mjs` | проект | вертолёт (летящий и обломки), ларёк шаурмы, рыночный прилавок, остановка, билборд, скамейка, конус, гидрант, рубильник, курочка гриль, панорамные окна, полы (трава, ковры, плитка, дорожка), фасады стен `dark` / `exec` / `cafe`, двери новых тем |
 
+## Итерация 14 (2026-10-03): правки D72
+
+- Universal LPC (та же ревизия 4963a69): `torso/clothes/sleeveless/tanktop/female` (white, перекраска рантаймом) и `legs/shorts/short_shorts/{thin,male}` — купальник Кати (майка + шорты одного цвета, босиком) и майка/шорты Толика. Авторы: MadMarcel, makrohn, ElizaWy, bluecarrot16, Redshrike, Wulax, JaidynReiman; CC-BY-SA 3.0 / OGA-BY 3.0 (`vendor/lpc-characters/SELECTED-CREDITS.csv`, копия в `public/assets/credits/lpc-characters.csv`).
+- Skorpio's SciFi Sprite Pack: спорткар Литовца и машины VIP-парковки — перекраска тех же купе/вертикальных машин (жёлтый с гоночными полосами, чёрный, лайм).
+- Собственный пиксель-арт в `tools/art/d72.mjs` (палитра и обводка city.mjs, ×2): `heart_bed`, `kink_rack`, `poster_kink`, `poster_kink2`, `fluffy_cuffs`, `disco_lamp`, `button_panel`, `potato_bed`, `tomato_plant`, `grow_lamp`, `watering_can`, `doc_form`, `fence_v`, `beer_crate`, `ashtray`, `bottle`; полы 515 (земля агрокомнаты) и 516 (асфальт парковки с разметкой и пятном масла).
+- Мутанты: петух-растение (листья и цветок картошки вместо гребня, зелёное оперение с бурыми крапинками), ГМО-петух (кислотно-лаймовый с фиолетовыми крапинками, пятизубый гребень, крупное тело), разжиревший жёлтый Генеральный (живот, золотой хвост, рисуется в 1,3 раза шире) — процедурно в `src/client/render/compose.ts`.
+
 ## Фактически импортировано в первой итерации (история)
 
 Адаптация: `tools/art/lpc.mjs`; сборка: `npm run assets`. Результат: `public/assets/gen/people25.{png,json}` (648 кадров, 2048×2048), `office25.{png,json}` (14 кадров, 2048×256), `officeTiles.png`. Проверка: `npm run check:art`. Указанные ниже области имеют формат `[x,y,w,h]` исходного PNG; кроме стены масштаб ×2 без сглаживания.

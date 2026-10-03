@@ -32,14 +32,15 @@ export function layersOf(l: Look, mutant: boolean): { id: string; tint: 'skin' |
   const g = l.body === 'f' ? 'f' : 'm';
   const top = g === 'f'
     ? ({ shirt: 'blouse', jacket: 'long', vest: 'long', plate: 'long', leather: 'long', apron: 'long' } as Record<string, string>)[l.top] ?? l.top
-    : l.top === 'blouse' ? 'shirt' : l.top;
+    : l.top === 'blouse' ? 'shirt' : l.top === 'tank' ? 'tee' : l.top;
   const legs = g === 'm' && l.legs === 'skirt' ? 'formal' : l.legs;
   const head = big ? 'head_plump' : l.old ? `head_old_${g}` : `head_${g}`;
   const out: ReturnType<typeof layersOf> = [];
   const rooster = mutant && isRooster(l);
   if (l.hair === 'ponytail' && !mutant) out.push({ id: 'hair_ponytail_bg', tint: 'hair', part: 'hair' });
   out.push({ id: big ? 'body_big' : `body_${g}`, tint: 'skin', part: 'body' });
-  out.push({ id: `feet_${g}`, tint: 'feet', part: 'feet' });
+  // D72: a swimsuit (tank top + short shorts on a woman) is worn barefoot
+  if (!(g === 'f' && legs === 'shorts' && top === 'tank') || mutant) out.push({ id: `feet_${g}`, tint: 'feet', part: 'feet' });
   out.push({ id: `legs_${legs}_${g}`, tint: 'legs', part: 'legs' });
   out.push({ id: `top_${top}_${g}`, tint: top === 'plate' ? 'none' : 'top', part: 'top' });
   if (l.top === 'apron' && g === 'm') out.push({ id: 'top_apron_m', tint: 'top', part: 'top' });
@@ -89,16 +90,24 @@ const CLAW = 'e89a2c', COMB = 'd8302a', BEAK = 'f2a531';
 
 /** Plumage of a chicken-person: base feather colour, tuft/tail highlights, quills/outline, optional speckles. */
 export interface Plumage { base: string; light: string; lighter: string; mid: string; quill: string; dark: string; speck?: string }
-export const PLUMAGES: Record<'white' | 'yellow' | 'speckled' | 'rooster', Plumage> = {
+export const PLUMAGES: Record<'white' | 'yellow' | 'speckled' | 'rooster' | 'plant' | 'gmo' | 'fat', Plumage> = {
   white: { base: 'efe9da', light: 'f6f1e4', lighter: 'fffdf4', mid: '9d927d', quill: 'b9ad95', dark: '7d7262' },
   yellow: { base: 'eac45a', light: 'f7dc84', lighter: 'fff0b0', mid: 'b98a2a', quill: 'c99a3a', dark: '7d5a1e' },
   // «рябая»: grey-brown with dark and light flecks
   speckled: { base: 'c9bca4', light: 'e8dfcc', lighter: 'f5efe2', mid: '85776a', quill: '8f8070', dark: '574b40', speck: '3e342c' },
   rooster: { base: 'd8603a', light: 'e98a5a', lighter: 'f4b080', mid: '8f3a22', quill: 'a64a2c', dark: '6a2a18' },
+  // D72: Вершков's potato-plant chickens: leafy green with earthy flecks
+  plant: { base: '7fae4a', light: '9fcc66', lighter: 'c8e890', mid: '4f7a2a', quill: '5f8a32', dark: '35521c', speck: '8a5a2a' },
+  // D72: the lab's GMO roosters: toxic lime with violet flecks
+  gmo: { base: 'c2dc44', light: 'd8ee72', lighter: 'f0ffac', mid: '7f9a22', quill: '96b030', dark: '4f5a12', speck: '7a34a6' },
+  // D72: the fattened CEO: bright yellow
+  fat: { base: 'f2c53d', light: 'f9dc6e', lighter: 'fff2b0', mid: 'b88a1e', quill: 'c99a2a', dark: '7a5612' },
 };
 /** Deterministic plumage per look: some chicken-people are white, some yellow, some speckled. */
 export function plumageOf(l: Look): Plumage {
-  if (isRooster(l)) return PLUMAGES.rooster;
+  if (l.mut === 'plant') return PLUMAGES.plant;
+  if (l.mut === 'gmo') return PLUMAGES.gmo;
+  if (isRooster(l)) return l.mut === 'fat' ? PLUMAGES.fat : PLUMAGES.rooster;
   const s = JSON.stringify(l);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619) >>> 0;
@@ -162,6 +171,7 @@ function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: 
     return;
   }
   if (mega) { megaBits(g, X, Y, cx, top, eyeY, dir, b, pl, outline); return; }
+  if (pl === PLUMAGES.plant) { leafBits(g, X, Y, cx, top, eyeY, dir, b, outline); return; }
   // comb: three serrations on top of the head
   const combX = dir === 1 ? cx + 1 : dir === 3 ? cx - 1 : cx;
   px(g, outline, X(combX - 4), Y(top - 3), 9, 4);
@@ -191,6 +201,41 @@ function chickenBits(g: Ctx, ox: number, oy: number, dir: number, b: Box, hurt: 
     px(g, pl.mid, X(cx + dx), Y(neckY + dy), 1, l + 1);
     px(g, pl.lighter, X(cx + dx), Y(neckY + dy), 1, l);
   }
+}
+
+/** D72: a potato-plant chicken: a crown of potato leaves with a small flower instead of a comb, leaves at the collar. */
+function leafBits(g: Ctx, X: (x: number) => number, Y: (y: number) => number, cx: number, top: number, eyeY: number, dir: number, b: Box, outline: string) {
+  const LEAF = '4f9a32', HI = '8fd16b', DK = '2a4a18';
+  const leaf = (x: number, y: number, h: number, lean: number) => {
+    for (let k = 0; k < h; k++) { const xx = x + Math.round(lean * k / h); px(g, DK, X(xx - 1), Y(y - k), 3, 1); px(g, k > h * 0.4 ? HI : LEAF, X(xx), Y(y - k), 1, 1); }
+  };
+  leaf(cx - 3, top, 7, -3); leaf(cx, top, 9, 0); leaf(cx + 3, top, 7, 3);
+  // a potato flower: white petals, yellow heart
+  px(g, outline, X(cx - 1), Y(top - 10), 3, 3); px(g, 'f3ecd6', X(cx - 1), Y(top - 10), 3, 1); px(g, 'e8b84a', X(cx), Y(top - 9), 1, 1);
+  if (dir === 2) { px(g, outline, X(cx - 3), Y(eyeY + 1), 6, 4); px(g, BEAK, X(cx - 2), Y(eyeY + 1), 4, 2); }
+  else if (dir === 1 || dir === 3) {
+    const s = dir === 3 ? 1 : -1, edge = dir === 3 ? b.x1 : b.x0;
+    for (let k = 0; k < 3; k++) { px(g, outline, X(edge + s * (1 + k)), Y(eyeY), 1, 3); px(g, BEAK, X(edge + s * (1 + k)), Y(eyeY + 1), 1, 1); }
+  }
+  // leaves sprouting from the collar
+  const neckY = b.y1 + 1;
+  for (const dx of [-6, 6]) { if (dir === 1 && dx > 0 || dir === 3 && dx < 0) continue; leaf(cx + dx, neckY + 2, 5, dx > 0 ? 3 : -3); }
+}
+
+/** D72: the fattened CEO: a round yellow belly bursting out of the suit (front and side views). */
+function belly(g: Ctx, ox: number, oy: number, dir: number, b: Box, pl: Plumage) {
+  if (dir === 0) return;
+  const cx = Math.round((b.x0 + b.x1) / 2) + (dir === 3 ? 4 : dir === 1 ? -4 : 0), cy = b.y1 + 11;
+  const rx = dir === 2 ? 10 : 8, ry = 8;
+  for (let y = -ry - 1; y <= ry + 1; y++) for (let x = -rx - 1; x <= rx + 1; x++) {
+    const d = (x * x) / ((rx + 1) * (rx + 1)) + (y * y) / ((ry + 1) * (ry + 1));
+    if (d > 1) continue;
+    const inner = (x * x) / (rx * rx) + (y * y) / (ry * ry);
+    const col = inner > 1 ? pl.dark : inner < 0.35 && y < 2 ? pl.lighter : y > ry * 0.45 ? pl.mid : pl.base;
+    px(g, col, ox + cx + x, oy + cy + y);
+  }
+  // a navel-button that gave up and three belly feathers
+  px(g, pl.dark, ox + cx, oy + cy + 2); px(g, pl.quill, ox + cx - 4, oy + cy - 3, 2, 1); px(g, pl.quill, ox + cx + 3, oy + cy - 4, 2, 1);
 }
 
 /** D71: the boss's mega-rooster head: a tall five-point comb, long double wattles, a hooked beak, a ruff of hackles. */
@@ -223,10 +268,11 @@ function megaBits(g: Ctx, X: (x: number) => number, Y: (y: number) => number, cx
 }
 
 /** D71: a rooster's sickle tail: long dark-green arcs rising behind the hips (seen around the body from the front). */
-function megaTail(g: Ctx, ox: number, oy: number, dir: number, b: Box) {
+function megaTail(g: Ctx, ox: number, oy: number, dir: number, b: Box, golden = false) {
   const cx = Math.round((b.x0 + b.x1) / 2), y = b.y1 + 14;
   const X = (x: number) => ox + x, Y = (v: number) => oy + v;
-  const DARK = '14241f', GREEN = '1f5a4a', SHINE = '3f9a7a';
+  // D72: the fat yellow CEO wears a golden-orange tail
+  const [DARK, GREEN, SHINE] = golden ? ['5a3a10', 'c8781e', 'f2b24a'] : ['14241f', '1f5a4a', '3f9a7a'];
   // a sickle feather: rises from the hips, bends outwards and droops at the tip
   const arc = (sx: number, dirX: number, len: number, spread: number) => {
     const n = len * 2;
@@ -313,17 +359,18 @@ export function composeLook(env: ComposeEnv, look: Look, mutant: boolean): Canva
   }
   const boxes: (Box | null)[] = [];
   for (let row = 0; row < 5; row++) for (let f = 0; f < 9; f++) boxes.push(headRaw && (row < 4 || f < 6) ? headBox(headRaw, f * CELL, row * CELL) : null);
-  const mega = isRooster(look);
+  const mega = isRooster(look) || look.mut === 'gmo';
   for (let row = 0; row < 4; row++) for (let f = 0; f < 9; f++) {
     const b = boxes[row * 9 + f];
-    if (b && mega && row !== 0) megaTail(g, f * CELL, row * CELL, row, b);
+    if (b && isRooster(look) && row !== 0) megaTail(g, f * CELL, row * CELL, row, b, look.mut === 'fat');
     else if (b && row !== 0) tail(g, f * CELL, row * CELL, row, b, pl);
   }
   layers.forEach(paint);
   for (let row = 0; row < 5; row++) for (let f = 0; f < (row < 4 ? 9 : 6); f++) {
     const b = boxes[row * 9 + f];
     if (!b) continue;
-    if (row === 0) { if (mega) megaTail(g, f * CELL, row * CELL, 0, b); else tail(g, f * CELL, row * CELL, 0, b, pl); }
+    if (row === 0) { if (isRooster(look)) megaTail(g, f * CELL, row * CELL, 0, b, look.mut === 'fat'); else tail(g, f * CELL, row * CELL, 0, b, pl); }
+    if (look.mut === 'fat' && row < 4) belly(g, f * CELL, row * CELL, row, b, pl);
     chickenBits(g, f * CELL, row * CELL, row < 4 ? row : 2, b, row === 4 && f >= 3, pl, mega);
   }
   return out;

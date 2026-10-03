@@ -28,7 +28,7 @@ function lockBehind(w: World) {
 }
 
 const lab: LevelScript = {
-  id: 'lab',
+  id: 'lab', rev: 2,
   title: 'Уровень −3. Лаборатория проекта «ЯЙЦО»',
   subtitle: 'Под заводом «Провансаль». Электричества нет. Фонарик есть',
   next: 'boss',
@@ -61,7 +61,9 @@ const lab: LevelScript = {
       case 'inc_a': case 'inc_b': case 'inc_c':
         w.hatchPods(id, id === 'inc_a' ? 1.5 : 2.5);
         if (id === 'inc_a') w.say(by.id, 'Яйца… они вылупляются!', 2);
-        if (id === 'inc_c') w.spawnWave('inc', ['normal', 'fast', 'exploder'], 8, 0.5, true, 'inc');
+        // D72: a bigger hatch, and the incubator's pride — GMO roosters
+        if (id === 'inc_b') { w.spawnWave('inc', ['normal', 'fast', 'chick', 'chick'], 6 + 2 * w.players.length, 0.35, true, 'inc'); w.say('pa', 'Внимание: партия «ГМО-бройлер» вылупилась досрочно. Не кормить. Не гладить. Бежать.', 5); }
+        if (id === 'inc_c') { w.spawnWave('inc', ['normal', 'fast', 'exploder', 'gmo'], 10 + 2 * w.players.length, 0.45, true, 'inc'); }
         break;
       case 'armory':
         if (!w.flags.armory) {
@@ -113,9 +115,12 @@ const lab: LevelScript = {
     w.setAlarm(true);
     w.say('pa', 'Генератор: прогрев 35 секунд. Свет погас. Образцы бегут ИЗ КОРИДОРОВ. Удачной пятницы.', 5);
     w.setObjective('Защищать генератор, пока он прогревается');
+    // D72: the GMO roosters come for the generator too
     const pool: EnemyType[] = ['normal', 'fast', 'fast', 'spitter', 'exploder', 'fat', 'armored'];
     let t = 0;
     w.spawnWave('gen_corridor', ['fast', 'normal', 'fast'], 8, .25, true, 'gen', true);
+    w.after(6, () => { if (w.alarm) { w.spawnWave('gen_corridor', ['gmo'], 1 + Math.ceil(w.players.length / 2), .8, true, 'gen', true); w.say('pa', 'Генератор привлёк ГМО-образцы. Они любят электричество. И вас.', 4); } });
+    w.after(22, () => { if (w.alarm) w.spawnWave('gen_corridor', ['gmo', 'armored'], 2 + w.players.length, .6, true, 'gen', true); });
     w.every(2.5, () => {
       if (!w.alarm) return;
       t += 2.5;
@@ -131,13 +136,28 @@ const lab: LevelScript = {
     });
   },
 
+  onKill(w, e) {
+    if (e.type !== 'gmo') return;
+    w.flags.gmoKills = (w.flags.gmoKills ?? 0) + 1;
+    if (w.flags.gmoKills === 1) w.say('omletov', 'ГМО-петух! Модифицирован под стойкость к офисной мебели. Цельтесь в гребень!', 4);
+    if (w.flags.gmoKills >= 5 && !w.flags.noGmo) { w.flags.noGmo = true; w.award('no_gmo'); }
+  },
+
   onNpcDead(w, n) {
     if (n.id === 'omletov') w.msg('ПОТЕРЯ', 'Профессор Омлетов… Рецепт антидота придётся вспоминать самим.', 3);
   },
   onNpcLost(w, n) {
-    if (n.id !== 'omletov' || w.flags.lostLabKey || w.players.some(p => p.keys.includes('lab'))) return;
+    if (n.id !== 'omletov') return;
+    // D72: a professor lost before his rescue no longer freezes «Найти учёных»: his card and his prototype stay
+    if (!w.flags.omletov) {
+      w.flags.omletov = true;
+      if (w.rules >= 6) w.addPickup('weapon', n.x + 40, n.y + 30, { weapon: 'laser', ttl: -1 });
+      w.say('radio', 'Неля: Профессор… не успели. У него в халате пропуск в оружейную. И какой-то лазер.', 5);
+    }
+    if (w.flags.lostLabKey || w.players.some(p => p.keys.includes('lab'))) { labObjective(w); return; }
     w.flags.lostLabKey = true;
     w.addPickup('keycard', n.x, n.y, { key: 'lab', ttl: -1 });
+    labObjective(w);
   },
 };
 

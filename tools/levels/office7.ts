@@ -25,6 +25,10 @@ p.rect(19, 27, 20, 27, 'c'); p.rect(8, 27, 10, 27, 'c');
 p.rect(44, 27, 46, 27, 'c'); p.rect(54, 27, 56, 27, 'c');
 p.rect(49, 8, 49, 10, 'c'); p.rect(49, 19, 49, 25, 'c');
 p.rect(59, 24, 61, 26, 'c');
+// D72: «Уединение» — a tiny meeting room off the Phoenix connector; its door opens with a button (Стас and Катя inside).
+p.rect(11, 18, 17, 18, '#'); p.rect(17, 18, 17, 22, '#'); p.rect(11, 22, 17, 22, '#');
+p.rect(12, 19, 16, 21, 'm');
+p.set(11, 20, 'K');
 // Castor's last office has a single card-reader entrance. No northern/southern bypass.
 p.rect(59, 22, 67, 22, '#'); p.rect(59, 23, 59, 31, '#'); p.rect(60, 31, 64, 31, '#');
 p.rect(59, 25, 59, 26, 'D');
@@ -56,8 +60,18 @@ prop('whiteboard', 44, 30); prop('plant', 48, 35);
 for (let i = 0; i < 4; i++) obj('spawn', 'player', 44 + (i % 2) * 1.5, 35 - Math.floor(i / 2) * 1.4);
 for (const [id, title, x, y] of [
   ['andrey', 'Андрей', 61.5, 27], ['sergey', 'Серёга', 63, 27],
-  ['vlad', 'Влад', 46, 9], ['stas', 'Стас', 6, 9], ['pasha', 'Паша', 10, 9],
-] as const) obj('npc', id, x, y, { title, mode: id === 'stas' || id === 'pasha' ? 'idle' : 'cower', hp: 200, story: true, essential: true, rescueLock: id === 'andrey' || id === 'sergey' ? 'f7_pass' : '', weapon: id === 'andrey' ? 'smg' : '', angle: id === 'stas' ? 0 : id === 'pasha' ? 180 : 90, lines: id === 'stas' || id === 'pasha' ? 'До одиннадцати! Потом эвакуация.|Петух под сеткой? Это фол!' : 'Мы тут!|Это всё корпоративный напиток!' });
+  ['vlad', 'Влад', 46, 9], ['stas', 'Стас', 13.4, 20.6], ['pasha', 'Паша', 10, 9],
+] as const) obj('npc', id, x, y, { title, mode: id === 'stas' || id === 'pasha' ? 'idle' : 'cower', hp: 200, story: true, essential: true, rescueLock: id === 'andrey' || id === 'sergey' ? 'f7_pass' : '', weapon: id === 'andrey' ? 'smg' : '', angle: id === 'stas' ? 0 : id === 'pasha' ? 180 : 90, lines: id === 'pasha' ? 'До одиннадцати! Потом эвакуация.|Петух под сеткой? Это фол!' : id === 'stas' ? 'Это не то, что вы подумали!|Мы… дебажили!' : 'Мы тут!|Это всё корпоративный напиток!' });
+// D72: Лера (QA) plays ping-pong with Паша — she can come along; Катя waits with Стас in «Уединение»
+obj('npc', 'lera', 6, 9, { title: 'Лера · тестировщица', mode: 'idle', hp: 120, story: true, essential: true, angle: 0, lines: 'Нашла баг: у петухов нет хитбокса на гребне!|Подача! Ой, это был петух.' });
+obj('npc', 'katya', 15.4, 20.4, { title: 'Катя', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 180, lines: 'Мы тут… обсуждаем спринт!|Стасик, кто это?' });
+prop('heart_bed', 14.4, 20.9); prop('kink_rack', 12.8, 19.1); prop('poster_kink', 15, 19.1); prop('poster_kink2', 16.3, 19.1);
+prop('fluffy_cuffs', 12.6, 21.5); prop('disco_lamp', 16.4, 21.4);
+obj('light', '', 14.5, 20, { kind: 'lamp', color: 'ff4fa8', radius: 150, flicker: .2 });
+prop('button_panel', 10.6, 19.15);
+obj('use', 'kink_button', 10.5, 19.6, { hint: 'нажать кнопку двери «Уединения»' });
+label('«УЕДИНЕНИЕ»', 14.5, 22.6);
+obj('note', '', 9.2, 21.6, { text: 'Табличка на двери: «Переговорка “Уединение”. Бронь: Стас + Катя, 17:00–∞. Тема: “дебаг”. НЕ БЕСПОКОИТЬ»' });
 obj('npc', 'elena', 46, 17, { title: 'Елена · офис-администратор', kind: 'womanGreen', mode: 'idle', hp: 100, story: true, essential: true, lines: 'Пропуск у меня. Только через корпоративный портал.|Сначала разгоните стаю у Castor!' });
 for (const [i, [x, y]] of [[54, 24], [56, 24], [57.4, 25], [55, 26], [57, 28], [54, 29]].entries()) obj('npc', 'gate_worker' + i, x, y, { title: 'Сотрудник у Castor', kind: i % 2 ? 'worker' : 'manBrown', tag: 'gate_workers', turn: i === 0 ? 'armored' : i % 2 ? 'fast' : 'normal' });
 obj('npc', 'root_manager', 45, 29, { title: 'Лысый менеджер', mode: 'idle', hp: 300, story: true, essential: true, lines: 'Вы куда? Рабочий день ещё не окончен.|У меня root-доступ к вашему отпуску.' });
@@ -87,5 +101,7 @@ obj('note', '', 45, 11.8, { text: 'Кофе проверен: бодрит, ле
 const level: LevelSource = { id: 'office7', theme: 'office7', mapProps: { ambient: 0, wallFace: 'office7' }, grid: p.rows(), legend: {
   '#': { wall: true }, g: { floor: [500] }, c: { floor: [501] }, k: { floor: F.white },
   D: { floor: [501], door: { id: 'castor_lock', locked: 'f7_pass', theme: 'office7' } },
+  m: { floor: F.woodRed },
+  K: { floor: [501], door: { id: 'kink_door', locked: 'script', theme: 'office7' } },
 }, objects };
 export default level;

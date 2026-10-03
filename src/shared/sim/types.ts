@@ -69,7 +69,28 @@ export interface Player {
   supportVersion: number;
   tp: number;             // teleport counter (client resets prediction when it changes)
   saved?: { weapons: WeaponId[]; ammo: Partial<Record<WeaponId, AmmoState>> };
+  /** D72: personal statistics — this chapter and the whole run (carried between floors; never affect the rules). */
+  stats?: { run: PlayerStats; chap: PlayerStats };
 }
+
+/** D72: what a player did (chapter summaries, the final personal statistics, the chronicle). */
+export interface PlayerStats {
+  kills: number; downs: number; heads: number; shots: number; dmg: number; taken: number;
+  revives: number; heals: number; maxCombo: number; closeCalls: number; barrels: number; floors: number; time: number;
+  /** elites and bosses this player finished off */
+  elites: string[];
+  /** achievements earned (chapter: in this chapter) */
+  ach: string[];
+  /** scripted funny moments («открыл не ту переговорку») */
+  moments: string[];
+}
+export const newStats = (): PlayerStats => ({ kills: 0, downs: 0, heads: 0, shots: 0, dmg: 0, taken: 0, revives: 0, heals: 0, maxCombo: 0, closeCalls: 0, barrels: 0, floors: 0, time: 0, elites: [], ach: [], moments: [] });
+export interface SummaryPlayer { id: string; name: string; slot: number; look: string; stats: PlayerStats; titles: string[] }
+/** D72: a chapter's mini summary (kept in the chronicle). `final`: the whole run, shown after the victory. */
+export interface ChapterSummary { chapter: string; title: string; players: SummaryPlayer[]; final?: SummaryPlayer[] }
+
+/** D72: a scripted vehicle (street 1: the Lithuanian's stolen sports car) — drives along a path, runs chickens over. */
+export interface Vehicle { id: number; kind: string; x: number; y: number; angle: number; speed: number; path: { x: number; y: number }[]; moving: boolean; honk?: number }
 
 export type EnemyState = 'idle' | 'chase' | 'windup' | 'fuse' | 'charge' | 'rise';
 
@@ -95,12 +116,16 @@ export interface Enemy {
   abilityCd: number;
   ability: string;
   dormant: boolean;           // ignores sight until damaged / woken by script or noise
+  /** D72: a deep sleeper — gunfire does not wake it (the parking-lot flock waits for the car). Sim only. */
+  deaf?: boolean;
   /** D69: seconds left blinded by a flashlight (elite Валера): slower and takes more damage. Sim only. */
   blindT?: number;
   /** D69: hit-and-run elites retreat into the dark for this long after a bite. Sim only. */
   fleeT?: number;
   /** D69: how long the elite has been held in a flashlight beam. Sim only. */
   litT?: number;
+  /** D72: seconds to the next blink through the dark (Валера) / the next bottle (Толик). Sim only. */
+  blinkT?: number;
   appearance?: { npcId: string; kind: string; name: string };
 }
 
@@ -131,7 +156,7 @@ export interface Npc {
   stuck?: { x: number; y: number; t: number; nav: number };
 }
 
-export type ProjKind = 'grenade' | 'spit' | 'egg';
+export type ProjKind = 'grenade' | 'spit' | 'egg' | 'bottle';
 
 export interface Projectile {
   id: number;
@@ -152,8 +177,12 @@ export const BUFFS = {
 } as const;
 export type BuffKind = keyof typeof BUFFS;
 export const BUFF_SECONDS = 10;
-export type PickupKind = 'ammo' | 'health' | 'armor' | 'weapon' | 'keycard' | 'antidote' | BuffKind | 'achievement';
-export interface Pickup { id: number; kind: PickupKind; weapon?: WeaponId; key?: string; x: number; y: number; ttl: number }
+export type PickupKind = 'ammo' | 'health' | 'armor' | 'weapon' | 'keycard' | 'antidote' | BuffKind | 'achievement' | 'doc';
+/**
+ * ts (D72): bit mask of player slots who already took this weapon/ammo — in a team every player takes their own.
+ * amount (D72): a special weapon dropped by a mini-boss carries only part of its ammo.
+ */
+export interface Pickup { id: number; kind: PickupKind; weapon?: WeaponId; key?: string; x: number; y: number; ttl: number; ts?: number; amount?: number }
 
 export interface Door { id: string; x: number; y: number; w: number; h: number; open: boolean; locked: string; theme: string }
 export interface Barrel { id: number; x: number; y: number; hp: number }
@@ -194,7 +223,9 @@ export type SimEvent =
   | { e: 'fuse'; id: number }
   | { e: 'propbreak'; id: number; x: number; y: number; m: string }
   /** D69: scripted horror beats (floor 8) and cutscene props (floor 12). */
-  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock'; x: number; y: number }
+  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock' | 'grain' | 'poof' | 'blink' | 'crash' | 'engine'; x: number; y: number }
+  /** D72: a chapter is over — per-player mini summary (and the whole run's statistics after the victory). */
+  | { e: 'chapter'; summary: ChapterSummary }
   | { e: 'light'; v: number }
   | { e: 'cine'; k: 'heli' | 'chapter' | 'victory' | 'intro'; text?: string; sub?: string };
 
@@ -227,6 +258,8 @@ export interface WorldView {
   bossName?: string;
   /** D69: darkness override set by a script (−1 = the map's own ambient). */
   light?: number;
+  /** D72: scripted vehicles. */
+  vehicles?: Vehicle[];
 }
 
 export interface IncidentView {

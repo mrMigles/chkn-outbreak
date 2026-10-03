@@ -203,6 +203,11 @@ const RECIPES: Record<string, { dur: number; vars: number; fn: Recipe }> = {
   laser: { dur: 0.5, vars: 2, fn: (c, v) => { tone(c, { dur: 0.35, type: 'sawtooth', f: 2400 + v * 200, f2: 300, gain: 0.35 }); tone(c, { dur: 0.25, type: 'sine', f: 1200, f2: 2600, gain: 0.25 }); noise(c, { dur: 0.15, type: 'highpass', f: 5000, gain: 0.3, seed: 290 + v }); } },
   minigun: { dur: 0.25, vars: 3, fn: (c, v) => gun(c, v, { body: 4200, bodyDur: 0.05, thump: 140, thumpDur: 0.06, tail: 2000, tailDur: 0.12, crack: 2600, drive: 4, gain: 0.7 }) },
   hop: { dur: 0.4, vars: 2, fn: (c, v) => { tone(c, { dur: 0.25, type: 'triangle', f: 300 + v * 40, f2: 900, gain: 0.3 }); noise(c, { dur: 0.1, type: 'bandpass', f: 1500, gain: 0.3, seed: 300 + v }); } },
+  // D72: the getaway car, the fence, Толик's bottles
+  engine: { dur: 0.45, vars: 2, fn: (c, v) => { const d = drive(c, 4); tone(c, { dur: 0.42, type: 'sawtooth', f: 70 + v * 8, f2: 95 + v * 8, gain: 0.32, dest: d, vib: 18 }); noise(c, { dur: 0.4, type: 'lowpass', f: 300, gain: 0.25, seed: 310 + v }); } },
+  honk: { dur: 0.7, vars: 1, fn: (c) => { tone(c, { dur: 0.32, type: 'square', f: 392, gain: 0.16 }); tone(c, { dur: 0.32, type: 'square', f: 494, gain: 0.12 }); tone(c, { t: 0.38, dur: 0.25, type: 'square', f: 392, gain: 0.16 }); tone(c, { t: 0.38, dur: 0.25, type: 'square', f: 494, gain: 0.12 }); } },
+  crash: { dur: 1.2, vars: 1, fn: (c) => { noise(c, { dur: 0.5, type: 'lowpass', f: 1200, gain: 0.9, seed: 320 }); for (let i = 0; i < 7; i++) noise(c, { t: 0.05 + i * 0.07, dur: 0.18, type: 'highpass', f: 2500 + i * 300, gain: 0.35, seed: 321 + i }); tone(c, { dur: 0.3, f: 80, f2: 40, gain: 0.7 }); } },
+  glass: { dur: 0.6, vars: 3, fn: (c, v) => { for (let i = 0; i < 5; i++) noise(c, { t: i * 0.03 + v * 0.01, dur: 0.12, type: 'highpass', f: 3800 + i * 500, gain: 0.35, seed: 330 + i + v * 7 }); tone(c, { dur: 0.15, type: 'sine', f: 2600 + v * 300, f2: 1800, gain: 0.12 }); } },
   chomp: { dur: 0.4, vars: 2, fn: (c, v) => { noise(c, { dur: 0.06, type: 'bandpass', f: 700, q: 2, gain: 0.6, seed: 250 + v }); noise(c, { t: 0.16, dur: 0.06, type: 'bandpass', f: 600, q: 2, gain: 0.5, seed: 252 + v }); } },
 };
 

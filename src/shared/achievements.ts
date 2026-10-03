@@ -31,6 +31,13 @@ export const ACHIEVEMENTS = {
   sanepid: { name: 'Санэпидстанция', description: 'Рынок: 30 петушков.', icon: '🧴', rare: true },
   subscribed: { name: 'Подписка оформлена', description: 'Довести блогера Стёпу до проходной «Провансаля» человеком.', icon: '📱', rare: true },
   chapter_city: { name: 'Городская легенда', description: 'Пройти главу 2 «Город».', icon: '🌆', rare: true },
+  // D72
+  debug_mode: { name: 'Режим отладки', description: 'Этаж 7: успокоить Катю из переговорки «Уединение».', icon: '🐞' },
+  harvest: { name: 'Урожай', description: 'Этаж 8: собрать урожай в комнате 87 и уволить Вершкова.', icon: '🥔' },
+  gone_in_60: { name: 'Угнать за 60 секунд', description: 'Улица: проводить Литовца через ограду парковки.', icon: '🏎️' },
+  sober_look: { name: 'Трезвый взгляд', description: 'Рынок: победить сменщика Толика.', icon: '🍺' },
+  no_gmo: { name: 'Без ГМО', description: 'Лаборатория: уложить пять ГМО-петухов.', icon: '🧬', rare: true },
+  diet: { name: 'Разгрузочный день', description: 'Ангар: уволить разжиревшего Генерального Петуха.', icon: '🥗' },
 } as const;
 /** D62: rare achievements can be shared into the room's Telegram chat after the floor. */
 export const isRare = (key: string) => !!(ACHIEVEMENTS as Record<string, { rare?: boolean }>)[key]?.rare;

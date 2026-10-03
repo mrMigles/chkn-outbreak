@@ -1,12 +1,16 @@
 import type { LevelScript } from './types';
 
 const boss: LevelScript = {
-  id: 'boss',
+  id: 'boss', rev: 2,
+  // D72: chapter 3 closes with the victory: its summary and the whole run's personal statistics
+  chapterEnd: { title: 'ГЛАВА 3 «ПРОВАНСАЛЬ» ПРОЙДЕНА', text: 'Генеральный Петух уволен. Антидот льётся по трубам.', chapter: 'Глава 3 · Провансаль' },
   title: 'Ангар «Провансаля». Совет директоров',
   subtitle: 'Генеральный директор хочет обсудить ваши KPI',
 
   onStart(w) {
     w.flags.reinforcementsAt = w.time + 10;
+    // D72 (issue #4): the trade-union medkit timer starts with the floor (it never started before)
+    w.flags.medkitAt = w.time + 24;
     w.setObjective('Выжить на совещании');
     w.after(1.5, () => w.say('pa', 'Генеральный директор: Сотрудники! Вы сорвали квартальный план. Это… КО-КО-КОНЕЦ вашей карьеры!', 5));
     w.after(4.5, () => {
@@ -15,7 +19,7 @@ const boss: LevelScript = {
       w.say(String(e.id), 'КУ-КА-РЕ-КУ-У-У!!!', 2);
       w.emit({ e: 'fuse', id: e.id });
       w.setAlarm(true);
-      w.msg('ГЕНЕРАЛЬНЫЙ ПЕТУХ', 'Председатель совета директоров', 3);
+      w.msg('ГЕНЕРАЛЬНЫЙ ПЕТУХ', 'Председатель совета директоров. Отъелся на премиях', 3);
       w.setObjective('Уволить Генерального Петуха');
     });
   },
@@ -56,6 +60,7 @@ const boss: LevelScript = {
   },
 
   onBossDead(w, e) {
+    w.award('diet');
     // D71: the finale cutscene (fanfare, feathers, the camera on the fallen CEO) — client only
     w.cine('victory', 'ГЕНЕРАЛЬНЫЙ ПЕТУХ ПОВЕРЖЕН', `${Math.round(e.x)},${Math.round(e.y)}`);
     for (const p of w.players) {

@@ -2,7 +2,7 @@ import type { Room } from 'colyseus.js';
 import { GameMap, TiledMap, Collider } from '../../shared/map';
 import type { Carry } from '../../shared/sim/World';
 import type { Barrel, Door, Enemy, Npc, Pickup, Player, PlayerInput, Pod, Projectile, SimEvent, WorldView } from '../../shared/sim/types';
-import { decodeEnemies, decodePickups, decodeProjectiles, Snapshot } from '../../shared/protocol';
+import { decodeEnemies, decodePickups, decodeProjectiles, decodeVehicles, Snapshot } from '../../shared/protocol';
 import { lerpAngle } from '../../shared/math';
 import type { Session } from './Session';
 
@@ -54,6 +54,8 @@ export class NetSession implements Session {
   private playerCache = new Map<string, Player & Smooth>();
   private npcCache = new Map<string, Npc & Smooth>();
   private doorColliders = new Map<string, Collider>();
+  /** D72: parked vehicles block the way on the client too (movement is predicted here). */
+  private vehicleColliders = new Map<number, Collider>();
   private barrelColliders = new Map<string, Collider>();
   private podColliders = new Map<string, Collider>();
   private sendT = 0;
@@ -147,6 +149,13 @@ export class NetSession implements Session {
     v.npcs = npcs;
     v.projectiles = decodeProjectiles(s);
     v.pickups = decodePickups(s);
+    v.vehicles = decodeVehicles(s);
+    for (const veh of v.vehicles) if (!veh.moving && !this.vehicleColliders.has(veh.id)) {
+      const vertical = veh.kind.endsWith('_v');
+      const [w, h] = vertical ? [118, 196] : [230, 74];
+      this.vehicleColliders.set(veh.id, this.map.addCollider({ x: veh.x - w / 2, y: veh.y - h / 2, w, h, bullets: true, round: false, id: -60000 - veh.id }));
+    }
+    for (const [id, c] of this.vehicleColliders) if (!v.vehicles.some(q => q.id === id && !q.moving)) { this.map.removeCollider(c); this.vehicleColliders.delete(id); }
     // doors
     for (let i = 0; i < s.d.length; i += 3) {
       const id = s.d[i] as string;

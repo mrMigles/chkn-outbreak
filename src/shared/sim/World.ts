@@ -6,11 +6,12 @@ import { FlowField } from '../nav';
 import { ENEMIES, EnemyType, PLAYER } from '../enemies';
 import { WEAPONS, WeaponId, WEAPON_ORDER } from '../weapons';
 import { Rng, angleDiff, clamp, dist, dist2, TAU } from '../math';
-import { MUTATION, BUFFS, BUFF_SECONDS, type BuffKind } from './types';
+import { MUTATION, BUFFS, BUFF_SECONDS, newStats, type BuffKind } from './types';
 import type {
   Player, Enemy, Npc, Projectile, Pickup, Door, Barrel, Pod, SimEvent, PlayerInput, Team, WorldView, PickupKind, ProjKind,
+  ChapterSummary, PlayerStats, SummaryPlayer, Vehicle,
 } from './types';
-import { updateEnemy } from './enemyAI';
+import { updateEnemy, ELITES } from './enemyAI';
 import { rayBody, enemyBox, enemyScale, HUMAN_BOX, type BodyBox } from './hitbox';
 import { updateNpc } from './npcAI';
 import { SupportController, bleedoutFor, RULES } from './support';
@@ -21,8 +22,10 @@ import { Incidents } from './Incidents';
 
 export interface CarryNpc { id: string; kind: string; name: string; weapon: WeaponId | null; hp: number; maxHp: number; betrayal?: Npc['betrayal']; mutation?: Npc['mutation']; props?: Npc['props'] }
 export interface Carry {
-  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number; supplies?: Player['supplies']; achievements?: string[] }>;
+  players: Record<string, { weapons: WeaponId[]; ammo: Player['ammo']; hp: number; armor: number; supplies?: Player['supplies']; achievements?: string[]; stats?: Player['stats'] }>;
   npcs: CarryNpc[];
+  /** D72: chapter summaries of this run (the chronicle), newest last. */
+  chronicle?: ChapterSummary[];
 }
 export interface WorldOptions {
   solo: boolean;
@@ -66,6 +69,10 @@ export class World implements WorldView {
   bossName?: string;
   /** D69: scripted darkness override (−1 = the map's ambient). */
   light = -1;
+  /** D72: scripted vehicles (street 1). */
+  vehicles: Vehicle[] = [];
+  /** D72: the summary of the chapter this floor closed (also carried into the chronicle). */
+  summary?: ChapterSummary;
   events: SimEvent[] = [];
   flags: Record<string, any> = {};
   script: LevelScript;
@@ -122,7 +129,7 @@ export class World implements WorldView {
     const cx = o.cx, cy = o.cy;
     switch (o.type) {
       case 'enemy':
-        this.spawnEnemy((o.name || 'normal') as EnemyType, cx, cy, { aggro: !!o.props.aggro, how: null, tag: o.props.tag || '', dormant: !!o.props.dormant });
+        { const e = this.spawnEnemy((o.name || 'normal') as EnemyType, cx, cy, { aggro: !!o.props.aggro, how: null, tag: o.props.tag || '', dormant: !!o.props.dormant }); if (o.props.deaf) e.deaf = true; }
         break;
       case 'npc':
         this.npcs.push({
@@ -170,6 +177,7 @@ export class World implements WorldView {
       kills: 0, deaths: 0, score: 0, hurtT: 0, keys: [], combo: 0, comboT: 0, connected: true, tp: 0,
       supplies: { ...(carry?.supplies ?? { medkit: 1, ammo: 1 }) }, support: null, supportVersion: 0,
       buffs: {}, achievements: [...(carry?.achievements ?? [])],
+      stats: carry?.stats ? JSON.parse(JSON.stringify(carry.stats)) : { run: newStats(), chap: newStats() },
     };
     p.input.x = p.x; p.input.y = p.y;
     p.cur = Math.max(0, p.weapons.length - 1);
@@ -210,19 +218,44 @@ export class World implements WorldView {
     const players: Carry['players'] = {};
     for (const p of this.players) {
       const src = p.state === 'alive' || !p.saved ? p : p.saved;
-      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor, supplies: { ...p.supplies }, achievements: [...(p.achievements ?? [])] };
+      const stats = p.stats ? JSON.parse(JSON.stringify(p.stats)) as NonNullable<Player['stats']> : undefined;
+      // D72: a new chapter starts its own count after the chapter's last floor
+      if (stats && this.summary) stats.chap = newStats();
+      players[p.id] = { weapons: [...src.weapons], ammo: JSON.parse(JSON.stringify(src.ammo)), hp: Math.max(60, p.state === 'alive' ? p.hp : 60), armor: p.armor, supplies: { ...p.supplies }, achievements: [...(p.achievements ?? [])], stats };
     }
     const npcs = this.npcs.filter((n) => n.mode === 'follow').map((n) => ({ id: n.id, kind: n.kind, name: n.name, weapon: n.weapon, hp: Math.max(n.hp, n.maxHp * 0.6), maxHp: n.maxHp, betrayal: n.betrayal ? { ...n.betrayal } : undefined, mutation: n.mutation ? { ...n.mutation } : undefined, props: n.props }));
-    return { players, npcs };
+    const chronicle = [...(this.opts.carry?.chronicle ?? []), ...(this.summary ? [this.summary] : [])].slice(-12);
+    return { players, npcs, ...(chronicle.length ? { chronicle } : {}) };
   }
 
   // ------------------------------------------------------------------ script API
-  emit(ev: SimEvent) { this.events.push(ev); }
+  emit(ev: SimEvent) { this.events.push(ev); this.track(ev); }
   award(key: AchievementKey, id?: string) {
     for (const p of this.players) {
       if (id && p.id !== id || (p.achievements ??= []).includes(key)) continue;
       p.achievements.push(key); this.emit({ e: 'achievement', id: p.id, key });
+      if (p.stats) { p.stats.run.ach.push(key); p.stats.chap.ach.push(key); }
     }
+  }
+  /** D72: personal statistics from the event stream (counters only — they never change the rules). */
+  private stat(id: string | undefined, fn: (s: PlayerStats) => void) {
+    const p = id ? this.players.find(q => q.id === id) : undefined;
+    if (p?.stats) { fn(p.stats.run); fn(p.stats.chap); }
+  }
+  private track(ev: SimEvent) {
+    switch (ev.e) {
+      case 'shot': if (ev.team === 'human') this.stat(ev.o, s => s.shots++); break;
+      case 'hit': if ((ev.k === 'flesh' || ev.k === 'armor') && ev.o) this.stat(ev.o, s => { s.dmg += ev.d; if (ev.hs) s.heads++; }); break;
+      case 'kill': if (ev.by) this.stat(ev.by, s => s.kills++); break;
+      case 'pdmg': this.stat(ev.id, s => { s.taken += Math.round(ev.d); }); break;
+      case 'down': this.stat(ev.id, s => s.downs++); break;
+      case 'revived': if (ev.by) this.stat(ev.by, s => s.revives++); break;
+      case 'help': this.stat(ev.by, s => s.heals++); break;
+    }
+  }
+  /** D72: a funny moment for the chapter summary ('' = everyone). */
+  moment(id: string, text: string) {
+    for (const p of this.players) if (!id || p.id === id) for (const s of p.stats ? [p.stats.run, p.stats.chap] : []) if (!s.moments.includes(text) && s.moments.length < 8) s.moments.push(text);
   }
   say(who: string, text: string, d = 3.2, flavor = false) { this.emit({ e: 'say', who, text, d, ...(flavor ? { flavor } : {}) }); }
   /** target: map object / NPC name(s) or a point; empty = no direction (survive/defend). */
@@ -247,7 +280,7 @@ export class World implements WorldView {
   /** D69: darkness override for scripted light (0 = fully lit, 0.95 = pitch black; −1 = back to the map's). */
   setLight(v: number) { if (this.light === v) return; this.light = v; this.emit({ e: 'light', v }); }
   /** D69: horror beat / cutscene prop for clients (no rules). */
-  scare(k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock', x: number, y: number) { this.emit({ e: 'scare', k, x: Math.round(x), y: Math.round(y) }); }
+  scare(k: Extract<SimEvent, { e: 'scare' }>['k'], x: number, y: number) { this.emit({ e: 'scare', k, x: Math.round(x), y: Math.round(y) }); }
   cine(k: 'heli' | 'chapter' | 'victory' | 'intro', text?: string, sub?: string) { this.emit({ e: 'cine', k, ...(text ? { text } : {}), ...(sub ? { sub } : {}) }); }
   /** D69: an elite chicken gets the boss bar. */
   setBoss(e: Enemy, name: string) { this.bossId = e.id; this.bossName = name; if (e.appearance) e.appearance.name = name; }
@@ -335,7 +368,14 @@ export class World implements WorldView {
     // chickens are cured at the end of a level
     for (const p of this.players) if (p.state !== 'alive') this.cure(p);
     if (this.script.chapterEnd?.award) this.award(this.script.chapterEnd.award);
-    this.emit({ e: 'level', next: next ?? this.script.next ?? '', win: !(next ?? this.script.next) });
+    for (const p of this.players) for (const s of p.stats ? [p.stats.run, p.stats.chap] : []) { s.floors++; s.time += Math.round(this.time); }
+    const win = !(next ?? this.script.next);
+    // D72: a chapter's last floor (or the victory) closes the chapter with a mini summary per player
+    if (this.script.chapterEnd || win) {
+      this.summary = chapterSummary(this, this.script.chapterEnd?.title ?? 'ФИНАЛ', this.script.chapterEnd?.chapter ?? '', win);
+      this.emit({ e: 'chapter', summary: this.summary });
+    }
+    this.emit({ e: 'level', next: next ?? this.script.next ?? '', win });
   }
 
   gameOver(reason: string) {
@@ -349,7 +389,8 @@ export class World implements WorldView {
     const def = ENEMIES[type];
     const diff = this.opts.difficulty ?? 1;
     // D70 (rules 5): the final boss has 7500 HP solo instead of 9000 (still +40 % of that per extra player)
-    const hpMul = (type === 'boss' ? (0.6 + 0.4 * Math.max(1, this.players.length)) * (this.rules >= 6 ? 8000 / 9000 : this.rules >= 5 ? 7500 / 9000 : 1) : 1) * (this.script.enemyHp ?? 1);
+    // D72 (rules 7): the fattened CEO is tougher again — 10000 solo (mini-bosses now drop miniguns and lasers)
+    const hpMul = (type === 'boss' ? (0.6 + 0.4 * Math.max(1, this.players.length)) * (this.rules >= 7 ? 10000 / 9000 : this.rules >= 6 ? 8000 / 9000 : this.rules >= 5 ? 7500 / 9000 : 1) : 1) * (this.script.enemyHp ?? 1);
     const e: Enemy = {
       id: this.nextId++, type, variant: this.rng.int(0, def.sprite.length - 1), x, y, angle: this.rng.range(0, TAU), vx: 0, vy: 0,
       hp: def.hp * hpMul * diff, maxHp: def.hp * hpMul * diff, state: o.how ? 'rise' : 'idle', t: o.how ? 0.55 : 0, cd: this.rng.range(0, 0.6),
@@ -357,12 +398,13 @@ export class World implements WorldView {
       phase: 0, abilityCd: 3, ability: '', dormant: !!o.dormant,
     };
     this.enemies.push(e);
-    if (this.mapId !== 'office' && type !== 'boss' && type !== 'chick' && !o.tag?.startsWith('root') && this.rng.chance(.12)) {
+    if (this.mapId !== 'office' && type !== 'boss' && type !== 'chick' && type !== 'sprout' && type !== 'gmo' && !o.tag?.startsWith('root') && this.rng.chance(.12)) {
       const odd: Record<string, [string, string]> = {
         normal: ['Ко-коуч · требует дейли', 'manBlue'], fast: ['Петух-отпускник · без согласования', 'worker'],
         fat: ['Директор по корму · всё включено', 'arkady'], armored: ['Служба петушиной безопасности', 'guard'],
         spitter: ['Бухгалтер · плюётся отчётами', 'scientist'], exploder: ['DevOops · горячий релиз', 'scientist'],
         jumper: ['Паркурщик · без лифта', 'courier'], chick: ['', ''], boss: ['', ''],
+        sprout: ['Агроном · окучивает', 'manOld'], gmo: ['Биотехнолог · модифицирован', 'scientist'],
       };
       const [name, kind] = odd[type]; e.appearance = { npcId: 'odd_' + e.id, kind, name };
     }
@@ -372,8 +414,8 @@ export class World implements WorldView {
     return e;
   }
 
-  addPickup(kind: PickupKind, x: number, y: number, o: { weapon?: WeaponId; key?: string; ttl?: number } = {}) {
-    const p: Pickup = { id: this.nextId++, kind, weapon: o.weapon, key: o.key, x, y, ttl: o.ttl ?? 25 };
+  addPickup(kind: PickupKind, x: number, y: number, o: { weapon?: WeaponId; key?: string; ttl?: number; amount?: number } = {}) {
+    const p: Pickup = { id: this.nextId++, kind, weapon: o.weapon, key: o.key, x, y, ttl: o.ttl ?? 25, ...(o.amount ? { amount: o.amount } : {}) };
     this.pickups.push(p);
     return p;
   }
@@ -424,6 +466,7 @@ export class World implements WorldView {
     this.separateNpcs();
     for (const e of [...this.enemies]) updateEnemy(this, e, dt);
     this.updateProjectiles(dt);
+    if (this.vehicles.length) this.updateVehicles(dt);
     this.updatePickups(dt);
     this.updateDoors();
     this.updateTriggers();
@@ -731,7 +774,7 @@ export class World implements WorldView {
     p.hp -= dmg;
     p.hurtT = 0.25;
     this.emit({ e: 'pdmg', id: p.id, d: dmg, x: fx, y: fy });
-    if (p.hp > 0) { if (p.hp <= 10 && p.state === 'alive') this.award('close_call', p.id); return; }
+    if (p.hp > 0) { if (p.hp <= 10 && p.state === 'alive') { if (p.hp + dmg > 10) this.stat(p.id, s => s.closeCalls++); this.award('close_call', p.id); } return; }
     p.hp = 0;
     p.deaths++;
     if (p.state === 'chicken') {
@@ -907,6 +950,9 @@ export class World implements WorldView {
     if (p) {
       p.kills++;
       p.combo++; p.comboT = 2.2;
+      this.stat(p.id, s => { s.maxCombo = Math.max(s.maxCombo, p.combo); });
+      const name = e.type === 'boss' ? 'Генеральный Петух' : e.appearance && (ELITES[e.appearance.npcId] || this.bossId === e.id) ? e.appearance.name : '';
+      if (name) this.stat(p.id, s => { if (!s.elites.includes(name)) s.elites.push(name); });
       this.bonusSystem.onCombo(p.combo);
       if (p.combo >= 50) this.award('combo_master', p.id);
       p.score += ENEMIES[e.type].score * (1 + Math.min(p.combo, 50) * 0.05);
@@ -922,6 +968,11 @@ export class World implements WorldView {
       else if (r < 0.11) this.addPickup('armor', e.x, e.y);
     }
     if (e.type === 'exploder') this.after(0.05, () => this.explode(e.x, e.y, 150, 90, by, 'exploder'));
+    // D72 (rules 7): a mini-boss sometimes drops a part-loaded minigun or laser (ammo boxes never refill those)
+    if (this.rules >= 7 && e.type !== 'boss' && e.appearance && (ELITES[e.appearance.npcId] || this.bossId === e.id) && this.rng.chance(.6)) {
+      const w: WeaponId = this.rng.chance(.5) ? 'minigun' : 'laser';
+      this.addPickup('weapon', e.x - 26, e.y + 20, { weapon: w, ttl: -1, amount: w === 'minigun' ? 140 : 10 });
+    }
     if (e.type === 'fat') {
       for (let i = 0; i < 3; i++) {
         const aa = a + (i - 1) * 0.9;
@@ -986,6 +1037,7 @@ export class World implements WorldView {
       if (e.hp <= 0) roasted++;
     }
     if (k === 'barrel' && roasted >= 3 && this.players.some(p => p.id === by)) this.award('barrel_barbeque', by);
+    if (k === 'barrel' && roasted) this.stat(by, s => { s.barrels += roasted; });
     const fromPlayer = this.players.some((p) => p.id === by);
     for (const p of this.players) {
       const d = dist(x, y, p.x, p.y);
@@ -1026,12 +1078,12 @@ export class World implements WorldView {
     const r2 = r * r;
     // D69 floor 8: in the dark a shot only wakes the sleepers close by
     const r2s = this.stealth ? r2 * 0.12 : r2;
-    for (const e of this.enemies) if (!e.aggro && dist2(x, y, e.x, e.y) < (e.dormant ? r2s : r2)) { e.aggro = true; e.dormant = false; }
+    for (const e of this.enemies) if (!e.aggro && !e.deaf && dist2(x, y, e.x, e.y) < (e.dormant ? r2s : r2)) { e.aggro = true; e.dormant = false; }
   }
 
   // ------------------------------------------------------------------ projectiles
   addProjectile(kind: ProjKind, x: number, y: number, vx: number, vy: number, owner: string, team: Team, dmg: number, ttl: number) {
-    const pr: Projectile = { id: this.nextId++, kind, x, y, vx, vy, ttl, owner, team, dmg, r: kind === 'grenade' ? 7 : kind === 'egg' ? 10 : 9 };
+    const pr: Projectile = { id: this.nextId++, kind, x, y, vx, vy, ttl, owner, team, dmg, r: kind === 'grenade' ? 7 : kind === 'egg' || kind === 'bottle' ? 10 : 9 };
     this.projectiles.push(pr);
     this.emit({ e: 'proj', id: pr.id, k: kind, x: Math.round(x), y: Math.round(y), vx: Math.round(vx), vy: Math.round(vy) });
     return pr;
@@ -1046,7 +1098,7 @@ export class World implements WorldView {
       const wall = this.map.raycast(pr.x, pr.y, a, stepD + pr.r, true);
       let hitT = wall.what !== 'none' ? Math.max(0, wall.d - pr.r) : Infinity;
       let victim: any = null;
-      if (pr.kind !== 'egg') {
+      if (pr.kind !== 'egg' && pr.kind !== 'bottle') {
         for (const v of this.victims(pr.team)) {
           if (v.kind === 'barrel' && pr.kind === 'spit') continue;
           const t = rayCircle(pr.x, pr.y, Math.cos(a), Math.sin(a), v.x, v.y, v.r + pr.r);
@@ -1065,6 +1117,11 @@ export class World implements WorldView {
         } else if (pr.kind === 'egg') {
           this.emit({ e: 'splat', x: Math.round(pr.x), y: Math.round(pr.y), k: 'egg' });
           this.spawnEnemy('chick', pr.x, pr.y, { aggro: true, how: 'egg', tag: 'boss' });
+        } else if (pr.kind === 'bottle') {
+          // D72: Толик's beer bottle flies over heads and shatters where it lands
+          this.emit({ e: 'splat', x: Math.round(pr.x), y: Math.round(pr.y), k: 'bottle' });
+          for (const q of this.players) if (q.state === 'alive' && dist2(q.x, q.y, pr.x, pr.y) < 62 * 62) this.damagePlayer(q, pr.dmg, pr.x, pr.y);
+          for (const n of this.npcs) if (n.mode !== 'dead' && n.mode !== 'gone' && dist2(n.x, n.y, pr.x, pr.y) < 62 * 62) this.damageNpc(n, pr.dmg * 0.5);
         }
         continue;
       }
@@ -1085,9 +1142,15 @@ export class World implements WorldView {
     for (const k of [...this.pickups]) {
       if (k.ttl > 0) { k.ttl -= dt; if (k.ttl <= 0) { this.pickups.splice(this.pickups.indexOf(k), 1); continue; } }
       const reach = this.reachOf(k);
+      // D72 (rules 7): in a team every player takes their own gun and ammo from the same spot; bonuses stay first-come
+      const own = this.rules >= 7 && (k.kind === 'weapon' || k.kind === 'ammo') && this.players.length > 1;
       for (const p of this.players) {
         if (p.state !== 'alive' || dist2(p.x, p.y, k.x, k.y) > reach * reach) continue;
-        if (this.tryPickup(p, k)) { this.pickups.splice(this.pickups.indexOf(k), 1); break; }
+        if (own && ((k.ts ?? 0) >> p.slot) & 1) continue;
+        if (!this.tryPickup(p, k)) continue;
+        if (!own) { this.pickups.splice(this.pickups.indexOf(k), 1); break; }
+        k.ts = (k.ts ?? 0) | (1 << p.slot);
+        if (this.players.filter(q => q.connected && !q.benched).every(q => ((k.ts ?? 0) >> q.slot) & 1)) { this.pickups.splice(this.pickups.indexOf(k), 1); break; }
       }
     }
   }
@@ -1125,8 +1188,24 @@ export class World implements WorldView {
       case 'weapon': {
         if (!k.weapon) return false;
         const had = p.weapons.includes(k.weapon);
+        const def = WEAPONS[k.weapon];
+        if (k.amount) {
+          // D72: a part-loaded special from a mini-boss: tops up the one you carry, or is yours with that much
+          if (had) {
+            const a = p.ammo[k.weapon]!;
+            const room = def.reserveMax > 0 ? def.reserveMax - a.reserve : def.mag - a.mag;
+            if (room <= 0) return false;
+            if (def.reserveMax > 0) a.reserve += Math.min(room, k.amount); else a.mag += Math.min(room, k.amount);
+          } else {
+            this.giveWeapon(p, k.weapon, true);
+            const a = p.ammo[k.weapon]!;
+            a.mag = Math.min(def.mag, k.amount); if (a.reserve >= 0) a.reserve = Math.max(0, Math.min(def.reserveMax, k.amount - a.mag));
+          }
+          text = (had ? 'Патроны: ' : '') + def.name + ' · ' + k.amount;
+          break;
+        }
         if (had) {
-          const a = p.ammo[k.weapon]!, def = WEAPONS[k.weapon];
+          const a = p.ammo[k.weapon]!;
           if (a.reserve >= def.reserveMax) return false;
         }
         this.giveWeapon(p, k.weapon, !had);
@@ -1140,6 +1219,9 @@ export class World implements WorldView {
         break;
       case 'antidote':
         text = 'Антидот';
+        break;
+      case 'doc':
+        text = 'Анкета удовлетворённости';
         break;
       case 'achievement': {
         const key = k.key && k.key in ACHIEVEMENTS ? k.key as AchievementKey : 'root_rooster';
@@ -1240,6 +1322,50 @@ export class World implements WorldView {
     }
   }
 
+  // ------------------------------------------------------------------ D72: vehicles
+  private vehicleColliders = new Map<number, Collider>();
+  /** A parked vehicle: solid until it drives off. foot = [w, h] in world units. */
+  addVehicle(kind: string, x: number, y: number, angle = 0, foot: [number, number] = [230, 74]) {
+    const v: Vehicle = { id: this.nextId++, kind, x, y, angle, speed: 0, path: [], moving: false };
+    this.vehicles.push(v);
+    const c = this.map.addCollider({ x: x - foot[0] / 2, y: y - foot[1] / 2, w: foot[0], h: foot[1], bullets: true, round: false, id: -50000 - v.id });
+    this.vehicleColliders.set(v.id, c); this.flow.rebuildBlocked();
+    return v;
+  }
+  /** Drive along a path at `speed`; chickens in the way are run over. The vehicle is gone at the path's end. */
+  driveVehicle(v: Vehicle, path: { x: number; y: number }[], speed: number) {
+    v.path = path.map(q => ({ ...q })); v.speed = speed; v.moving = true;
+    const c = this.vehicleColliders.get(v.id);
+    if (c) { this.map.removeCollider(c); this.vehicleColliders.delete(v.id); this.flow.rebuildBlocked(); }
+    this.scare('engine', v.x, v.y);
+  }
+  private updateVehicles(dt: number) {
+    for (const v of [...this.vehicles]) {
+      if (!v.moving) continue;
+      const goal = v.path[0];
+      if (!goal) { this.vehicles.splice(this.vehicles.indexOf(v), 1); continue; }
+      const d = dist(v.x, v.y, goal.x, goal.y), step = v.speed * dt;
+      v.angle = Math.atan2(goal.y - v.y, goal.x - v.x);
+      if (d <= step) { v.x = goal.x; v.y = goal.y; v.path.shift(); } else { v.x += Math.cos(v.angle) * step; v.y += Math.sin(v.angle) * step; }
+      const c = Math.cos(v.angle), sn = Math.sin(v.angle);
+      for (const e of [...this.enemies]) {
+        const dx = e.x - v.x, dy = e.y - v.y, along = dx * c + dy * sn, side = -dx * sn + dy * c;
+        if (Math.abs(along) < 150 && Math.abs(side) < 96 + ENEMIES[e.type].radius) this.damageEnemy(e, 9999, v.angle + (side > 0 ? 0.8 : -0.8), 900, '', 'melee');
+      }
+      // people step aside
+      for (const p of this.players) {
+        if (p.state !== 'alive' && p.state !== 'downed') continue;
+        const dx = p.x - v.x, dy = p.y - v.y, along = dx * c + dy * sn, side = -dx * sn + dy * c;
+        if (Math.abs(along) < 120 && Math.abs(side) < 60) {
+          const push = (60 - Math.abs(side)) * (side >= 0 ? 1 : -1);
+          [p.x, p.y] = this.map.move(p.x, p.y, HUMAN_R, -sn * push, c * push);
+          p.input.x = p.x; p.input.y = p.y; p.tp++;
+        }
+      }
+      for (const dp of [...this.dprops]) if (dp.mat === 'metal' && dist(dp.x, dp.y, v.x + c * 110, v.y + sn * 110) < 100) this.damageProp(dp, dp.hp + 1, '');
+    }
+  }
+
   /** Developer helpers (solo): every weapon with full reserve, kill every enemy. */
   devArsenal(p: Player) {
     for (const w of WEAPON_ORDER) { this.giveWeapon(p, w, false); const a = p.ammo[w]!, def = WEAPONS[w]; a.mag = def.mag; if (a.reserve >= 0) a.reserve = def.reserveMax; }
@@ -1253,6 +1379,38 @@ export class World implements WorldView {
   view(): WorldView { return this; }
 }
 
+/**
+ * D72: a chapter's mini summary: per player the chapter's numbers, achievements and moments, plus a few
+ * light-hearted titles («Санитар леса», «Любимец петухов»…). After the victory `final` holds the whole run.
+ */
+export function chapterSummary(w: World, title: string, chapter: string, win: boolean): ChapterSummary {
+  const make = (pick: (p: Player) => PlayerStats): SummaryPlayer[] => {
+    const list = w.players.filter(p => p.stats).map(p => ({ id: p.id, name: p.name, slot: p.slot, look: p.look, stats: JSON.parse(JSON.stringify(pick(p))) as PlayerStats, titles: [] as string[] }));
+    const team = list.length > 1;
+    const top = (key: (s: PlayerStats) => number, min: number, name: string, low = false) => {
+      const sorted = [...list].sort((a, b) => low ? key(a.stats) - key(b.stats) : key(b.stats) - key(a.stats));
+      const best = sorted[0];
+      if (!best || (!low && key(best.stats) < min) || (team && sorted[1] && key(sorted[1].stats) === key(best.stats))) return;
+      best.titles.push(name);
+    };
+    top(s => s.kills, 30, 'Санитар леса');
+    top(s => s.heads, 15, 'Снайпер отдела');
+    top(s => s.revives + s.heals, 1, 'Корпоративная медсестра');
+    top(s => s.downs, 1, 'Любимец петухов');
+    top(s => s.taken, 400, 'Подушка безопасности');
+    top(s => s.barrels, 3, 'Специалист по шашлыку');
+    top(s => s.closeCalls, 2, 'Живучий, как таракан');
+    if (team) top(s => s.kills, 0, 'Пацифист квартала', true);
+    for (const q of list) {
+      if (q.stats.maxCombo >= 20) q.titles.push(`Эффективный менеджер · комбо ×${q.stats.maxCombo}`);
+      if (q.stats.shots > 40 && q.stats.dmg / Math.max(1, q.stats.shots) > 40) q.titles.push('Каждая пуля — в KPI');
+      if (!q.stats.downs && q.stats.kills >= 20) q.titles.push('Ни царапины');
+    }
+    return list;
+  };
+  return { chapter, title, players: make(p => p.stats!.chap), ...(win ? { final: make(p => p.stats!.run) } : {}) };
+}
+
 /** Pickup radius from the feet: 34 on open floor, up to 84 when the item lies on a solid prop. */
 export function pickupReach(map: GameMap, x: number, y: number) {
   return map.blockedAt(x, y, 14) ? 84 : 34;
@@ -1261,7 +1419,7 @@ export function pickupReach(map: GameMap, x: number, y: number) {
 function inRect(x: number, y: number, o: MapObject) { return x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h; }
 
 export function keyName(k: string) {
-  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной', f7_pass: 'Елены', visa_fin: 'виза финдиректора', visa_hr: 'виза HR', visa_law: 'виза юриста', f12: 'директора на 12 этаж', gate: 'проходной «Провансаля»' } as Record<string, string>)[k] ?? k;
+  return ({ red: 'красный', blue: 'синий', yellow: 'жёлтый', lab: 'лаборатории', ceo: 'гендиректора', server: 'серверной', f7_pass: 'Елены', visa_fin: 'виза финдиректора', visa_hr: 'виза HR', visa_law: 'виза юриста', f12: 'директора на 12 этаж', gate: 'проходной «Провансаля»', valera_pass: 'Валеры (комната 87)' } as Record<string, string>)[k] ?? k;
 }
 
 export { TILE };

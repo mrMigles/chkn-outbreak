@@ -2,16 +2,17 @@
 // Lobby/meta state is a Colyseus schema (server/schema.ts); the game world travels as compact snapshots.
 import type { EnemyType } from './enemies';
 import type { WeaponId } from './weapons';
-import type { Enemy, EnemyState, Npc, Pickup, PickupKind, Player, Projectile, ProjKind, WorldView } from './sim/types';
+import type { Enemy, EnemyState, Npc, Pickup, PickupKind, Player, Projectile, ProjKind, Vehicle, WorldView } from './sim/types';
 
 export const MAX_PLAYERS = 4;
 export const TICK_HZ = 30;
 export const SNAP_HZ = 20;
 
-const ETYPES: EnemyType[] = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'chick', 'boss', 'jumper'];
+const ETYPES: EnemyType[] = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'chick', 'boss', 'jumper', 'sprout', 'gmo'];
 const ESTATES: EnemyState[] = ['idle', 'chase', 'windup', 'fuse', 'charge', 'rise'];
-const PKINDS: ProjKind[] = ['grenade', 'spit', 'egg'];
-const KKINDS: PickupKind[] = ['ammo', 'health', 'armor', 'weapon', 'keycard', 'antidote', 'invincible', 'damage', 'infinite', 'sprint', 'achievement'];
+const PKINDS: ProjKind[] = ['grenade', 'spit', 'egg', 'bottle'];
+const KKINDS: PickupKind[] = ['ammo', 'health', 'armor', 'weapon', 'keycard', 'antidote', 'invincible', 'damage', 'infinite', 'sprint', 'achievement', 'doc'];
+export const K_STRIDE = 7;
 
 export interface Snapshot {
   t: number;
@@ -30,6 +31,8 @@ export interface Snapshot {
   bn?: WorldView['bonus'];
   /** D69: boss bar name, darkness override */
   bnm?: string; am?: number;
+  /** D72: vehicles: kind, x, y, angle×100, moving quadruples */
+  vh?: (string | number)[];
 }
 export const E_STRIDE = 11;
 
@@ -46,12 +49,13 @@ export function encodeSnapshot(w: WorldView): Snapshot {
   const r: number[] = [];
   for (const pr of w.projectiles) r.push(pr.id, PKINDS.indexOf(pr.kind), r1(pr.x), r1(pr.y), r1(pr.vx), r1(pr.vy));
   const k: number[] = [];
-  for (const pk of w.pickups) k.push(pk.id, KKINDS.indexOf(pk.kind), pk.weapon ? WEAPON_IDS.indexOf(pk.weapon) : -1, r1(pk.x), r1(pk.y), r1(pk.ttl * 10));
+  for (const pk of w.pickups) k.push(pk.id, KKINDS.indexOf(pk.kind), pk.weapon ? WEAPON_IDS.indexOf(pk.weapon) : -1, r1(pk.x), r1(pk.y), r1(pk.ttl * 10), pk.ts ?? 0);
   return {
     t: Math.round(w.time * 1000) / 1000,
     bn: w.bonus ? { ...w.bonus } : null,
     incidents: w.incidents?.map(({ id, kind, x, y, phase, seconds, left, paused }) => ({ id, kind, x: r1(x), y: r1(y), phase, seconds: Math.ceil(seconds * 10) / 10, left, paused })),
     ...(w.bossName ? { bnm: w.bossName } : {}), ...(w.light !== undefined && w.light >= 0 ? { am: w.light } : {}),
+    ...(w.vehicles?.length ? { vh: w.vehicles.flatMap(v => [v.kind, r1(v.x), r1(v.y), r1(v.angle * 100), v.moving ? 1 : 0]) } : {}),
     o: w.objective, ot: w.objectiveTarget.join('|'), bk: w.broken, bo: w.blackout ? 1 : 0, al: w.alarm ? 1 : 0, b: w.bossId,
     p: w.players.map((p) => ({
       id: p.id, slot: p.slot, name: p.name, look: p.look, x: r1(p.x), y: r1(p.y), aim: Math.round(p.aim * 100) / 100,
@@ -166,6 +170,13 @@ export function decodeProjectiles(s: Snapshot): Projectile[] {
 
 export function decodePickups(s: Snapshot): Pickup[] {
   const out: Pickup[] = [];
-  for (let i = 0; i < s.k.length; i += 6) out.push({ id: s.k[i], kind: KKINDS[s.k[i + 1]], weapon: s.k[i + 2] >= 0 ? WEAPON_IDS[s.k[i + 2]] : undefined, x: s.k[i + 3], y: s.k[i + 4], ttl: s.k[i + 5] / 10 });
+  for (let i = 0; i < s.k.length; i += K_STRIDE) out.push({ id: s.k[i], kind: KKINDS[s.k[i + 1]], weapon: s.k[i + 2] >= 0 ? WEAPON_IDS[s.k[i + 2]] : undefined, x: s.k[i + 3], y: s.k[i + 4], ttl: s.k[i + 5] / 10, ts: s.k[i + 6] });
+  return out;
+}
+
+/** D72: scripted vehicles of a snapshot. */
+export function decodeVehicles(s: Snapshot): Vehicle[] {
+  const out: Vehicle[] = [], v = s.vh ?? [];
+  for (let i = 0; i < v.length; i += 5) out.push({ id: i / 5, kind: String(v[i]), x: +v[i + 1], y: +v[i + 2], angle: +v[i + 3] / 100, speed: 0, path: [], moving: !!v[i + 4] });
   return out;
 }

@@ -30,7 +30,7 @@ function objective(w: World) {
       const d = drop('visa_hr'), e = irinaEnemy(w);
       if (d) t.push({ x: d.x, y: d.y });
       else if (e) t.push({ x: e.x, y: e.y });
-      else if (w.flags.irinaAsked && forms(w) < 3) for (const f of ['form1', 'form2', 'form3']) { if (!w.flags[f]) t.push(f); }
+      else if (w.flags.irinaAsked && forms(w) < 3) for (const f of ['form1', 'form2', 'form3']) { const k = w.pickups.find(q => q.key === f); if (!w.flags[f] && k) t.push({ x: k.x, y: k.y }); }
       else t.push('irina');
       parts.push(w.flags.irinaAsked && !w.flags.irinaTurned ? `HR (анкеты ${forms(w)}/3)` : 'HR');
     }
@@ -63,27 +63,64 @@ function startMeeting(w: World) {
   w.setAlarm(true);
   w.say('pa', 'Внимание! Совещание начинается. Явка обязательна. Опоздавшие будут склёваны.', 5);
   w.msg('СОВЕЩАНИЕ', '75 секунд. Три отдела. Ни одного перерыва', 3);
-  const waves: [number, EnemyType[]][] = [[0, ['normal', 'fast', 'fast', 'normal']], [25, ['spitter', 'normal', 'exploder', 'fast']], [50, ['armored', 'normal', 'fast', 'normal', 'fat']]];
-  for (const [at, types] of waves) w.after(at, () => {
+  // D72: twice the chickens, arriving in packs, more heavy ones — still a 75-second fight, not a wall
+  const waves: [number, EnemyType[], EnemyType[]][] = [
+    [0, ['normal', 'fast', 'fast', 'normal'], ['armored', 'normal', 'fast']],
+    [25, ['spitter', 'normal', 'exploder', 'fast'], ['fat', 'armored', 'spitter', 'normal']],
+    [50, ['armored', 'normal', 'fast', 'normal', 'fat'], ['armored', 'fat', 'exploder', 'armored', 'fast']],
+  ];
+  for (const [at, types, heavy] of waves) w.after(at, () => {
     if (w.flags.meetingDone) return;
-    w.spawnWave('meeting', types, 5 + 3 * w.players.length, .4, true, 'meeting');
+    w.spawnWave('meeting', types, 6 + 3 * w.players.length, .12, true, 'meeting');
+    w.after(4, () => { if (!w.flags.meetingDone) w.spawnWave('meeting', heavy, 4 + 2 * w.players.length, .15, true, 'meeting'); });
     w.say('pa', ['Отдел продаж — на совещание!', 'Бухгалтерия — с отчётами!', 'Служба безопасности — проверить пропуска!'][at / 25], 3);
   });
   w.every(5, () => {
     if (w.flags.meetingDone || !w.flags.meeting) return;
     const t = w.time - (w.flags.meetingEnd - MEETING);
-    if (w.countTag('meeting') < 9 + 3 * w.players.length) w.spawnWave('meeting', t < 25 ? ['normal', 'fast'] : t < 50 ? ['spitter', 'normal', 'fast'] : ['armored', 'fast', 'normal'], 2 + Math.floor(w.players.length / 2), .4, true, 'meeting');
+    if (w.countTag('meeting') < 16 + 5 * w.players.length) w.spawnWave('meeting', t < 25 ? ['normal', 'fast', 'fast', 'armored'] : t < 50 ? ['spitter', 'normal', 'fast', 'armored'] : ['armored', 'fast', 'normal', 'fat'], 4 + w.players.length, .14, true, 'meeting');
   });
+  w.addPickup('health', 32.5 * 64, 32 * 64, { ttl: -1 });
   objective(w);
 }
 
+/** D72: a little scene around each satisfaction form. */
+const SCENES: Record<string, { names: [string, string][]; look: string[]; lines: string[]; chicks?: number }> = {
+  scene1: { names: [['Хэдхантер · высиживает анкету', 'arkady'], ['Кандидат в резерв', 'manBlue']], look: [], lines: ['Не трогать! Я высиживаю кадровый резерв!', 'Кандидаты, на собеседование! Вопрос первый: КО?'], chicks: 3 },
+  scene2: { names: [['Тамада корпоратива', 'scientist'], ['Хор отдела закупок', 'womanGreen']], look: [], lines: ['А сейчас — хит года: «Анкета моя, анкета»!', 'КО-КО-КО-О-О! Все вместе! Припев!'] },
+  scene3: { names: [['Петух-нотариус', 'punktovich'], ['Присяжный', 'manOld']], look: [], lines: ['Пункт три: «Довольны ли вы руководством?» Ответ: «КО». Протестую!', 'Суд удаляется на совещание. С клювом!'] },
+};
+function scene(w: World, id: string, by: string) {
+  if (w.flags[id]) return;
+  w.flags[id] = true;
+  const s = SCENES[id];
+  const list = w.enemies.filter(e => w.enemyTags.get(e.id) === id);
+  const lead = list[0];
+  if (!lead) return;
+  w.say(String(lead.id), s.lines[0], 3.5);
+  w.after(2.2, () => {
+    const q = list.find(e => e !== lead && e.hp > 0);
+    if (q) w.say(String(q.id), s.lines[1], 3);
+  });
+  w.after(3.4, () => {
+    for (const e of list) { e.dormant = false; e.aggro = true; }
+    if (s.chicks && lead.hp > 0) for (let i = 0; i < s.chicks + w.players.length; i++) w.spawnEnemy('chick', lead.x + (i - 1.5) * 26, lead.y + 30, { how: 'egg', aggro: true, tag: id });
+    w.spawnWave('hr', ['normal', 'fast', 'spitter', 'normal'], 2 + 2 * w.players.length, .3, true, 'hr');
+  });
+  w.moment(by, id === 'scene1' ? 'Отобрал(а) анкету у петуха-хэдхантера, пока тот высиживал' : id === 'scene2' ? 'Сорвал(а) караоке на корпоративе отдела закупок' : 'Прервал(а) заседание петушиного суда');
+}
+
 const office11: LevelScript = {
-  id: 'office11', title: 'Этаж 11. Начальство',
+  id: 'office11', title: 'Этаж 11. Начальство', rev: 2,
   subtitle: 'Без записи не входить. С перьями — тем более',
   next: 'cafe12', enemyDamage: .85,
 
   onStart(w) {
     objective(w);
+    for (const [id, s] of Object.entries(SCENES)) {
+      const list = w.enemies.filter(e => w.enemyTags.get(e.id) === id);
+      list.forEach((e, i) => { const [name, kind] = s.names[i === 0 ? 0 : 1]; e.appearance = { npcId: `${id}_${i}`, kind, name }; });
+    }
     w.after(1.5, () => w.say('pa', 'Добро пожаловать на этаж руководства. Сохраняйте субординацию и спокойствие. Именно в этом порядке.', 5));
     w.after(6, () => w.say(w.anyPlayer?.id ?? 'pa', 'Тихо, ковры, портреты… Здесь даже петухи в галстуках?', 3));
   },
@@ -92,9 +129,10 @@ const office11: LevelScript = {
     const sec = Math.floor(w.time) !== Math.floor(w.time - dt);
     if (sec) objective(w);
     // corridor stragglers until the meeting
-    if (!w.flags.meeting && w.time >= (w.flags.strayAt ?? 30)) {
-      w.flags.strayAt = w.time + 20;
-      if (w.countTag('stray') < 6) w.spawnWave('corridor', ['normal', 'fast', 'spitter'], 2 + w.players.length, .5, true, 'stray', true);
+    if (!w.flags.meeting && w.time >= (w.flags.strayAt ?? 24)) {
+      // D72: the floor felt empty — stragglers come more often and in bigger groups
+      w.flags.strayAt = w.time + 15;
+      if (w.countTag('stray') < 10) w.spawnWave('corridor', ['normal', 'fast', 'spitter', 'normal', 'armored'], 3 + w.players.length, .4, true, 'stray', true);
     }
     // the intern with 40 slides
     const g = w.npc('intern11');
@@ -140,6 +178,7 @@ const office11: LevelScript = {
   },
 
   onTrigger(w, id, by) {
+    if (id in SCENES) scene(w, id, by.id);
     if (id === 'finance' && !w.flags.finSeen) {
       w.flags.finSeen = true;
       w.say('boris', 'Сюда! Отдел сам себя оптимизировал! Сократите их — подпишу что угодно!', 4);
@@ -215,13 +254,18 @@ const office11: LevelScript = {
     }
   },
 
-  onUse(w, id, by) {
-    if (!id.startsWith('form')) return;
-    if (w.flags[id]) return;
-    w.flags[id] = true;
-    const n = forms(w);
-    w.say(by.id, ['Анкета: «Как вы оцениваете эпидемию по шкале от 1 до КО»?', 'Анкета: «Ваш руководитель — петух? Да / Скорее да»', 'Третья анкета. Ирина будет счастлива. Наверное.'][n - 1], 3.5);
-    w.spawnWave('hr', ['normal', 'fast', 'spitter'], 3 + w.players.length, .4, true, 'hr');
+  onPickup(w, k, by) {
+    if (k.kind === 'doc' && k.key && !w.flags[k.key]) {
+      w.flags[k.key] = true;
+      const n = forms(w);
+      w.say(by.id, ['Анкета: «Как вы оцениваете эпидемию по шкале от 1 до КО»?', 'Анкета: «Ваш руководитель — петух? Да / Скорее да»', 'Третья анкета. Ирина будет счастлива. Наверное.'][n - 1], 3.5);
+      w.spawnWave('hr', ['normal', 'fast', 'spitter'], 3 + w.players.length, .4, true, 'hr');
+      if (n === 3) w.say('radio', 'Неля: Три анкеты! Неси Ирине — она в стеклянном кабинете HR.', 4);
+      objective(w);
+      return;
+    }
+    if (k.kind !== 'keycard') return;
+    if (VISAS.every(v => has(w, v)) && !w.flags.bureaucrat) { w.flags.bureaucrat = true; w.award('bureaucrat'); w.say('radio', 'Неля: Три визы! Бегом к Жанне, пока она не ушла на обед.', 4); }
     objective(w);
   },
 
@@ -242,10 +286,5 @@ const office11: LevelScript = {
     }
   },
 
-  onPickup(w, k) {
-    if (k.kind !== 'keycard') return;
-    if (VISAS.every(v => has(w, v)) && !w.flags.bureaucrat) { w.flags.bureaucrat = true; w.award('bureaucrat'); w.say('radio', 'Неля: Три визы! Бегом к Жанне, пока она не ушла на обед.', 4); }
-    objective(w);
-  },
 };
 export default office11;

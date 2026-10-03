@@ -7,14 +7,15 @@ import fs from 'node:fs';
 import { World } from '../src/shared/sim/World';
 import { GameMap } from '../src/shared/map';
 import { LEVELS } from '../src/shared/levels';
-import { RoomRecording } from '../src/shared/sim/Checkpoint';
+import { RoomRecording, type RoomCheckpoint } from '../src/shared/sim/Checkpoint';
 import { botStep, makeBot, seedBots } from './sim-play';
-import { encodeSnapshot } from '../src/shared/protocol';
+import { encodeSnapshot, decodePickups } from '../src/shared/protocol';
+import type { SimEvent } from '../src/shared/sim/types';
 
 const json = (id: string) => JSON.parse(fs.readFileSync(`public/assets/maps/${id}.tmj`, 'utf8'));
 const state = (w: World) => JSON.stringify({ t: w.time.toFixed(3), f: w.finished, o: w.objective, p: w.players.map(p => [p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.state, p.kills]), e: w.enemies.map(e => [e.id, e.type, Math.round(e.x), Math.round(e.y), Math.round(e.hp)]), n: w.npcs.map(n => [n.id, n.mode, Math.round(n.x), Math.round(n.y)]), flags: w.flags, d: w.doors.map(d => [d.id, d.open]) });
 
-for (const id of ['office8', 'office11', 'cafe12', 'street1', 'street2']) {
+for (const id of process.env.SKIP_BOTS ? [] : ['office8', 'office11', 'cafe12', 'street1', 'street2']) {
   const t0 = performance.now();
   seedBots(97);
   const w = new World(new GameMap(id, json(id)), LEVELS[id], { solo: false, seed: 2024 });
@@ -89,4 +90,102 @@ const run = (w: World, s: number) => { for (let i = 0; i < s * 30; i++) w.step(1
   assert.ok(w.events.some(e => e.e === 'cine' && e.k === 'victory'), 'finale cutscene');
   run(w, 10); assert.ok(w.finished, 'the campaign ends after the finale');
   console.log('PASS boss: victory cutscene, then the campaign ends');
+}
+// D72
+{
+  // in a team every player takes their own gun and ammo from one spot; a bonus stays first-come
+  const w = mk('arena', 2); w.enemies = []; w.cancelWaves();
+  const [a, b] = w.players; b.x = b.input.x = a.x + 300; b.y = b.input.y = a.y; b.tp++;
+  const gun = w.addPickup('weapon', a.x, a.y, { weapon: 'shotgun', ttl: -1 });
+  run(w, .1); assert.ok(a.weapons.includes('shotgun') && w.pickups.includes(gun) && gun.ts === 1, 'taken by the first, still there for the second');
+  b.x = b.input.x = a.x; b.y = b.input.y = a.y; b.tp++; run(w, .1);
+  assert.ok(b.weapons.includes('shotgun') && !w.pickups.includes(gun), 'the second takes their own, then it is gone');
+  const buff = w.addPickup('damage', a.x, a.y, { ttl: -1 }); run(w, .1); assert.ok(!w.pickups.includes(buff), 'a bonus is first-come');
+  const g2 = w.addPickup('ammo', 10, 10, { ttl: -1 }); g2.ts = 2;
+  assert.equal(decodePickups(encodeSnapshot(w)).find(k => k.id === g2.id)!.ts, 2, 'who took it travels in snapshots');
+  console.log('PASS shared guns/ammo: each teammate takes their own; bonuses stay first-come');
+}
+{
+  // mini-bosses sometimes drop a part-loaded minigun or laser
+  let drops = 0;
+  for (let s = 0; s < 12; s++) {
+    const w = new World(new GameMap('arena', json('arena')), LEVELS.arena, { solo: true, seed: 100 + s }); w.addPlayer('p0', 'P', 0); w.start();
+    const e = w.spawnEnemy('fast', 500, 500, { aggro: true }); e.appearance = { npcId: 'katya', kind: 'katya', name: 'Катя' };
+    w.killEnemy(e, 0, 'p0', false, false);
+    const k = w.pickups.find(q => q.amount);
+    if (k) {
+      drops++; const p = w.players[0]; p.weapons = ['pistol']; delete p.ammo.minigun; delete p.ammo.laser;
+      p.x = p.input.x = k.x; p.y = p.input.y = k.y; p.tp++; run(w, .1);
+      assert.ok(p.weapons.includes(k.weapon!), 'picked the special'); const a = p.ammo[k.weapon!]!;
+      assert.ok(a.mag + Math.max(0, a.reserve) <= (k.weapon === 'minigun' ? 140 : 10), 'only part of the ammo');
+    }
+  }
+  assert.ok(drops >= 3 && drops <= 11, 'about half of the mini-bosses drop one (' + drops + '/12)');
+  console.log(`PASS mini-boss special drops: ${drops}/12 part-loaded miniguns/lasers`);
+}
+{
+  // Валера blinks next to his prey in the dark, never while a beam holds him
+  const w = mk('office8'); w.god = true; w.setLight(0.97); w.enemies = []; w.cancelWaves();
+  const p = w.players[0]; const v = w.spawnEnemy('fast', p.x + 420, p.y, { aggro: true }); v.appearance = { npcId: 'valera', kind: 'valera', name: 'В' };
+  v.blinkT = 0; p.input.aim = Math.PI; w.events = []; run(w, .2);
+  assert.ok(w.events.some(e => e.e === 'scare' && e.k === 'blink'), 'blinks in the dark'); assert.ok(Math.hypot(v.x - p.x, v.y - p.y) < 260);
+  const w2 = mk('office8'); w2.god = true; w2.setLight(0.97); w2.enemies = []; w2.cancelWaves();
+  const q = w2.players[0]; const v2 = w2.spawnEnemy('fast', q.x + 300, q.y, { aggro: true }); v2.appearance = { npcId: 'valera', kind: 'valera', name: 'В' };
+  v2.blinkT = 0; q.input.aim = Math.atan2(v2.y - q.y, v2.x - q.x); w2.events = []; run(w2, .3);
+  assert.ok(!w2.events.some(e => e.e === 'scare' && e.k === 'blink'), 'a flashlight on him: no blink');
+  console.log('PASS office8: Валера blinks through the dark, never in a beam');
+}
+{
+  // Толик lobs bottles that shatter at the player's feet
+  const w = mk('street2'); w.enemies = []; w.cancelWaves();
+  const p = w.players[0]; const t = w.spawnEnemy('fat', p.x + 330, p.y, { aggro: true }); t.appearance = { npcId: 'tolik', kind: 'tolik', name: 'Т' }; t.blinkT = 0;
+  w.events = []; const hp = p.hp; let thrown = false, shattered = false;
+  for (let i = 0; i < 60; i++) { w.step(1 / 30); thrown ||= w.events.some(e => e.e === 'proj' && e.k === 'bottle'); shattered ||= w.events.some(e => e.e === 'splat' && e.k === 'bottle'); w.events = []; }
+  assert.ok(thrown, 'throws a bottle'); assert.ok(shattered, 'it shatters');
+  assert.ok(p.hp < hp, 'the bottle hurts where it lands');
+  console.log('PASS street2: Толик throws beer bottles');
+}
+{
+  // street 1: the getaway car runs the flock over and breaks the fence; the floor ends beyond it
+  const w = mk('street1'); w.god = true;
+  Object.assign(w.flags, { pilotMet: true, radioDone: true });
+  const lot = w.object('lot')!; const p = w.players[0]; p.x = p.input.x = lot.cx; p.y = p.input.y = lot.cy; p.tp++;
+  const before = w.enemies.filter(e => w.enemyTags.get(e.id) === 'lot').length; run(w, 1);
+  assert.ok(w.flags.lotSeen && w.vehicles.length === 1 && !w.vehicles[0].moving);
+  run(w, 20); assert.ok(w.flags.carGone, 'the car went through'); assert.ok(!w.dprops.some(d => d.name === 'fence_v'), 'the fence is down');
+  assert.ok(w.enemies.filter(e => w.enemyTags.get(e.id) === 'lot').length <= before / 3, 'most of the lot flock is run over');
+  const exit = w.object('lot_exit')!; p.x = p.input.x = exit.cx; p.y = p.input.y = exit.cy; p.tp++; run(w, .3);
+  assert.ok(w.finished && p.achievements?.includes('gone_in_60'));
+  console.log('PASS street1: Литовец steals the car, runs over the flock, breaks the fence; we follow');
+}
+{
+  // a chapter ends with a summary per player; stats and the chronicle ride the carry
+  const w = mk('street2', 2); w.god = true;
+  const [a] = w.players; for (let i = 0; i < 5; i++) w.killEnemy(w.spawnEnemy('normal', a.x + 200, a.y, { aggro: true }), 0, a.id, false, false);
+  w.moment(a.id, 'Тестовый момент'); w.events = []; w.completeLevel();
+  const ev = w.events.find(e => e.e === 'chapter') as Extract<SimEvent, { e: 'chapter' }>;
+  assert.ok(ev && ev.summary.players.length === 2 && ev.summary.players.find(q => q.id === a.id)!.stats.kills === 5);
+  assert.ok(ev.summary.players.find(q => q.id === a.id)!.stats.moments.includes('Тестовый момент'));
+  const carry = w.carryOut(); assert.equal(carry.chronicle?.length, 1); assert.equal(carry.players[a.id].stats!.chap.kills, 0, 'a new chapter counts from zero'); assert.equal(carry.players[a.id].stats!.run.kills, 5);
+  const next = new World(new GameMap('factory', json('factory')), LEVELS.factory, { solo: false, seed: 3, carry }); next.addPlayer(a.id, 'A', 0); next.start();
+  assert.equal(next.players[0].stats!.run.kills, 5, 'run statistics carry to the next floor');
+  console.log('PASS chapter summary: per-player kills, moments, achievements; stats and chronicle carried');
+}
+{
+  // a room save recorded on an older revision of a rebuilt floor restarts that floor with its entry loadout
+  const w = mk('office8', 1, false); const rec = new RoomRecording(w); for (let i = 0; i < 90; i++) rec.step(1 / 30);
+  const save = { ...rec.checkpoint() } as RoomCheckpoint; delete save.rev;
+  const back = RoomRecording.restore(json('office8'), save);
+  assert.ok(back.world.time < 0.01 && back.data.frames.length === 0 && back.data.rev === LEVELS.office8.rev, 'old-revision save → floor restarts');
+  console.log('PASS rebuilt floors: an old save restarts the floor instead of replaying a different map');
+}
+{
+  // office 11: the forms are visible pickups with a scene each
+  const w = mk('office11'); w.god = true;
+  assert.equal(w.pickups.filter(k => k.kind === 'doc').length, 3, 'three forms lie on the floor');
+  const p = w.players[0]; const tr = w.object('scene1')!; p.x = p.input.x = tr.cx; p.y = p.input.y = tr.cy; p.tp++; run(w, 4);
+  assert.ok(w.enemies.some(e => w.enemyTags.get(e.id) === 'scene1' && e.aggro && e.appearance?.name.includes('Хэдхантер')), 'the headhunter scene starts');
+  const doc = w.pickups.find(k => k.key === 'form1')!; p.x = p.input.x = doc.x; p.y = p.input.y = doc.y; p.tp++; run(w, .2);
+  assert.ok(w.flags.form1, 'picking up the form counts it');
+  console.log('PASS office11: three visible forms, each with its scene');
 }

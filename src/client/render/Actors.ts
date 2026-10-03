@@ -205,13 +205,15 @@ export class EnemyView {
     const lx = Math.cos(e.angle) * lunge, ly = Math.sin(e.angle) * lunge * 0.6;
     // D71: a jumper in the air — an arc above its shadow
     const hop = e.type === 'jumper' && e.state === 'charge' ? Math.sin(Math.PI * Math.min(1, Math.max(0, 1 - e.t / 0.55))) * 70 : 0;
-    this.spr.setPosition(x + lx, y + ly - hop).setScale(s).setDepth(worldDepth(y));
+    // D72: the CEO is a fattened rooster — drawn wider than tall
+    this.spr.setPosition(x + lx, y + ly - hop).setScale(this.type === 'boss' ? s * 1.3 : s, s).setDepth(worldDepth(y));
     this.shadow.setPosition(x, y);
     this.label?.setPosition(x, y - this.scale * 48 - 14);
     this.flashT -= dt;
     if (this.flashT > 0) this.spr.setTintFill(0xffffff);
     else if (e.state === 'fuse' || ((e.type === 'boss' || e.type === 'jumper') && e.state === 'charge')) this.spr.setTint(Math.sin(time * 30) > 0 ? 0xff4040 : 0xffffff);
     else if (e.type === 'exploder') this.spr.setTint(Math.sin(time * 6) > 0.6 ? 0xc8ff8a : 0xffffff);
+    else if (e.type === 'gmo') this.spr.setTint(Math.sin(time * 3 + e.id) > 0.75 ? 0xd8ff9a : 0xffffff);
     else if (e.burnT > 0) this.spr.setTint(0xffb080);
     else this.spr.clearTint();
     this.spr.setAlpha(e.state === 'rise' ? 0.6 : 1);

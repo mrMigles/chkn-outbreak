@@ -76,6 +76,11 @@ await page.addInitScript(() => {
     if (me.hp < 50 && me.supplies.medkit && (!best || bd > 260) && (performance.now() % 1600) < 1350) { inp.interact = true; inp.mx = 0; inp.my = 0; inp.fire = false; }
     else if (wantE && interactPulse <= 0) { inp.interact = true; interactPulse = 8; }
     // reload when idle
+    // D72: a player switches to the best gun that has ammo (grenades only in the open)
+    const ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'machinegun', 'grenade', 'flamethrower', 'minigun', 'laser'];
+    let bi = 0;
+    me.weapons.forEach((w, i) => { const a = me.ammo[w]; if (w !== 'grenade' && a && (a.mag > 0 || a.reserve !== 0) && ORDER.indexOf(w) >= ORDER.indexOf(me.weapons[bi])) bi = i; });
+    if (bi !== me.cur) inp.slot = bi;
     window.__input = inp;
   }, 50);
   const sc0 = () => window.__game?.scene?.getScene('game');

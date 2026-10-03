@@ -11,7 +11,8 @@ export const HELP_RADIUS = 80;
  * phone) and bleeds out in 15 s. Earlier room saves replay with their own rules (RoomCheckpoint.rules).
  */
 // 5: D68–D70 (root manager, wide doors, boss relief…); 6: D71 (lab doors never lock, jumpers, new guns, floor-8 horror)
-export const RULES = 6;
+// 7: D72 (shared guns/ammo in a team, mini-boss special drops, tougher fat CEO)
+export const RULES = 7;
 const rulesOf = (v: unknown) => ((v as { rules?: number }).rules ?? RULES);
 export const helpRadius = (v: unknown) => (rulesOf(v) >= 4 ? 110 : HELP_RADIUS);
 export const BLEEDOUT = 15;

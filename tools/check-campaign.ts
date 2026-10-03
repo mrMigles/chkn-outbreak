@@ -73,7 +73,17 @@ console.log('PASS all four buffs: activation, ammo-free firing, protection, dama
   assert.ok(gate.open, 'the recovered pass opens the actual door');
   for (const id of FRIENDS) {
     w.cancelWaves(); w.enemies = [];
-    const n = w.npc(id)!; place(w, n.x - 40, n.y + 20); step(w, .2);
+    const n = w.npc(id)!;
+    if (id === 'stas') {
+      // D72: Стас is in «Уединение» with Катя — the door button, Катя turns, she falls, Стас joins
+      const btn = w.object('kink_button')!; place(w, btn.cx, btn.cy); w.script.onUse!(w, 'kink_button', w.players[0]);
+      assert.ok(w.doors.find(d => d.id === 'kink_door')!.open, 'the button opens «Уединение»');
+      step(w, 7.4); const katya = w.enemies.find(e => e.appearance?.npcId === 'katya')!;
+      assert.ok(katya && katya.maxHp >= 600 && w.bossId === katya.id, 'Катя is a mini-boss with a bar');
+      w.killEnemy(katya, 0, 'me', false, false); step(w, .2);
+      assert.ok(w.players[0].achievements?.includes('debug_mode'));
+    }
+    place(w, n.x - 40, n.y + 20); step(w, .2);
     // nearby workers finish their readable mutation, then the player clears them
     step(w, 3.1); w.cancelWaves(); w.devKillAll('me'); step(w, .2);
     assert.equal(n.rescued, true, id + ' is rescuable'); assert.equal(n.mode, 'follow');

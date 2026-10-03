@@ -23,6 +23,8 @@ import { music } from '../audio/Music';
 import { loadSolo, saveSolo, clearSolo, loadRoom, saveRoom, levelCaption, activeRoom, setActiveRoom, clearActiveRoom, browserPid } from '../progress';
 import { initPwa, isStandalone, isIos, canPromptInstall, promptInstall, installUrl, onInstallChange, shareLink } from '../pwa';
 import { controlsMarkup } from './ControlsHelp';
+import { summaryMarkup, finalStatsMarkup, saveChronicle, chronicleMarkup } from './Chronicle';
+import type { ChapterSummary } from '../../shared/sim/types';
 import { reloadIfOutdated } from '../version';
 
 /** Menus (HTML/CSS) + game flow (levels, retries, multiplayer lobby). */
@@ -188,6 +190,7 @@ export class App {
           <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
         </div>
         <div class="menu-extras">
+          <button class="btn ghost" data-a="chronicle">📜 Летопись</button>
           <button class="btn ghost" data-a="controls">Как управлять</button>
           ${isStandalone() ? '' : '<button class="btn ghost" data-a="install">📲 Установить игру</button>'}
         </div>
@@ -224,6 +227,7 @@ export class App {
       if (a === 'look') { const host = this.show(''); openEditor(host, () => this.mainMenu()); }
       if (a === 'preferences') this.preferences();
       if (a === 'achievements') this.achievements();
+      if (a === 'chronicle') this.chronicle();
       if (a === 'chat') this.chatRoom();
       if (a === 'devplay') { this.levelStartCarry = undefined; this.startSolo(settings.devLevel); }
       if (a === 'devoff') { settings.dev = false; saveSettings(); this.mainMenu(); }
@@ -365,11 +369,20 @@ export class App {
     this.titleCard(lvl?.title ?? '', lvl?.subtitle ?? '', lvl?.chapter);
   }
 
-  /** D69: «Глава 1 «Офис» пройдена» on the result panel of a chapter's last floor. */
-  private chapterBanner(levelId: string | undefined) {
+  /** D69: «Глава 1 «Офис» пройдена» on the result panel of a chapter's last floor. D72: with the chapter's summary. */
+  private chapterBanner(levelId: string | undefined, summary?: ChapterSummary, myId = '') {
     const end = levelId ? LEVELS[levelId]?.chapterEnd : undefined;
-    return end ? `<div class="chapter-banner"><b>${escapeHtml(end.title)}</b><span>${escapeHtml(end.text)}</span></div>` : '';
+    return (end ? `<div class="chapter-banner"><b>${escapeHtml(end.title)}</b><span>${escapeHtml(end.text)}</span></div>` : '')
+      + (summary ? summaryMarkup(summary, myId) : '');
   }
+
+  /** D72: «Летопись» — the chapter summaries this device has seen. */
+  private chronicle(back: () => void = () => this.mainMenu()) {
+    const d = this.show(`<div class="panel chronicle-panel"><h2>ЛЕТОПИСЬ</h2><div class="chronicle-list">${chronicleMarkup()}</div><button class="btn primary" data-a="back">Назад</button></div>`);
+    d.querySelector('[data-a="back"]')!.addEventListener('click', back);
+  }
+  /** The latest chapter summary of a room (arrives as a sim event before the result panel). */
+  private netSummary: ChapterSummary | undefined;
 
   /** D71: the end of the campaign — what happened, every achievement earned on the way, the credits. */
   private finaleMarkup(keys: string[]) {
@@ -396,10 +409,13 @@ export class App {
     const me = session.view.players.find((p) => p.id === session.myId);
     const carry = session.carry();
     if (session.solo) { if (win || !next || !LEVELS[next]) clearSolo(); else saveSolo(next, carry); }
-    const d = this.show(`<div class="panel center">
+    const summary = (session as LocalSession).world?.summary;
+    if (summary) saveChronicle(summary, 'одиночная игра');
+    const d = this.show(`<div class="panel center ${summary ? 'wide' : ''}">
       <h2>${win ? 'ПОБЕДА!' : 'ЭТАП ПРОЙДЕН'}</h2>
-      ${this.chapterBanner(session.levelId)}
+      ${this.chapterBanner(session.levelId, summary, session.myId)}
       <div class="stats"><div><b>${me?.kills ?? 0}</b><span>куриц оптимизировано</span></div><div><b>${Math.floor(me?.score ?? 0)}</b><span>KPI</span></div></div>
+      ${win && summary ? finalStatsMarkup(summary, session.myId) : ''}
       ${win ? this.finaleMarkup(me?.achievements ?? []) : ''}
       <button class="btn primary" data-a="${win || !next || !LEVELS[next] ? 'menu' : 'next'}">${win || !next || !LEVELS[next] ? 'В главное меню' : 'Дальше'}</button></div>`);
     d.addEventListener('click', (e) => {
@@ -518,6 +534,7 @@ export class App {
     room.onMessage('ev', (ev: SimEvent[]) => {
       if (this.room !== room) return;
       for (const e of ev) if (e.e === 'achievement' && e.id === room.sessionId && isRare(e.key)) this.pendingShare.add(e.key as AchievementKey);
+      for (const e of ev) if (e.e === 'chapter') { this.netSummary = e.summary; saveChronicle(e.summary, 'комната ' + room.roomId); }
       this.net?.onEvents(ev);
     });
     room.onMessage('end', (m: NetEnd) => { if (this.room === room) this.netEnd(m); });
@@ -641,6 +658,7 @@ export class App {
       ${chat ? '<button class="btn cont" data-a="solo-mode">🎮 Одиночный режим<small>выйти из комнаты чата в главное меню</small></button>' : ''}
       <div class="menu-extras">
         <button class="btn ghost" data-a="achievements">Достижения · ${earnedAchievements().length}/${Object.keys(ACHIEVEMENTS).length}</button>
+        <button class="btn ghost" data-a="chronicle">📜 Летопись</button>
         <button class="btn ghost" data-a="controls">Как управлять</button>
       </div>
       <div class="flavor tiny-help">1–4 игрока против стаи. E: нажать — поделиться патронами, держать — лечить или поднять. Опоздавшие подключаются прямо в бой.</div>
@@ -669,6 +687,7 @@ export class App {
       }
       if (a === 'look') sub((back) => { const host = this.show(''); openEditor(host, () => { room.send('profile', { look: settings.look }); back(); }); });
       if (a === 'achievements') sub((back) => this.achievements(back));
+      if (a === 'chronicle') sub((back) => this.chronicle(back));
       if (a === 'controls') sub((back) => { const p = this.show(`<div class="panel controls-panel"><h2>КАК УПРАВЛЯТЬ</h2>${controlsMarkup()}<button class="btn primary" data-a="back">Понятно</button></div>`); p.querySelector('[data-a="back"]')!.addEventListener('click', back); });
       if (a === 'browser') this.openInBrowser(btn);
       if (a === 'banner-close') this.closeBanner(btn);
@@ -711,7 +730,7 @@ export class App {
       ? `<div class="row">${saved
           ? `<button class="btn cont primary" data-a="continue">Продолжить<small>${escapeHtml(levelCaption(saved))}</small></button><button class="btn cont" data-a="fresh">Новая игра<small>с первого этажа</small></button>`
           : `<button class="btn cont primary" data-a="fresh">Начать<small>${escapeHtml(levelCaption(st.level) || 'с первого этажа')}</small></button>`}</div>
-        <div class="flavor small">${notReady ? `Не готовы: ${notReady}. Можно начать и так — опоздавшие подключатся в бою.` : 'Вы ведущий: выбираете, продолжить или начать заново.'}</div>`
+        <div class="flavor small">${notReady ? `Не готовы: ${notReady}. Можно начать и так — опоздавшие подключатся в бою.` : saved ? 'Вы ведущий: выбираете, продолжить или начать заново.' : 'Вы ведущий: новая игра начнётся, когда нажмёте «Начать».'}</div>`
       : `<button class="btn ${me?.ready ? 'ready' : 'primary'}" data-a="ready">${me?.ready ? 'Готов ✓' : 'Готов'}</button>
         <div class="flavor small">Начинает ведущий${host ? ' — ' + escapeHtml(host.name) : ''}: ${saved ? 'продолжить «' + escapeHtml(levelCaption(saved)) + '» или начать заново' : 'новая игра'}.</div>`;
     const actEl = d.querySelector<HTMLElement>('.lobby-actions')!;
@@ -762,8 +781,11 @@ export class App {
       : m.kind === 'level' ? 'Следующий этап через 5 секунд…' : `${m.reason ?? ''} Повтор — с начала этого этажа. ${isHost ? 'Начните, когда команда готова.' : 'Ждём решения ведущего.'}`;
     this.stopGame();
     this.net = null; this.netResult = true;
-    const d = this.show(`<div class="panel center"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
-      ${m.kind !== 'gameover' ? this.chapterBanner(ended) : ''}
+    const summary = m.kind !== 'gameover' && ended && (LEVELS[ended]?.chapterEnd || m.kind === 'win') ? this.netSummary : undefined;
+    const myId = this.room?.sessionId ?? '';
+    const d = this.show(`<div class="panel center ${summary ? 'wide' : ''}"><h2 class="${m.kind === 'gameover' ? 'bad' : ''}">${title}</h2>
+      ${m.kind !== 'gameover' ? this.chapterBanner(ended, summary, myId) : ''}
+      ${m.kind === 'win' && summary ? finalStatsMarkup(summary, myId) : ''}
       ${m.kind === 'win' ? this.finaleMarkup(mine) : ''}
       <p class="flavor">${escapeHtml(sub)}</p><div class="plist">${rows}</div>
       ${m.kind !== 'gameover' ? this.shareButtons(!!(this.room?.state as any)?.summon) : ''}

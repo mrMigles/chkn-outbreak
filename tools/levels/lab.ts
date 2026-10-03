@@ -103,9 +103,9 @@ note(11.5, 13.4, 'Опись: «Пулемёт — 1 шт. Назначение:
 trigger('armory', 2, 12, 13, 11);
 
 // ---------------------------------------------------------------- incubator hall
+// D72: every incubator slot is full now, and a few eggs hold GMO roosters
 for (const [i, x] of [33, 38.5, 41, 46.5, 49, 54.5, 57, 60].entries()) for (const [j, y] of [19.6, 21.6, 26.8, 28.8].entries()) {
-  if ((i + j) % 3 === 2) continue;
-  pod(x, y, x < 44 ? 'inc_a' : x < 52 ? 'inc_b' : 'inc_c', (i * 7 + j) % 5 === 0 ? 'normal' : (i + j) % 4 === 0 ? 'fast' : 'chick');
+  pod(x, y, x < 44 ? 'inc_a' : x < 52 ? 'inc_b' : 'inc_c', (i * 5 + j * 3) % 13 === 4 ? 'gmo' : (i * 7 + j) % 5 === 0 ? 'normal' : (i + j) % 4 === 0 ? 'fast' : 'chick');
 }
 light(37, 24, 'lamp', '7dff8a', 260, { flicker: 0.3 }); light(48, 24, 'lamp', '7dff8a', 260); light(58, 24, 'lamp', '7dff8a', 260, { flicker: 0.5 });
 label(46, 24.4, 'ИНКУБАТОРНАЯ', 30);

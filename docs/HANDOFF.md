@@ -2,6 +2,33 @@
 
 _Last updated: 2026-10-03_
 
+## Iteration 14 (2026-10-03, Claude) — feedback round (D72)
+
+16 items, decision D72, story in [design/chapters.md](design/chapters.md). Floor 7: Лера at ping-pong, Стас and Катя in «Уединение» (button door, swimsuit, a «ДЕБАГ!» mini-boss), root manager boss bar. Floor 8: Валера's pass in room 87 (Вершков, potato beds, red grow lamps, plant chickens `sprout`, Вершков as a mild mini-boss); Валера blinks in the dark, only his eyes show without a beam. Floor 11: visible forms with a scene each, more chickens, a meeting twice as dense in packs. Street 1: a bigger flock, the grandma crumbles into hens; the VIP parking lot, Литовец's getaway car runs the flock over and breaks the fence (scripted vehicles in the sim and snapshots). Street 2: 24 eggs, Толик throws beer bottles and smokes. Lab: full incubator, GMO roosters (`gmo`) also at the generator. Fat yellow CEO (10 000 HP solo), the trade-union medkit fixed (issue #4). Mini-bosses drop part-loaded miniguns/lasers. In a team every player takes their own gun/ammo from one spot (rules 7). Chapter summaries per player (kills, help, moments, titles, achievements), the whole run's personal statistics after the victory, «📜 Летопись» (carry + device). New rooms no longer talk about continuing. Issues #2, #3 (phone picker selection), #5, #6.
+
+Engine notes: `RULES = 7`; `LevelScript.rev` — a room save on an older revision of a rebuilt floor restarts that floor with its entry loadout (office7/8/11, street1/2, lab, boss are rev 2). Player statistics live in `Player.stats {run, chap}`, are fed by `World.emit` (never change the rules) and ride `Carry` with `Carry.chronicle`. `World.moment(id, text)` for funny moments. Vehicles: `World.addVehicle/driveVehicle`, snapshot `vh`. Pickup `ts` (slot mask), `amount`, kind `doc`. Elites: `katya`, `vershkov`, `tolik` (`bottles`), Валера `blink`. Deep sleepers (`deaf`) ignore gunfire. Art: `tools/art/d72.mjs`, LPC tank top/short shorts, plant/GMO/fat mutants in `compose.ts`.
+
+**Balance matrix** (`tools/sim-play.ts`, whole campaign chained; game-overs per run / lowest HP):
+
+| Floor | Solo (5) | Duo (4) | Quad (3) |
+|---|---|---|---|
+| 6 | 0 / 61–100 | 0 / 88–94 | 0 / 84–100 |
+| 7 (Катя) | 0 / 38–82 | 0 / 41–71 | 0 / 81–90 |
+| 8 (комната 87, Валера) | 0 / 83–100 | 0 / 76–100 | 0 / 81–90 |
+| 11 (сценки, совещание ×2) | 0 / 63–84 | 0 / 39–84 | 0 / 6–84 |
+| 12 | 0 | 0 | 0 |
+| Улица 1 (бабушка, Литовец) | 0 / 86–100 | 0 / 64–88 | 0 / 64–95 |
+| Улица 2 (Толик) | 0 / 60–100 | 0 / 28–85 | 0 / 26–87 |
+| Завод | 0 / 60–92 | 0 / 44–88 | 0 / 57–86 |
+| Лаборатория (ГМО) | 0.2 / 11–77 | 0 / 33–75 | 0 / 60–66 |
+| Ангар (толстый Генеральный, matrix at 11 000 HP; shipped 10 000) | 0.6 / 9–74 | 0.5 / 0–43 | 0.33 / 2–56 |
+
+Bots never suffer the dark, so floor 8 stays harder for people than the table says. The final boss dies in ~50–55 s with a full arsenal (specials included) but stays the most dangerous fight.
+
+Found by playing: Омлетов dying before his rescue froze the lab («Найти учёных»); street lamps leaving a pocket against a wall; the parking flock waking up from the helicopter defence's gunfire (+14 chickens, the browser autopilot died there five times) — now deep sleepers until the car; the autopilot standing on a minigun it had already taken (shared pickups) — bot fix.
+
+Checks: typecheck, combat, campaign, polish, engagement, progress, coop, levels, floor6, chapters (+8 scenarios), art, build, lobby, network, telegram, chapters-net, lobby-ui (+ new room text), network-ui; `node tools/qa-d72.mjs` (screenshots `docs/qa/d72/`, real touch on the phone picker); browser autopilot `qa-campaign` (`docs/qa/d72-e2e*`). Not tried: a real phone, humans in the dark, four humans online.
+
 ## Iteration 13 (2026-10-03, Claude) — feedback round (D71)
 
 Lab doors never lock (co-op), phone weapon button (tap = next, hold = picker grid), street «прыгуны» (leaping chickens), minigun at the helicopter and laser from Омлетов (limited ammo), the final boss is a wingless mega rooster (8000 HP solo), browser/PWA back needs two presses (first one pauses), finale with fanfare/confetti and a victory screen listing the run's achievements, a 3-s non-blocking intro (camera to the objective) on every floor, Неля stays with a team and explains, more floor-8 horror, companions unstick around corners. Rules version 6. Details: [DECISIONS.md](DECISIONS.md) D71.

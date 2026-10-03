@@ -103,7 +103,7 @@ export function botStep(w: World, b: Bot, skill: number) {
   let goal = downed ? { x: downed.x, y: downed.y } : slotTargets.sort((a, c) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(c.x - p.x, c.y - p.y))[0];
   // a gun lying close by that we do not have yet: a human picks it up
   if (!downed && (!best || bd > 300)) {
-    const g = w.pickups.find(k => k.kind === 'weapon' && k.weapon && !p.weapons.includes(k.weapon) && k.weapon !== 'grenade' && Math.hypot(k.x - p.x, k.y - p.y) < 450);
+    const g = w.pickups.find(k => k.kind === 'weapon' && k.weapon && !p.weapons.includes(k.weapon) && k.weapon !== 'grenade' && !(((k.ts ?? 0) >> p.slot) & 1) && Math.hypot(k.x - p.x, k.y - p.y) < 450);
     if (g) goal = { x: g.x, y: g.y };
   }
   // low on health: grab a nearby medkit / buff first
@@ -132,6 +132,8 @@ export function botStep(w: World, b: Bot, skill: number) {
     mv = null; // stand and shoot (keeps aim steady)
   } else if (goal) {
     mv = pathDir(w, b, p, goal);
+    // no way out of the own cell (wedged between a lamp and a wall): wiggle like a human would
+    if (!mv && Math.hypot(goal.x - p.x, goal.y - p.y) > 50) { if (rnd() < 0.05) b.wanderA = rnd() * Math.PI * 2; mv = [Math.cos(b.wanderA), Math.sin(b.wanderA)]; }
   } else {
     // nothing to do: drift around so triggers fire
     b.wander -= DT; if (b.wander <= 0) { b.wander = 2 + rnd() * 2; b.wanderA = rnd() * Math.PI * 2; }
@@ -140,7 +142,7 @@ export function botStep(w: World, b: Bot, skill: number) {
   if (downed && Math.hypot(downed.x - p.x, downed.y - p.y) < 90) { mv = null; inp.interact = (w.time % 3.2) < 3; }
   // stuck: sidestep
   if (Math.hypot(p.x - b.lastX, p.y - b.lastY) > 24) { b.lastX = p.x; b.lastY = p.y; b.stuckT = 0; }
-  else if (mv) { b.stuckT += DT; if (b.stuckT > 2.5) { b.stuckT = 0; b.wander = 1; b.wanderA = Math.atan2(mv[1], mv[0]) + (rnd() < 0.5 ? 1.6 : -1.6); (b as any).stuck = ((b as any).stuck ?? 0) + 1; } }
+  else if (mv) { b.stuckT += DT; if (b.stuckT > 2.5) { b.stuckT = 0; b.wander = 1; b.wanderA = Math.atan2(mv[1], mv[0]) + (rnd() < 0.3 ? Math.PI : rnd() < 0.5 ? 1.6 : -1.6); (b as any).stuck = ((b as any).stuck ?? 0) + 1; } }
   if (b.wander > 0 && b.stuckT === 0 && mv && (b as any).stuck && b.wander > 0.01) { b.wander -= DT; if (b.wander > 0) mv = [Math.cos(b.wanderA), Math.sin(b.wanderA)]; }
   const speed = (p.state === 'downed' ? 45 : PLAYER.speed * WEAPONS[p.weapons[p.cur]].speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1));
   let [nx, ny] = [p.x, p.y];

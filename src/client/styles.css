@@ -241,8 +241,8 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .tbtn { position: fixed; pointer-events: auto; width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--head); font-size: 20px; color: #fff; background: rgba(20,22,26,0.6); border: 3px solid rgba(255,255,255,0.3); z-index: 12; }
 .tbtn.down { background: rgba(232,106,23,0.7); }
 .t-pause { right: var(--sr); top: var(--st); width: 38px; height: 38px; font-size: 12px; border-width: 2px; }
-.t-reload { right: var(--sr); bottom: calc(var(--sb) + 62px); }
-.t-interact { right: calc(var(--sr) + 62px); bottom: calc(var(--sb) + 62px); width: auto; min-width: 84px; max-width: min(150px, 40vw); padding: 0 14px; border-radius: 27px; font-family: var(--body); font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(232,106,23,0.85); border-color: #ffb347; }
+.t-reload { right: var(--sr); bottom: calc(var(--sb) + 74px); } /* D72 (issue #6): clear of the 66-px weapon panel */
+.t-interact { right: calc(var(--sr) + 62px); bottom: calc(var(--sb) + 74px); width: auto; min-width: 84px; max-width: min(150px, 40vw); padding: 0 14px; border-radius: 27px; font-family: var(--body); font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(232,106,23,0.85); border-color: #ffb347; }
 
 /* ---------- phones: everything in the corners, the middle stays for the fight */
 .hud.touch .hud-top { right: calc(var(--sr) + 46px); column-gap: 10px; row-gap: 5px; grid-template-columns: minmax(0, 1fr) minmax(0, calc(44 * var(--vw))) minmax(0, 1fr); }
@@ -597,6 +597,8 @@ kbd { font-family: var(--head); font-size: 12px; background: #121418; border: 1p
 .hud.touch .hud-weapon .w-icon { transform: scale(1.15); }
 .hud.touch .hud-weapon.held { border-color: var(--accent2); background: rgba(232,106,23,0.3); }
 .weapon-picker { position: absolute; right: var(--sr); bottom: calc(var(--sb) + 76px); z-index: 40; pointer-events: auto !important; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: rgba(12,13,16,0.92); border: 2px solid rgba(255,255,255,0.18); border-radius: 14px; max-height: 70vh; overflow: auto; }
+/* D72 (issue #3): the picker's tiles must take touches although they live inside .hud */
+.weapon-picker * { pointer-events: auto !important; }
 .weapon-picker .wp-title { font: 700 11px var(--body); color: var(--muted); letter-spacing: .12em; text-transform: uppercase; padding: 0 4px; }
 .wp-item { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; min-width: 220px; min-height: 52px; padding: 4px 10px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
 .wp-item i { grid-row: span 2; width: 64px; height: 40px; background: no-repeat center / contain; image-rendering: pixelated; }
@@ -610,10 +612,11 @@ kbd { font-family: var(--head); font-size: 12px; background: #121418; border: 1p
 #ui.cine-bars::before, #ui.cine-bars::after { content: ''; position: fixed; left: 0; right: 0; height: 9vh; background: #000; z-index: 25; pointer-events: none; animation: cine-in .5s ease-out; }
 #ui.cine-bars::before { top: 0; } #ui.cine-bars::after { bottom: 0; }
 @keyframes cine-in { from { height: 0; } }
-.cine-caption { position: fixed; left: 50%; bottom: calc(9vh + 14px); transform: translateX(-50%); z-index: 26; max-width: min(92vw, 640px); text-align: center; pointer-events: none; color: #fff; text-shadow: 0 2px 6px #000; animation: tc 3.6s ease forwards; }
-.cine-caption small { display: block; font: 700 11px var(--body); letter-spacing: .3em; color: #ffb74d; margin-bottom: 4px; }
-.cine-caption b { font: 700 17px var(--body); }
-.cine-caption i { display: block; font: 500 11px var(--body); color: #aab; margin-top: 6px; font-style: normal; }
+/* D72: inside the bottom letterbox bar, clear of the radio feed above it */
+.cine-caption { position: fixed; left: 50%; bottom: max(4px, calc(9vh - 58px)); transform: translateX(-50%); z-index: 26; max-width: min(92vw, 640px); text-align: center; pointer-events: none; color: #fff; text-shadow: 0 2px 6px #000; animation: tc 3.6s ease forwards; }
+.cine-caption small { display: block; font: 700 10px var(--body); letter-spacing: .3em; color: #ffb74d; margin-bottom: 2px; }
+.cine-caption b { font: 700 15px var(--body); }
+.cine-caption i { display: block; font: 500 10px var(--body); color: #aab; margin-top: 3px; font-style: normal; }
 .finale { text-align: center; }
 .finale-ach { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-height: 34vh; overflow: auto; }
 .finale-ach li { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; background: rgba(255,210,122,0.12); border: 1px solid rgba(255,210,122,0.35); font-size: 13px; }
@@ -624,3 +627,31 @@ kbd { font-family: var(--head); font-size: 12px; background: #121418; border: 1p
 .wp-item i { grid-row: auto; width: 56px; height: 30px; }
 .wp-item b { font-size: 11px; line-height: 1.15; }
 .wp-item span { font-size: 11px; }
+
+/* D72: chapter mini summaries, the whole run's personal statistics, «Летопись» */
+.panel.wide { max-width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.chapter-summary, .final-stats { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 10px; text-align: left; }
+.sum-card { background: #121418; border-radius: 12px; padding: 10px 12px; border-left: 6px solid var(--c, #888); }
+.sum-card.me { background: #1b1712; box-shadow: 0 0 0 1px #ffb74d44 inset; }
+.sum-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.sum-name b { font-size: 15px; margin-right: 4px; }
+.sum-title { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(255,179,71,0.18); color: #ffd27a; border: 1px solid rgba(255,179,71,0.4); }
+.sum-nums { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.sum-nums div, .final-grid div { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 4px 2px; min-width: 0; }
+.sum-nums b, .final-grid b { font-family: var(--head); font-size: 17px; color: #fff; }
+.sum-nums span, .final-grid span { font-size: 10.5px; color: var(--muted); text-align: center; line-height: 1.15; }
+.sum-line { font-size: 12.5px; color: #e8dcc8; margin-top: 6px; }
+.sum-moments { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: #e8dcc8; }
+.sum-moments li { margin: 2px 0; }
+.sum-moments li::marker { content: '😄 '; }
+.sum-achs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sum-ach { font-size: 11.5px; padding: 2px 8px; border-radius: 8px; background: rgba(255,210,122,0.1); border: 1px solid rgba(255,210,122,0.3); }
+.final-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px; }
+.chronicle-panel { max-width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 24px); }
+.chronicle-list { overflow-y: auto; max-height: calc(100dvh - 170px); display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.chron { background: #121418; border-radius: 12px; padding: 8px 10px; }
+.chron summary { cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.chron summary b { font-family: var(--head); color: #ffd27a; font-size: 14px; letter-spacing: .04em; }
+.chron summary span { font-size: 12px; color: var(--muted); }
+.chron[open] .sum-card { margin-top: 8px; }
+@media (max-width: 480px) { .sum-nums { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

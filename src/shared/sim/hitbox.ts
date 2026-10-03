@@ -8,12 +8,12 @@ import { ENEMIES } from '../enemies';
 /** Height of the gun above the feet (world units). Mirrors the client's hand placement. */
 export const HAND_H = 36;
 /** Display scale per enemy type (LPC 64-px frames). */
-export const ENEMY_SCALE: Record<EnemyType, number> = { normal: 2, fast: 1.85, fat: 2.35, spitter: 2, armored: 2.15, exploder: 2, chick: 1.6, boss: 3.4, jumper: 2.05 };
+export const ENEMY_SCALE: Record<EnemyType, number> = { normal: 2, fast: 1.85, fat: 2.35, spitter: 2, armored: 2.15, exploder: 2, chick: 1.6, boss: 3.9, jumper: 2.05, sprout: 1.95, gmo: 2.7 };
 
 export interface BodyBox { hw: number; h: number; head: number }
 
 /** D69: elite chickens (scripted bosses made from a named survivor) are drawn larger than their base type. */
-export const ELITE_SCALE: Record<string, number> = { valera: 2.45, director: 2.9 };
+export const ELITE_SCALE: Record<string, number> = { valera: 2.45, director: 2.9, katya: 2.3, vershkov: 2.4, tolik: 2.5 };
 export const enemyScale = (e: { type: EnemyType; appearance?: { npcId: string } }) => (e.appearance && ELITE_SCALE[e.appearance.npcId]) || ENEMY_SCALE[e.type];
 
 /** Humans (players, NPCs): LPC body ×2, head top ≈ 100 above the feet. */
@@ -23,7 +23,8 @@ export function enemyBox(t: EnemyType, scale?: number): BodyBox {
   if (t === 'chick') return { hw: 15, h: 30, head: 0 };
   const s = scale ?? ENEMY_SCALE[t];
   const h = 51 * s; // feet (row 62) to the comb (row ~11)
-  return { hw: Math.max(ENEMIES[t].radius + 3, s * 10), h, head: h * 0.3 };
+  // D72: the CEO is a fattened rooster now — drawn 1.3× wider, hit box to match
+  return { hw: Math.max(ENEMIES[t].radius + 3, s * (t === 'boss' ? 13 : 10)), h, head: h * 0.3 };
 }
 
 /** Slab test: entry distance of the ray into [x0,x1]×[y0,y1] within maxT, or -1. */

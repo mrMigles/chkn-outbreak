@@ -57,6 +57,10 @@ try {
   assert.deepEqual(hostCards.map(s => s.replace(' (вы)', '')).sort(), ['Ведущая', 'Коллега']);
   assert.equal(await host.locator('.team .mate:not(.empty) img').count(), 2);
   assert.ok(await host.locator('button[data-a="fresh"]').isVisible(), 'host has the start button');
+  // D72: a brand-new room offers a new game only — no «Продолжить», no «продолжить или начать заново»
+  const fresh = await host.locator('.lobby-actions').innerText();
+  assert.ok(!/продолжить/i.test(fresh) && !(await host.locator('button[data-a="continue"]').count()), 'a new room has nothing to continue: ' + fresh.replace(/\s+/g, ' '));
+  assert.ok(!/продолжить/i.test(await friend.locator('.lobby-actions').innerText()), 'the guest is told it is a new game');
   assert.ok(await friend.locator('button[data-a="ready"]').isVisible(), 'guest has «Готов»');
   assert.equal(await friend.locator('button[data-a="fresh"]').count(), 0);
   await host.screenshot({ path: `${out}/desktop-lobby-host.png` });

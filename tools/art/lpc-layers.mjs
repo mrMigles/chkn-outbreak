@@ -45,12 +45,16 @@ export const LAYERS = [
   { id: 'top_plate_m', dir: 'torso/armour/plate/male' },
   { id: 'top_leather_m', dir: 'torso/armour/leather/male' },
   { id: 'top_apron_m', dir: 'torso/aprons/apron/male', variant: 'white' },
+  // D72: Катя's swimsuit (tank top + short shorts), Толик's shorts
+  { id: 'top_tank_f', dir: 'torso/clothes/sleeveless/tanktop/female', variant: 'white' },
   // legs / feet
   { id: 'legs_pants_m', dir: 'legs/pants/male' },
   { id: 'legs_pants_f', dir: 'legs/pants/thin' },
   { id: 'legs_formal_m', dir: 'legs/formal/male' },
   { id: 'legs_formal_f', dir: 'legs/formal/thin' },
   { id: 'legs_skirt_f', dir: 'legs/skirts/plain/thin' },
+  { id: 'legs_shorts_f', dir: 'legs/shorts/short_shorts/thin' },
+  { id: 'legs_shorts_m', dir: 'legs/shorts/short_shorts/male' },
   { id: 'feet_m', dir: 'feet/shoes/basic/male' },
   { id: 'feet_f', dir: 'feet/shoes/basic/thin' },
   // accessories

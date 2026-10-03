@@ -44,6 +44,13 @@ export const PROP_DEFS: Record<string, PropDef> = {
   heli_wreck: { ...HARD, inset: 4 }, heli_side: FLAT,
   breaker: FLAT, desk_phone: FLAT, bar_stool: FLAT, portrait_ceo: FLAT, painting_wide: FLAT, painting_sea: FLAT, chicken_plate: FLAT, coffee_cup: FLAT,
   pano_0: FLAT, pano_1: FLAT, pano_2: FLAT,
+  // D72: «Уединение» (floor 7), room 87 (floor 8), the parking lot (street 1), Толик's garage (street 2)
+  heart_bed: { ...SOLID, inset: 6 }, kink_rack: FLAT, poster_kink: FLAT, poster_kink2: FLAT, fluffy_cuffs: FLAT, disco_lamp: { ...SOLID, round: true, hp: 12, mat: 'glass', h: 56 }, button_panel: FLAT,
+  potato_bed: { solid: true, bullets: false, inset: 4, hp: 30, mat: 'plant', h: 36 }, tomato_plant: { solid: true, bullets: false, inset: 2, hp: 18, mat: 'plant', h: 64 },
+  grow_lamp: { ...SOLID, round: true, inset: 2 }, watering_can: FLAT,
+  ...Object.fromEntries(['black', 'yellow', 'lime'].map(c => [`car_sport_${c}_v`, { ...HARD, inset: 2 }])),
+  fence_v: { solid: true, bullets: false, inset: 0, hp: 999999, mat: 'metal', h: 140 },
+  beer_crate: { ...SOLID, hp: 30, mat: 'wood', h: 30 }, ashtray: FLAT,
 };
 
 export function propDef(name: string): PropDef {

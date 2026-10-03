@@ -46,14 +46,18 @@ function hatch(w: World) {
   w.spawnWave('market', ['fast', 'normal', 'spitter'], 2 + 2 * w.players.length, .5, true, 'market');
 }
 
+const tolikEnemy = (w: World) => w.enemies.find(e => e.appearance?.npcId === 'tolik');
 const street2: LevelScript = {
-  id: 'street2', title: 'Улица. Дорога к «Провансалю»',
+  id: 'street2', title: 'Улица. Дорога к «Провансалю»', rev: 2,
   subtitle: 'Рынок, сквер и проходная. Пропуск обязателен',
   next: 'factory', enemyDamage: .9,
   chapterEnd: { title: 'ГЛАВА 2 «ГОРОД» ПРОЙДЕНА', text: 'Вертолёт, бабушка, шаурма и вахтёр позади. Впереди — завод «Провансаль», где всё началось.', award: 'chapter_city' },
 
   onStart(w) {
     objective(w);
+    // D72: Толик — smokes and drinks, lobs beer bottles from a distance, a smoke cloud around him
+    const t = w.enemies.find(e => w.enemyTags.get(e.id) === 'tolik');
+    if (t) { t.appearance = { npcId: 'tolik', kind: 'tolik', name: 'Сменщик Толик · перекур' }; t.hp = t.maxHp = 950 * (1 + .4 * (w.players.length - 1)); t.speedMul = 1.1; }
     w.after(2, () => w.say('radio', 'Капитан Крылов: Дорогу к заводу перекрыла фура с майонезом. Идите через рынок. И… не покупайте яйца.', 6));
   },
 
@@ -92,11 +96,12 @@ const street2: LevelScript = {
       w.say('valya', 'Ой, ну всё, рынок закрыт. Санитарный день. Калитку открыла — идите через сквер, деточки. И яйца не забудьте! Шучу.', 6);
       objective(w);
     }
-    const tolik = w.enemies.find(e => e.appearance?.npcId === 'tolik');
-    if (!tolik && w.flags.atGate && !w.flags.tolikSpawned) {
-      // the relief is the armored sleeper in the garage: give it a face and a name
-      const g = w.enemies.find(e => e.type === 'armored' && w.enemyTags.get(e.id) === 'garage');
-      if (g) { g.appearance = { npcId: 'tolik', kind: 'guard', name: 'Сменщик Толик' }; g.hp = g.maxHp = 480 * (1 + .4 * (w.players.length - 1)); w.flags.tolikSpawned = true; }
+    const tolik = tolikEnemy(w);
+    if (tolik && tolik.aggro && !w.flags.tolikBoss) { w.flags.tolikBoss = true; w.setBoss(tolik, 'Сменщик Толик · перекур'); }
+    if (tolik && w.flags.tolikBoss && !w.flags.tolikHalf && tolik.hp < tolik.maxHp / 2) {
+      w.flags.tolikHalf = true;
+      w.say(String(tolik.id), 'Так, всё, второй ящик! Мужики, ко мне!', 3);
+      w.spawnWave('yard', ['normal', 'fast', 'normal'], 3 + w.players.length, .4, true, 'garage');
     }
     if (w.flags.gateOpening && !w.flags.gateOpen) {
       const t = w.time - w.flags.gateAt;
@@ -147,9 +152,9 @@ const street2: LevelScript = {
     }
     if (id === 'garage' && !w.flags.garageSeen) {
       w.flags.garageSeen = true;
-      for (const e of w.enemies) if (w.enemyTags.get(e.id) === 'garage') { e.dormant = false; e.aggro = true; }
-      const t = w.enemies.find(e => e.appearance?.npcId === 'tolik');
-      if (t) w.say(String(t.id), 'Пропуск? КО-КО-КОНТРОЛЬ!', 2.5);
+      for (const e of w.enemies) if (['garage', 'tolik'].includes(w.enemyTags.get(e.id) ?? '')) { e.dormant = false; e.aggro = true; }
+      const t = tolikEnemy(w);
+      if (t) { w.say(String(t.id), 'Пропуск? У меня ПЕРЕКУР! Ик… КО-КО-КОНТРОЛЬ!', 3); w.moment(by.id, 'Прервал(а) перекур Толика'); }
     }
   },
 
@@ -185,6 +190,7 @@ const street2: LevelScript = {
   onKill(w, e) {
     if (e.appearance?.npcId === 'tolik' && !w.flags.tolikDead) {
       w.flags.tolikDead = true;
+      w.award('sober_look');
       w.addPickup('keycard', e.x, e.y, { key: 'gate', ttl: -1 });
       w.say('semyonych', 'Толик… Ну хоть пропуск не съел. Неси его сюда, в будку!', 4);
       objective(w);

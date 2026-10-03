@@ -1,5 +1,6 @@
 import type { LevelScript } from './types';
 import type { World } from '../sim/World';
+import type { Player } from '../sim/types';
 import { dist } from '../math';
 export const FRIENDS = ['andrey', 'sergey', 'vlad', 'stas', 'pasha'];
 const allFound = (w: World) => FRIENDS.every(id => w.npc(id)?.rescued);
@@ -25,7 +26,11 @@ function objective(w: World) {
   }
   if (!gate?.open && gate?.locked) { w.setObjective('Открыть Castor пропуском Елены', 'castor_lock'); return; }
   const left = FRIENDS.filter(id => !w.npc(id)?.rescued);
-  if (left.length) w.setObjective(`Найти друзей (${5 - left.length}/5) · кухня, Phoenix, Castor`, left);
+  // D72: Стас is not at the ping-pong table — he went to «Уединение» with Катя
+  const katya = w.enemies.find(e => e.appearance?.npcId === 'katya') ?? (w.npc('katya')?.mutation ? w.npc('katya') : undefined);
+  if (left.includes('stas') && katya) { w.setObjective('Катя превращается! Успокоить Катю', { x: katya.x, y: katya.y }); return; }
+  if (left.length === 1 && left[0] === 'stas' && !w.flags.kinkOpen) { w.setObjective('Стас в переговорке «Уединение»: дверь открывается кнопкой', 'kink_button'); return; }
+  if (left.length) w.setObjective(`Найти друзей (${5 - left.length}/5) · кухня, Phoenix, Castor${w.flags.stasHint ? ', «Уединение»' : ''}`, left.map(id => id === 'stas' && !w.flags.kinkOpen ? 'kink_button' : id));
   else if (!w.flags.rootStarted) w.setObjective('Все пятеро с нами. Провести их к лифтам', 'root_ambush');
   else if (!w.flags.rootDead || w.countTag('root_attack')) {
     const root = w.enemies.find(e => e.appearance?.npcId === 'root_manager');
@@ -38,8 +43,21 @@ function objective(w: World) {
     w.setObjective('Подобрать «Рутового петушка»', drop ? { x: drop.x, y: drop.y } : 'evacuation');
   } else w.setObjective('Отвести всех пятерых к лифтам', 'evacuation');
 }
+/** D72: the «Уединение» door: Стас and Катя inside; Катя turns into a «debug» chicken. */
+function openKink(w: World, by: Player) {
+  if (w.flags.kinkOpen) return;
+  w.flags.kinkOpen = true;
+  w.openDoor('kink_door');
+  w.moment(by.id, 'Открыл(а) переговорку «Уединение» без стука');
+  const stas = w.npc('stas')!, katya = w.npc('katya')!;
+  w.say(stas.id, 'Это не то, что вы подумали! Мы… дебажили! Честно!', 4);
+  w.after(2.2, () => w.say(katya.id, 'Стасик, кто это? Мы же на созвоне… ко… ко-ко… ДЕБАГ! ДЕБАГ!', 3.5));
+  w.after(4, () => { w.infect(katya, 'fast', 'katya'); w.spawnWave('escort', ['fast', 'normal', 'fast'], 3 + w.players.length, .35, true, 'katya_wave', true); });
+  objective(w);
+}
+
 const level: LevelScript = {
-  id: 'office7', title: 'Этаж 7. Пятеро на одного петуха',
+  id: 'office7', title: 'Этаж 7. Пятеро на одного петуха', rev: 2,
   subtitle: 'Capella · Castor · Phoenix. Эвакуация без записи в календаре', next: 'office8', enemyDamage: .8,
   onStart(w) {
     objective(w);
@@ -48,12 +66,19 @@ const level: LevelScript = {
     w.after(6, () => w.say('radio', 'Влад: На банке написано «проект ЯЙЦО, лаборатория −3». Они разослали опытную партию по офису!', 6));
   },
   onTick(w, dt) {
-    for (const id of ['stas', 'pasha']) {
+    for (const id of ['pasha', 'lera']) {
       const n = w.npc(id)!;
       const p = w.humanPlayers.find(p => dist(p.x, p.y, n.x, n.y) < 160 && w.map.lineOfSight(p.x, p.y, n.x, n.y, false));
       if (w.npc('andrey')?.rescued && w.npc('sergey')?.rescued && !n.rescued && p && !w.enemies.some(e => dist(e.x, e.y, n.x, n.y) < 380 && w.map.lineOfSight(e.x, e.y, n.x, n.y, false))) {
         n.rescued = true; level.onRescue!(w, n, p);
       }
+    }
+    const kat = w.enemies.find(e => e.appearance?.npcId === 'katya');
+    if (kat && !w.flags.katyaScaled) {
+      // D72: a «debug» chicken: stronger than the rest, gentler than the manager
+      w.flags.katyaScaled = true;
+      kat.hp = kat.maxHp = 650 * (1 + .4 * (w.players.length - 1)); kat.speedMul = 1.25; kat.abilityCd = 3;
+      w.setBoss(kat, 'Катя · режим отладки');
     }
     for (const n of w.npcs.filter(n => n.tag === 'worker7')) {
       if (!n.mutation && n.mode !== 'gone' && n.mode !== 'dead' && w.humanPlayers.some(p => dist(p.x, p.y, n.x, n.y) < 430)) {
@@ -76,7 +101,8 @@ const level: LevelScript = {
     if (boss && !w.flags.rootScaled) {
       w.flags.rootScaled = true; // D68: rules 5 halve the root manager (2200 was too long a fight for the second floor)
       boss.hp = boss.maxHp = (w.rules >= 5 ? 1100 : 2200) * (1 + .4 * (w.players.length - 1)); boss.speedMul = 1.8; boss.abilityCd = 2.5;
-      boss.appearance!.name = 'Рутовый петушок · sudo ко-ко';
+      // D72: the root manager gets a boss bar like the other mini-bosses
+      w.setBoss(boss, 'Рутовый петушок · sudo ко-ко');
     }
     if (boss && w.time >= w.flags.rootSupportAt && w.countTag('root_attack') < 48) {
       w.flags.rootSupportAt = w.time + 9;
@@ -107,7 +133,7 @@ const level: LevelScript = {
       objective(w);
     }
     if (id === 'east') w.say('sergey', 'Андрей говорит, это просто очередная реорганизация. Андрей, у них клювы!', 4);
-    if (id === 'pingpong') w.say('stas', 'Паша, партия до одиннадцати! Даже если конец света!', 4);
+    if (id === 'pingpong' && !w.flags.pingSaid) { w.flags.pingSaid = true; w.say('pasha', 'Лера, партия до одиннадцати! Даже если конец света!', 4); w.after(3, () => w.say('lera', 'Паша, у тебя подача. И петух на сетке. Это баг или фича?', 4)); }
     if (id === 'root_ambush' && allFound(w) && !w.flags.rootStarted) {
       w.flags.rootStarted = true;
       w.flags.rootSupportAt = w.time + 8;
@@ -121,11 +147,26 @@ const level: LevelScript = {
     }
   },
   onRescue(w, n, by) {
+    if (n.id === 'lera') {
+      n.mode = 'follow'; n.follow = by.id;
+      w.say(n.id, 'Я с вами! Ракетка — тоже оружие, если очень захотеть.', 4);
+      return;
+    }
     if (!FRIENDS.includes(n.id)) return;
     n.mode = 'follow'; n.follow = by.id;
-    const lines: Record<string, string> = { andrey: 'Я прикрою. Серёга, закрывай вкладки — уходим!', sergey: 'Я тут! Только ноутбук… Ладно, пятеро важнее ноутбука.', vlad: 'Я не пил! Я только понюхал. На банке адрес лаборатории −3.', stas: 'Счёт 10:10. Объявляем техническое спасение!', pasha: 'Ракетку забрал. Если что — отражаю яйца бэкхендом.' };
+    const lines: Record<string, string> = { andrey: 'Я прикрою. Серёга, закрывай вкладки — уходим!', sergey: 'Я тут! Только ноутбук… Ладно, пятеро важнее ноутбука.', vlad: 'Я не пил! Я только понюхал. На банке адрес лаборатории −3.', stas: 'Спасибо… Давайте никому не расскажем. Особенно про наручники.', pasha: 'Ракетку забрал. Если что — отражаю яйца бэкхендом.' };
     w.say(n.id, lines[n.id], 4);
+    if (n.id === 'pasha') {
+      // D72: Стас is not here
+      w.flags.stasHint = true;
+      w.after(4.2, () => w.say('pasha', 'Стас? Ушёл с Катей в переговорку «Уединение» — сказал, «дебажить». Минут сорок назад. Дверь там на кнопке.', 6));
+    }
     objective(w);
+  },
+  onUse(w, id, by) {
+    if (id !== 'kink_button') return;
+    if (w.flags.kinkOpen) { w.say(by.id, 'Дверь уже открыта. Лучше бы закрыта.', 2.5); return; }
+    openKink(w, by);
   },
   onNpcUse(w, n) {
     if (n.id !== 'elena') return;
@@ -140,6 +181,14 @@ const level: LevelScript = {
     return true;
   },
   onKill(w, e) {
+    if (e.appearance?.npcId === 'katya' && !w.flags.katyaDead) {
+      w.flags.katyaDead = true;
+      w.award('debug_mode');
+      const stas = w.npc('stas')!;
+      const p = w.humanPlayers.sort((a, b) => dist(a.x, a.y, stas.x, stas.y) - dist(b.x, b.y, stas.x, stas.y))[0] ?? w.anyPlayer;
+      if (p && !stas.rescued) { stas.rescued = true; level.onRescue!(w, stas, p); }
+      w.msg('БАГ ИСПРАВЛЕН', 'Катя закрыта как «не воспроизводится»', 3);
+    }
     if (e.appearance?.npcId === 'elena' && !w.flags.elenaDead) {
       w.flags.elenaDead = true;
       w.addPickup('keycard', e.x, e.y, { key: 'f7_pass', ttl: -1 });

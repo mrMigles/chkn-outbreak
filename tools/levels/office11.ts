@@ -31,7 +31,7 @@ const o = (type: string, name: string, x: number, y: number, props?: ObjSpec['pr
 const prop = (name: string, x: number, y: number, props?: ObjSpec['props']) => o('prop', name, x, y, props);
 const label = (text: string, x: number, y: number, size = 20) => o('label', '', x, y, { text, size, color: '#6b5440' });
 const note = (x: number, y: number, text: string) => o('note', '', x, y, { text });
-const enemy = (type: string, x: number, y: number, tag: string) => o('enemy', type, x, y, { tag });
+const enemy = (type: string, x: number, y: number, tag: string, extra: ObjSpec['props'] = {}) => o('enemy', type, x, y, { tag, ...extra });
 const desk = (x: number, y: number) => { prop('desk_b', x, y); prop('office_chair', x, y + 1.15); };
 
 // ---- lift hall
@@ -61,7 +61,7 @@ for (const [x, y] of [[4, 21], [61, 21], [24, 21.5], [41, 21.5]]) o('spawner', '
 for (const x of [5, 9, 13]) for (const y of [7, 12]) desk(x, y);
 prop('cabinet', 17.5, 3.6); prop('cabinet', 18.6, 3.6); prop('table_big', 16.5, 13.5);
 o('npc', 'boris', 17, 6, { title: 'Борис Сальдович · финдиректор', mode: 'cower', hp: 200, story: true, essential: true, untargetable: true, angle: 180, lines: 'Сократите их! Сократите их всех!' });
-for (const [x, y, t] of [[6, 9.5, 'normal'], [11, 9.5, 'fast'], [14, 5, 'normal'], [7, 15, 'spitter'], [12, 15, 'normal'], [16, 10, 'fat']] as const) enemy(t, x, y, 'fin');
+for (const [x, y, t] of [[6, 9.5, 'normal'], [11, 9.5, 'fast'], [14, 5, 'normal'], [7, 15, 'spitter'], [12, 15, 'normal'], [16, 10, 'fat'], [4, 13, 'fast'], [9, 4.5, 'normal'], [17.5, 15, 'armored']] as const) enemy(t, x, y, 'fin');
 o('trigger', 'finance', 3, 3, {}, [17, 15]);
 for (const [x, y] of [[4, 4], [4, 16]]) o('spawner', 'fin', x, y, { how: 'vent' });
 label('ФИНАНСОВЫЙ ДЕПАРТАМЕНТ', 11, 16.6);
@@ -72,9 +72,22 @@ o('pickup', 'ammo', 4, 10);
 for (const x of [46, 50]) for (const y of [6, 11, 15]) desk(x, y);
 prop('sofa_orange', 59, 15.6); prop('table_round', 59, 13); prop('plant', 61.5, 3.4); prop('whiteboard', 49, 3.1);
 o('npc', 'irina', 59, 6.5, { title: 'Ирина Тимбилдинговна · HR', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 180 });
-o('use', 'form1', 46, 15.7, { done: true, hint: 'взять анкету удовлетворённости' });
-o('use', 'form2', 5, 21.6, { done: true, hint: 'взять анкету удовлетворённости' });
-o('use', 'form3', 17.5, 40, { done: true, hint: 'взять анкету удовлетворённости' });
+// D72: the forms lie in plain sight (a sheet with a glow), each guarded by a small scene
+o('pickup', 'doc', 47.6, 14.2, { key: 'form1' });
+o('pickup', 'doc', 6, 21.4, { key: 'form2' });
+o('pickup', 'doc', 17.5, 40.4, { key: 'form3' });
+// scene 1: a headhunter hatching the form like an egg, candidates asleep around
+enemy('fat', 47.6, 13.2, 'scene1', { dormant: true }); for (const [x, y] of [[45.5, 13], [49.5, 13.5], [46.5, 9]]) enemy('normal', x, y, 'scene1', { dormant: true });
+o('trigger', 'scene1', 44, 8, {}, [10, 9]);
+// scene 2: karaoke corporate party in the west corridor
+enemy('spitter', 8, 21, 'scene2', { dormant: true }); for (const [x, y] of [[9.5, 20.6], [10.5, 21.6], [7, 22]]) enemy('normal', x, y, 'scene2', { dormant: true });
+prop('disco_lamp', 4.2, 20.4); o('light', '', 4.2, 20.2, { kind: 'lamp', color: 'ff4fa8', radius: 140, flicker: .25 });
+o('trigger', 'scene2', 3, 20, {}, [12, 3]);
+// scene 3: a notary chicken reads the form aloud to a jury in the archive
+enemy('armored', 15.5, 39.5, 'scene3', { dormant: true }); for (const [x, y] of [[13, 41], [14.5, 41.6], [16.5, 41.6], [18.5, 41]]) enemy('normal', x, y, 'scene3', { dormant: true });
+o('trigger', 'scene3', 11, 37, {}, [9, 6]);
+// D72: more chickens on the floor
+for (const [x, y, t] of [[56, 6, 'normal'], [57, 10, 'fast'], [52, 4.5, 'spitter'], [60, 15, 'normal']] as const) enemy(t, x, y, 'hr0');
 for (const [x, y] of [[44.5, 4], [62, 16.5], [3.5, 21], [18, 41]]) o('spawner', 'hr', x, y, { how: 'vent' });
 label('HR · ОТДЕЛ СЧАСТЬЯ', 53, 16.6);
 note(49, 4.1, 'Доска: «Ценности компании: 1. Лояльность 2. Перья 3. Синергия»');
@@ -83,7 +96,7 @@ o('pickup', 'health', 62, 10);
 // ---- legal archive: Пунктович hides at the back
 for (const x of [5, 8, 15, 18]) for (const y of [26, 30, 34]) prop('shelf', x, y + .2);
 o('npc', 'punktovich', 5, 40.5, { title: 'Аркадий Пунктович · юрист', mode: 'cower', hp: 200, story: true, essential: true, untargetable: true, angle: 0, lines: 'Согласно пункту 4.2, я боюсь!' });
-for (const [x, y, t] of [[7, 25.5, 'normal'], [16, 25.5, 'normal'], [12, 30, 'fast'], [6, 34, 'spitter'], [17, 34, 'normal'], [12, 38, 'armored'], [9, 41, 'fast']] as const) enemy(t, x, y, 'law');
+for (const [x, y, t] of [[7, 25.5, 'normal'], [16, 25.5, 'normal'], [12, 30, 'fast'], [6, 34, 'spitter'], [17, 34, 'normal'], [12, 38, 'armored'], [9, 41, 'fast'], [4, 30, 'normal'], [19, 30, 'fast'], [10, 26, 'spitter']] as const) enemy(t, x, y, 'law');
 o('trigger', 'archive', 3, 24, {}, [18, 19]);
 label('ЮРИДИЧЕСКИЙ ОТДЕЛ · АРХИВ', 11.5, 43.2);
 note(16, 41.5, 'Договор с поставщиком КУКАРЕКСА. Мелкий шрифт: «Возможны побочные эффекты: перья, гребень, кудахтанье»');

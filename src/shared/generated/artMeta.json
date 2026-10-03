@@ -788,6 +788,90 @@
   "pano_2": [
    128,
    48
+  ],
+  "heart_bed": [
+   100,
+   52
+  ],
+  "kink_rack": [
+   64,
+   48
+  ],
+  "poster_kink": [
+   48,
+   48
+  ],
+  "poster_kink2": [
+   44,
+   48
+  ],
+  "fluffy_cuffs": [
+   30,
+   14
+  ],
+  "disco_lamp": [
+   20,
+   14
+  ],
+  "button_panel": [
+   16,
+   10
+  ],
+  "potato_bed": [
+   88,
+   30
+  ],
+  "tomato_plant": [
+   26,
+   16
+  ],
+  "grow_lamp": [
+   20,
+   18
+  ],
+  "watering_can": [
+   28,
+   14
+  ],
+  "doc_form": [
+   26,
+   32
+  ],
+  "car_sport": [
+   230,
+   74
+  ],
+  "car_sport_l": [
+   230,
+   74
+  ],
+  "car_sport_black_v": [
+   118,
+   196
+  ],
+  "car_sport_yellow_v": [
+   118,
+   196
+  ],
+  "car_sport_lime_v": [
+   118,
+   196
+  ],
+  "fence_v": [
+   26,
+   128
+  ],
+  "beer_crate": [
+   40,
+   24
+  ],
+  "ashtray": [
+   24,
+   12
+  ],
+  "bottle": [
+   12,
+   30
   ]
  },
  "office25": {
@@ -1495,6 +1579,157 @@
    "feetX": 64,
    "feetY": 100,
    "wall": true
+  },
+  "heart_bed": {
+   "feetX": 50,
+   "feetY": 64,
+   "foot": [
+    100,
+    52
+   ]
+  },
+  "kink_rack": {
+   "feetX": 32,
+   "feetY": 76,
+   "wall": true
+  },
+  "poster_kink": {
+   "feetX": 24,
+   "feetY": 74,
+   "wall": true
+  },
+  "poster_kink2": {
+   "feetX": 22,
+   "feetY": 72,
+   "wall": true
+  },
+  "fluffy_cuffs": {
+   "feetX": 20,
+   "feetY": 16,
+   "foot": [
+    30,
+    14
+   ]
+  },
+  "disco_lamp": {
+   "feetX": 12,
+   "feetY": 54,
+   "foot": [
+    20,
+    14
+   ]
+  },
+  "button_panel": {
+   "feetX": 10,
+   "feetY": 40,
+   "foot": [
+    16,
+    10
+   ]
+  },
+  "potato_bed": {
+   "feetX": 46,
+   "feetY": 40,
+   "foot": [
+    88,
+    30
+   ]
+  },
+  "tomato_plant": {
+   "feetX": 14,
+   "feetY": 64,
+   "foot": [
+    26,
+    16
+   ]
+  },
+  "grow_lamp": {
+   "feetX": 16,
+   "feetY": 98,
+   "foot": [
+    20,
+    18
+   ]
+  },
+  "watering_can": {
+   "feetX": 16,
+   "feetY": 22,
+   "foot": [
+    28,
+    14
+   ]
+  },
+  "doc_form": {
+   "feetX": 13,
+   "feetY": 30
+  },
+  "car_sport": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_sport_l": {
+   "feetX": 127,
+   "feetY": 134,
+   "foot": [
+    230,
+    74
+   ]
+  },
+  "car_sport_black_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_sport_yellow_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "car_sport_lime_v": {
+   "feetX": 72,
+   "feetY": 220,
+   "foot": [
+    118,
+    196
+   ]
+  },
+  "fence_v": {
+   "feetX": 12,
+   "feetY": 140,
+   "foot": [
+    26,
+    128
+   ]
+  },
+  "beer_crate": {
+   "feetX": 20,
+   "feetY": 30,
+   "foot": [
+    40,
+    24
+   ]
+  },
+  "ashtray": {
+   "feetX": 12,
+   "feetY": 12,
+   "foot": [
+    24,
+    12
+   ]
+  },
+  "bottle": {
+   "feetX": 6,
+   "feetY": 30
   }
  },
  "guns": {

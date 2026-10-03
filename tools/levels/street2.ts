@@ -41,6 +41,11 @@ for (const y of [7, 13, 19]) for (const x of [7, 15, 31]) prop('stall', x, y);
 prop('stall', 23, 7); prop('stall', 23, 19);
 prop('stall', 23, 13); o('npc', 'valya', 23, 12.1, { reach: 150, title: 'Тётя Валя · яйца', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 90, lines: 'Яйца! Свежие! Почти не вылупляются!' });
 for (const [x, y] of [[20.5, 14.4], [25.5, 14.4], [21.5, 15.6], [24.5, 15.6], [19.5, 12], [26.5, 12]]) o('pod', '', x, y, { tag: 'eggs', hatch: (x * 7 + y) % 3 < 1 ? 'fast' : 'normal' });
+// D72: more eggs — trays at every stall row, they all hatch with Тётя Валя's
+for (const [x, y] of [[5.5, 8.6], [8.5, 8.6], [13.5, 8.6], [16.5, 8.6], [29.5, 8.6], [32.5, 8.6], [5.5, 14.6], [8.5, 14.6], [13.5, 14.6], [16.5, 14.6], [29.5, 14.6], [32.5, 14.6], [5.5, 20.6], [9, 20.6], [16.5, 20.6], [21.5, 20.6], [25, 20.6], [32.5, 20.6]] as const) {
+  const k = Math.round(x * 3 + y);
+  o('pod', '', x, y, { tag: 'eggs', hatch: k % 4 === 0 ? 'fast' : k % 4 === 1 ? 'normal' : 'chick' });
+}
 for (const [x, y, t] of [[11, 10, 'normal'], [19, 10, 'fast'], [27, 10, 'normal'], [11, 16, 'spitter'], [27, 16, 'normal'], [15, 22.5, 'fast'], [31, 22.5, 'normal'], [7, 22.5, 'normal'], [34, 4.5, 'fast'], [5, 4.5, 'normal']] as const) enemy(t, x, y, 'market');
 for (const [x, y] of [[3.5, 3.5], [3.5, 26], [36, 26], [20, 3.5]]) o('spawner', 'market', x, y, { how: 'rise' });
 o('trigger', 'market', 3, 3, { once: false }, [34, 24]);
@@ -67,7 +72,10 @@ for (const [x, y] of [[44, 47], [49, 40], [56, 31.5], [64, 41]]) { prop('crate',
 o('barrel', '', 47, 46); o('barrel', '', 58, 46); o('barrel', '', 65, 34); o('barrel', '', 69, 42);
 prop('pallet', 79, 47); prop('pallet', 41, 33);
 label('ГАРАЖ ВАХТЫ', 76.5, 32.4, 16);
-enemy('armored', 76.5, 35, 'garage', { dormant: true }); enemy('normal', 74, 36.5, 'garage', { dormant: true }); enemy('fast', 79, 33.5, 'garage', { dormant: true }); enemy('normal', 79.5, 37, 'garage', { dormant: true });
+// D72: Толик — a mini-boss on a smoke break among beer crates; his garage mates
+enemy('fat', 76.5, 35, 'tolik', { dormant: true }); enemy('normal', 74, 36.5, 'garage', { dormant: true }); enemy('fast', 79, 33.5, 'garage', { dormant: true }); enemy('normal', 79.5, 37, 'garage', { dormant: true }); enemy('armored', 73.5, 33, 'garage', { dormant: true });
+for (const [x, y] of [[73, 32.2], [74.2, 32.2], [80.5, 35.5], [80.5, 36.6]]) prop('beer_crate', x, y);
+prop('ashtray', 77.6, 33.2);
 o('trigger', 'garage', 72, 31, {}, [10, 8]);
 o('npc', 'semyonych', 64.5, 49.2, { title: 'Вахтёр Семёныч', kind: 'semyon', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 180, lines: 'Пропуск!|Без пропуска не пущу. Даже конец света.' });
 prop('terminal', 69, 47.2); o('use', 'gate_panel', 69, 48, { hint: 'открыть ворота завода' });

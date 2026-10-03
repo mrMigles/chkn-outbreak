@@ -1,4 +1,4 @@
-export type EnemyType = 'normal' | 'fast' | 'fat' | 'spitter' | 'armored' | 'exploder' | 'chick' | 'boss' | 'jumper';
+export type EnemyType = 'normal' | 'fast' | 'fat' | 'spitter' | 'armored' | 'exploder' | 'chick' | 'boss' | 'jumper' | 'sprout' | 'gmo';
 
 export interface EnemyDef {
   type: EnemyType;
@@ -52,8 +52,18 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     type: 'jumper', name: 'Прыгун-курьер', hp: 95, speed: 175, radius: 16, damage: 14, attackRange: 34, attackCd: 0.8, windup: 0.18,
     armor: 0, mass: 1.3, sight: 760, score: 30, sprite: ['ck_fast'], scale: 1,
   },
+  // D72: floor 8, room 87 — Вершков's potatoes come alive: half chicken, half plant (slow, a bit sturdier)
+  sprout: {
+    type: 'sprout', name: 'Ботвопетух', hp: 58, speed: 100, radius: 16, damage: 11, attackRange: 34, attackCd: 0.9, windup: 0.25,
+    armor: 0, mass: 1.2, sight: 640, score: 15, sprite: ['ck_normal_a'], scale: 1,
+  },
+  // D72: the lab's genetically modified rooster — big, tough, hits hard
+  gmo: {
+    type: 'gmo', name: 'ГМО-петух', hp: 380, speed: 112, radius: 22, damage: 24, attackRange: 44, attackCd: 1.1, windup: 0.32,
+    armor: 0.2, mass: 3.5, sight: 700, score: 60, sprite: ['ck_fat'], scale: 1,
+  },
   boss: {
-    type: 'boss', name: 'Генеральный Петух', hp: 9000, speed: 95, radius: 62, damage: 35, attackRange: 110, attackCd: 1.4, windup: 0.5,
+    type: 'boss', name: 'Генеральный Петух', hp: 9000, speed: 95, radius: 66, damage: 35, attackRange: 110, attackCd: 1.4, windup: 0.5,
     armor: 0, mass: 40, sight: 2000, score: 1000, sprite: ['boss'], scale: 1,
   },
 };

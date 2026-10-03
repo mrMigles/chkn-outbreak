@@ -14,16 +14,19 @@ export interface Look {
   legs: LegsId;
   legsColor: string;
   acc: AccId;
+  /** D72: how this person looks once mutated — a potato-plant chicken, a GMO rooster, the fattened CEO. */
+  mut?: MutId;
 }
+export type MutId = 'plant' | 'gmo' | 'fat';
 
 export const HAIR = {
   parted: 'Пробор', buzzcut: 'Ёжик', spiked: 'Иглы', messy: 'Лохматый', curly: 'Кудри', afro: 'Афро', balding: 'Лысина',
   bob: 'Каре', pixie: 'Пикси', long: 'Длинные', ponytail: 'Хвост', bangslong: 'Чёлка', lob: 'Удлинённое каре', page: 'Паж',
 } as const;
 export type HairId = keyof typeof HAIR;
-export const TOPS = { shirt: 'Рубашка', long: 'Лонгслив', tee: 'Футболка', blouse: 'Блузка', jacket: 'Пиджак', vest: 'Жилет', plate: 'Броня', leather: 'Кожанка', apron: 'Фартук' } as const;
+export const TOPS = { shirt: 'Рубашка', long: 'Лонгслив', tee: 'Футболка', blouse: 'Блузка', jacket: 'Пиджак', vest: 'Жилет', plate: 'Броня', leather: 'Кожанка', apron: 'Фартук', tank: 'Майка' } as const;
 export type TopId = keyof typeof TOPS;
-export const LEGS = { pants: 'Брюки', formal: 'Классика', skirt: 'Юбка' } as const;
+export const LEGS = { pants: 'Брюки', formal: 'Классика', skirt: 'Юбка', shorts: 'Шорты' } as const;
 export type LegsId = keyof typeof LEGS;
 export const ACCS = { none: 'Нет', glasses: 'Очки', beard: 'Борода', mustache: 'Усы' } as const;
 export type AccId = keyof typeof ACCS;
@@ -42,7 +45,7 @@ export const CLOTH_COLORS = ['f2f0ea', '2e3440', '5f86a8', '3b5f8a', 'b04a42', '
 export const LEGS_COLORS = ['2b2e36', '485366', '3b4f7a', '6b5845', 'a39a86', '1f1f24', '6d2f35', '50613f'];
 
 export function encodeLook(l: Look): string {
-  return [l.body + (l.old ? 'o' : ''), l.skin, l.hair, l.hairColor, l.top, l.topColor, l.legs, l.legsColor, l.acc].join('.');
+  return [l.body + (l.old ? 'o' : ''), l.skin, l.hair, l.hairColor, l.top, l.topColor, l.legs, l.legsColor, l.acc, ...(l.mut ? [l.mut] : [])].join('.');
 }
 
 export function decodeLook(s: string): Look | null {
@@ -55,11 +58,12 @@ export function decodeLook(s: string): Look | null {
     body, old: p[0].endsWith('o'), skin: Math.max(0, Math.min(SKIN_TONES.length - 1, Number(p[1]) | 0)),
     hair: p[2] as HairId, hairColor: hex(p[3], HAIR_COLORS[1]), top: p[4] as TopId, topColor: hex(p[5], CLOTH_COLORS[0]),
     legs: p[6] as LegsId, legsColor: hex(p[7], LEGS_COLORS[0]), acc: (p[8] in ACCS ? p[8] : 'none') as AccId,
+    ...(['plant', 'gmo', 'fat'].includes(p[9]) ? { mut: p[9] as MutId } : {}),
   };
 }
 
-const L = (body: string, skin: number, hair: HairId, hc: string, top: TopId, tc: string, legs: LegsId, lc: string, acc: AccId = 'none') =>
-  [body, skin, hair, hc, top, tc, legs, lc, acc].join('.');
+const L = (body: string, skin: number, hair: HairId, hc: string, top: TopId, tc: string, legs: LegsId, lc: string, acc: AccId = 'none', mut?: MutId) =>
+  [body, skin, hair, hc, top, tc, legs, lc, acc, ...(mut ? [mut] : [])].join('.');
 
 /** Named looks: story NPCs, player defaults and legacy Kenney character keys. */
 export const LOOK_PRESETS: Record<string, string> = {
@@ -107,6 +111,12 @@ export const LOOK_PRESETS: Record<string, string> = {
   blogger: L('m', 2, 'spiked', 'd9a441', 'tee', 'cf6f9f', 'pants', '3b4f7a', 'glasses'),
   valya: L('f', 1, 'page', '7b4a2a', 'vest', 'b04a42', 'skirt', '485366'),
   courier: L('m', 0, 'messy', '4a3121', 'jacket', 'd9a33a', 'pants', '2b2e36'),
+  // D72: floor 7 (Лера at the ping-pong table, Катя in a swimsuit), floor 8 (Вершков the gardener), the city
+  lera: L('f', 0, 'ponytail', '2a2120', 'tee', '3b5f8a', 'pants', '3b4f7a', 'glasses'),
+  katya: L('f', 0, 'long', 'e8d39a', 'tank', 'cf6f9f', 'shorts', 'cf6f9f'),
+  vershkov: L('mo', 0, 'messy', 'c9c9c9', 'vest', '6d8b4e', 'pants', '6b5845', 'beard', 'plant'),
+  litovets: L('m', 0, 'buzzcut', 'e8d39a', 'leather', '1f1f24', 'pants', '3b4f7a'),
+  tolik: L('m', 1, 'balding', '4a3121', 'tank', 'f2f0ea', 'pants', '485366', 'mustache'),
   // legacy Kenney keys
   survivor: L('m', 0, 'messy', '4a3121', 'tee', '5f86a8', 'pants', '2b2e36'),
   soldier: L('m', 1, 'buzzcut', '2a2120', 'jacket', '50613f', 'pants', '50613f'),
@@ -156,7 +166,10 @@ export function enemyLook(type: EnemyType, seed: number): string {
     case 'armored': return encodeLook({ ...base, body: 'm', old: false, top: 'plate', topColor: 'a39a86', legs: 'pants', legsColor: '1f1f24', acc: 'none' });
     case 'exploder': return encodeLook({ ...base, body: 'm', top: 'apron', topColor: '9be22e', legs: 'pants', acc: 'glasses' });
     case 'jumper': return encodeLook({ ...base, body: 'm', old: false, top: 'tee', topColor: ['d9a33a', '3c7f9a', 'b04a42'][seed % 3], legs: 'pants', legsColor: '2b2e36', acc: 'none' });
-    case 'boss': return L('big', 0, 'balding', 'c2452d', 'jacket', '1f2a3a', 'formal', '1f1f24');
+    // D72: the fattened yellow CEO rooster
+    case 'boss': return L('big', 0, 'balding', 'c2452d', 'jacket', '1f2a3a', 'formal', '1f1f24', 'none', 'fat');
+    case 'sprout': return encodeLook({ ...base, old: false, top: base.body === 'f' ? 'blouse' : 'vest', topColor: ['6d8b4e', '50613f', '7b6a58'][seed % 3], legs: 'pants', legsColor: '6b5845', mut: 'plant' });
+    case 'gmo': return encodeLook({ ...base, body: 'big', old: false, top: 'shirt', topColor: 'f2f0ea', legs: 'pants', legsColor: '485366', acc: 'none', mut: 'gmo' });
     default: return encodeLook(base);
   }
 }

@@ -28,6 +28,15 @@ function objective(w: World) {
     w.setObjective(text, solo ? 'lock_w' : left.length ? left : ['lock_w', 'lock_e']);
     return;
   }
+  if (!w.flags.denOpen) {
+    // D72: the den has Валера's card reader; his pass is in room 87 with Вершков
+    const card = w.pickups.find(k => k.key === 'valera_pass');
+    const v = w.enemies.find(e => e.appearance?.npcId === 'vershkov');
+    if (card) w.setObjective('Подобрать пропуск Валеры', { x: card.x, y: card.y });
+    else if (v) w.setObjective('Вершков пустил корни! Пропуск Валеры — у него', { x: v.x, y: v.y });
+    else w.setObjective('Серверная — на пропуске Валеры. Пропуск в комнате 87 у Вершкова (юго-запад)', 'room87');
+    return;
+  }
   if (!w.flags.breaker) {
     w.setObjective(w.flags.denSeen ? 'Включить рубильник на стене серверной' : 'В серверную: найти щиток этажа', w.flags.denSeen ? 'breaker' : 'den');
     return;
@@ -58,8 +67,9 @@ function pull(w: World, id: 'lock_w' | 'lock_e', who: string) {
     w.openDoor('dark_door');
     w.award('two_keys');
     w.scare('flicker', w.object('dark_door')!.cx, w.object('dark_door')!.cy);
-    w.msg('ДВЕРЬ В СЕРВЕРНУЮ ОТКРЫТА', 'Два ключа, как в фильмах про ракеты', 3);
-    w.say('radio', 'Неля: Щёлкнуло! Серверная по центру, на север от коридора. Валера там. Он… разговаривает.', 5);
+    w.msg('КОРИДОР К СЕРВЕРНОЙ ОТКРЫТ', 'Два ключа, как в фильмах про ракеты', 3);
+    w.say('radio', w.flags.denOpen ? 'Неля: Щёлкнуло! Серверная по центру, на север от коридора. Валера там. Он… разговаривает.'
+      : 'Неля: Щёлкнуло! Но на самой серверной — картридер. Пропуск Валера вечно забывает у Вершкова, в 87-й. Они там… рассаду меняют.', 6);
     // Валера knows: a few of his pets come down the corridor
     w.spawnWave('dark', ['fast', 'normal', 'normal', 'fast'], 6 + 2 * Math.max(0, team(w) - 1), .5, true, 'dark', true);
     objective(w);
@@ -97,8 +107,31 @@ function horror(w: World) {
   if (w.rng.chance(.35)) w.after(1.2, () => w.scare('flicker', p.x, p.y));
 }
 
+/** D72: room 87 — the potatoes wake up, Вершков takes root. */
+function harvest(w: World, by: string) {
+  if (w.flags.farm) return;
+  w.flags.farm = true;
+  const n = w.npc('vershkov')!;
+  w.say(n.id, 'Тихо! Не топчите! Экспериментальный картофель «Синеглазка-КУКАРЕКС». Поливаю кукарексом — прёт как на дрожжах!', 5);
+  w.moment(by, 'Зашёл(ла) в комнату 87 посмотреть на картошку');
+  w.after(4.5, () => {
+    w.scare('flicker', n.x, n.y);
+    w.say(n.id, 'Мои хорошие… вы чего шевелитесь? Это же… ботва… с КЛЮВОМ?!', 3.5);
+  });
+  w.after(6.5, () => {
+    const beds = w.objects('prop', 'potato_bed');
+    for (const d of [...w.dprops]) if (d.name === 'potato_bed' || d.name === 'tomato_plant') w.damageProp(d, 9999, '');
+    const pts = beds.flatMap(b => [{ x: b.cx - 30, y: b.cy + 10 }, { x: b.cx + 30, y: b.cy + 10 }]);
+    const n2 = Math.min(pts.length, 9 + 2 * (w.players.length - 1));
+    for (let i = 0; i < n2; i++) w.after(i * 0.18, () => w.spawnEnemy('sprout', pts[i].x, pts[i].y, { how: 'rise', aggro: true, tag: 'farm' }));
+    w.scare('jump', n.x, n.y);
+  });
+  w.after(8.5, () => { w.say(n.id, 'Я… УКОРЕНЯЮСЬ! КО-КО-КОМПОСТ!', 3); w.infect(n, 'sprout', 'vershkov'); });
+  objective(w);
+}
+
 const office8: LevelScript = {
-  id: 'office8', title: 'Этаж 8. Тёмная тема',
+  id: 'office8', title: 'Этаж 8. Тёмная тема', rev: 2,
   subtitle: 'Здесь работает человек, который не любит свет',
   next: 'office11', enemyDamage: .8, enemyHp: .9,
 
@@ -147,6 +180,13 @@ const office8: LevelScript = {
       const i = w.flags.callLine ?? 0;
       w.say(n.id, lines[i % lines.length], 3);
       w.flags.callLine = i + 1; w.flags.callAt = w.time + 3.4;
+    }
+    const vr = w.enemies.find(e => e.appearance?.npcId === 'vershkov');
+    if (vr && !w.flags.vershkovScaled) {
+      // D72: not a hard fight — slow, plants seedlings (chicks), a lunge now and then
+      w.flags.vershkovScaled = true;
+      vr.hp = vr.maxHp = 850 * (1 + .4 * (w.players.length - 1)); vr.speedMul = .95; vr.abilityCd = 5;
+      w.setBoss(vr, 'Вершков · ботва-петух');
     }
     const v = valeraEnemy(w);
     if (v && !w.flags.valeraScaled) {
@@ -200,6 +240,7 @@ const office8: LevelScript = {
     }
     if (id === 'west' && !w.flags.westSaid) { w.flags.westSaid = true; w.say(by.id, 'Шкафы, папки и красные глаза между ними. Тихо…', 3); }
     if (id === 'east' && !w.flags.eastSaid) { w.flags.eastSaid = true; w.say(by.id, 'Отдел продаж. Даже в темноте пахнет дедлайном.', 3); }
+    if (id === 'room87') harvest(w, by.id);
     if (id === 'den' && w.flags.doorOpen && !w.flags.denSeen) {
       w.flags.denSeen = true; w.flags.callAt = w.time + 0.5;
       objective(w);
@@ -226,6 +267,7 @@ const office8: LevelScript = {
 
   onNpcUse(w, n) {
     if (n.id === 'valera') { w.say(n.id, w.flags.denSeen ? 'Тсс! У меня созвон! Артём, тебя не слышно!' : 'Кто здесь?', 2.5); return true; }
+    if (n.id === 'vershkov') { w.say(n.id, 'Не светите на рассаду! У неё фотопериод!', 2.5); return true; }
     if (n.id === 'nelya' && !w.flags.valeraDead) {
       w.say(n.id, w.flags.nelyaHelps ? 'Я на связи! Иди к своему размыкателю.' : 'Я сторожу лифт. Разделитесь и возьмите оба размыкателя!', 3);
       return true;
@@ -240,7 +282,25 @@ const office8: LevelScript = {
     objective(w);
   },
 
+  onPickup(w, k, by) {
+    if (k.key !== 'valera_pass' || w.flags.denOpen) return;
+    w.flags.denOpen = true;
+    w.openDoor('den_door');
+    w.say(by.id, 'Пропуск Валеры. На обороте: «Если нашли — НЕ ВКЛЮЧАЙТЕ СВЕТ».', 3.5);
+    w.msg('ПРОПУСК ВАЛЕРЫ', 'Картридер серверной откроется сам', 3);
+    objective(w);
+  },
+
   onKill(w, e) {
+    if (e.appearance?.npcId === 'vershkov' && !w.flags.vershkovDead) {
+      w.flags.vershkovDead = true;
+      w.award('harvest');
+      w.addPickup('keycard', e.x, e.y, { key: 'valera_pass', ttl: -1 });
+      w.say('radio', 'Неля: Вершков… Он всегда говорил, что картошка — это любовь. Пропуск Валеры у него выпал — берите!', 5);
+      w.msg('УРОЖАЙ СОБРАН', 'Вершков ушёл в компост', 3);
+      objective(w);
+      return;
+    }
     if (e.appearance?.npcId !== 'valera' || w.flags.valeraDead) return;
     w.flags.valeraDead = true;
     w.cancelWaves();

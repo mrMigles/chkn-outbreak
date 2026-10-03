@@ -14,6 +14,9 @@ p.rect(51, 28, 52, 28, 'c');   // east wing door gap
 p.rect(29, 17, 32, 28, 'c');   // north corridor to the den
 p.rect(25, 3, 36, 16, 'd');    // Валера's den («серверная тёмной темы»)
 p.rect(38, 3, 42, 10, 'l');    // service lift
+// D72: room 87 — Вершков's potato farm under red grow lamps (south of the west corridor); Валера's pass is there
+p.rect(4, 34, 22, 43, 'h');
+p.rect(12, 32, 13, 33, 'c');
 // archive shelves (west) and glass meeting rooms (east)
 for (const y of [6, 10, 14]) { p.rect(4, y, 9, y, '#'); p.rect(15, y, 20, y, '#'); }
 p.rect(44, 13, 51, 13, '#'); p.rect(54, 13, 60, 13, '#'); p.rect(51, 8, 51, 12, '#'); p.rect(54, 8, 54, 12, '#');
@@ -23,6 +26,8 @@ p.rect(29, 21, 32, 21, 'D');  // the double-locked door to the den
 p.set(37, 6, 'S'); p.set(37, 7, 'S'); // den → service lift (opens when the light is back)
 p.rect(12, 28, 13, 28, 'W'); p.rect(51, 28, 52, 28, 'E');
 p.rect(30, 33, 33, 33, 'L');
+p.rect(12, 33, 13, 33, 'R');
+p.rect(29, 17, 32, 17, 'V');  // D72: the den itself: Валера's card reader
 
 const objects: ObjSpec[] = [];
 const o = (type: string, name: string, x: number, y: number, props?: ObjSpec['props'], size?: [number, number]) => objects.push({ type, name, at: [x, y], props, size });
@@ -95,6 +100,17 @@ label('СЕРВЕРНАЯ ТЁМНОЙ ТЕМЫ', 30.5, 14.6, 18);
 note(32.5, 8.6, 'На мониторе: «Не включайте свет. У меня мигрень, дедлайн и тёмная тема». Ниже: «Артём, перезвони»');
 o('pickup', 'ammo', 26.5, 12.5); o('pickup', 'health', 35.5, 12.5);
 
+// ---- D72: room 87, «агрокомната» Вершкова: potato beds, tomatoes on stakes, red grow lamps
+label('КОМНАТА 87 · ВЕРШКОВ', 12.5, 34.6, 16);
+for (const y of [37, 40]) for (const x of [6, 9.5, 15.5, 19]) prop('potato_bed', x, y);
+for (const x of [5, 8, 17, 20.5]) prop('tomato_plant', x, 35.1);
+for (const [x, y] of [[7.8, 38.5], [17.3, 38.5], [7.8, 41.5], [17.3, 41.5]]) { prop('grow_lamp', x, y); light(x, y - .6, 'lamp', 'ff2a5a', 200, { flicker: .08 }); }
+prop('watering_can', 21.5, 42.6); prop('desk', 21, 36.4); prop('office_chair', 21, 37.6);
+o('npc', 'vershkov', 20, 37.6, { reach: 130, title: 'Вершков · агроном отдела', mode: 'idle', hp: 200, story: true, essential: true, untargetable: true, angle: 180 });
+o('trigger', 'room87', 4, 35, {}, [19, 9]);
+note(12.5, 42.8, 'Табличка: «Экспериментальный картофель “Синеглазка-КУКАРЕКС”. Полив — строго по графику. Не светить!»');
+o('pickup', 'health', 4.6, 42.6); o('pickup', 'ammo', 12.5, 36);
+
 // ---- service lift
 prop('elevator', 40, 3.6);
 o('trigger', 'lift8', 38, 3, { once: false, all: true }, [5, 8]);
@@ -105,6 +121,9 @@ const level: LevelSource = {
   legend: {
     '#': { wall: true }, l: { floor: [511] }, c: { floor: [511] }, a: { floor: [511] }, s: { floor: [511] }, d: { floor: [511] },
     D: { floor: [511], door: { id: 'dark_door', locked: 'script', theme: 'dark' } },
+    V: { floor: [511], door: { id: 'den_door', locked: 'valera_pass', theme: 'dark' } },
+    R: { floor: [511], door: { id: 'door87', theme: 'dark' } },
+    h: { floor: [515] },
     S: { floor: [511], door: { id: 'service', locked: 'script', theme: 'dark' } },
     W: { floor: [511], door: { id: 'west_door', theme: 'dark' } },
     E: { floor: [511], door: { id: 'east_door', theme: 'dark' } },

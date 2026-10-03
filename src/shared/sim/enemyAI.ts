@@ -14,11 +14,19 @@ interface Elite {
   damage: number; attackRange: number; attackCd: number; windup: number;
   charge: { cd: number; wind: number; run: number; speed: number; dmg: number; line: string };
   hitRun?: number; blind?: boolean; eggs?: { cd: number; n: number; line: string };
+  /** D72: Валера blinks through the dark next to his target (never while a flashlight holds him) */
+  blink?: boolean;
+  /** D72: Толик keeps his distance and lobs beer bottles that shatter where they land */
+  bottles?: { cd: number; line: string };
 }
 export const ELITES: Record<string, Elite> = {
   root_manager: { damage: 42, attackRange: 60, attackCd: .8, windup: .35, charge: { cd: 6.5, wind: .6, run: .75, speed: 460, dmg: 48, line: 'ROOT идёт без согласования!' } },
-  valera: { damage: 24, attackRange: 50, attackCd: .75, windup: .28, charge: { cd: 7.5, wind: .55, run: .6, speed: 540, dmg: 28, line: 'Ctrl+Alt+КО-КО!' }, hitRun: 2.2, blind: true },
+  valera: { damage: 24, attackRange: 50, attackCd: .75, windup: .28, charge: { cd: 7.5, wind: .55, run: .6, speed: 540, dmg: 28, line: 'Ctrl+Alt+КО-КО!' }, hitRun: 2.2, blind: true, blink: true },
   director: { damage: 34, attackRange: 70, attackCd: 1.05, windup: .42, charge: { cd: 7, wind: .75, run: .8, speed: 470, dmg: 40, line: 'Это не обсуждается!' }, eggs: { cd: 9, n: 5, line: 'Делегирую!' } },
+  // D72: floor 7 «Катя» (stronger than a chicken, gentler than the manager), floor 8 Вершков, street 2 Толик
+  katya: { damage: 20, attackRange: 52, attackCd: .7, windup: .25, charge: { cd: 6, wind: .5, run: .55, speed: 520, dmg: 26, line: 'ДЕБАГ! ДЕБАГ!' } },
+  vershkov: { damage: 16, attackRange: 52, attackCd: 1, windup: .35, charge: { cd: 9, wind: .7, run: .6, speed: 420, dmg: 22, line: 'Окучу!' }, eggs: { cd: 8.5, n: 3, line: 'Посадка! Всходите!' } },
+  tolik: { damage: 22, attackRange: 52, attackCd: .9, windup: .3, charge: { cd: 11, wind: .7, run: .55, speed: 430, dmg: 26, line: 'Э, слышь! Ко мне!' }, bottles: { cd: 1.9, line: 'Лови, пивасик!' } },
 };
 
 const losByWorld = new WeakMap<World, Map<number, { t: number; ok: boolean }>>();
@@ -133,6 +141,42 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
       if (lit && !was && w.rng.chance(.25)) w.say(String(e.id), w.rng.pick(['А-А-А! СВЕТ!', 'Убери фонарик! Глаза!', 'Тёмная тема! ВЕРНИТЕ ТЁМНУЮ ТЕМУ!']), 1.5);
       // held in a beam for a while: it bolts back into the dark
       if (e.litT > 1.1 && e.state !== 'charge' && !(e.fleeT ?? 0)) { e.litT = 0; e.fleeT = 1.5; if (w.rng.chance(.4)) w.say(String(e.id), w.rng.pick(['Не поймаешь!', 'Я в тёмном режиме!', 'Ко-ко… офлайн!']), 1.4); }
+    }
+    // D72: in the dark (no beam on him) Валера vanishes and reappears beside his prey with a lunge
+    if (elite.blink && (w.light ?? -1) >= 0.5 && !((e.blindT ?? 0) > 0) && e.state !== 'charge' && !((e.fleeT ?? 0) > 0)) {
+      e.blinkT = (e.blinkT ?? 2.5) - dt;
+      if (e.blinkT <= 0 && td < 1000) {
+        e.blinkT = 3 + w.rng.next() * 1.8;
+        for (let k = 0; k < 8; k++) {
+          const a = w.rng.next() * TAU, r = 150 + w.rng.next() * 80;
+          const x = t.x + Math.cos(a) * r, y = t.y + Math.sin(a) * r;
+          if (w.map.blockedAt(x, y, 22) || !w.map.lineOfSight(t.x, t.y, x, y, false)) continue;
+          w.scare('blink', e.x, e.y);
+          e.x = x; e.y = y; e.vx = 0; e.vy = 0;
+          e.state = 'charge'; e.ability = 'charge_wind'; e.t = 0.5; e.angle = Math.atan2(t.y - y, t.x - x);
+          w.scare('eyes', x, y);
+          if (w.rng.chance(.35)) w.say(String(e.id), w.rng.pick(['Я в каждом углу.', 'Тёмная тема — везде.', 'Ку-ку. То есть КО-КО.', 'Свет выключен. Я — включён.']), 1.6);
+          return;
+        }
+      }
+    }
+    if (elite.bottles && e.state !== 'charge') {
+      // keep a throwing distance; lob a bottle at the target's feet (it flies over heads and shatters there)
+      e.blinkT = (e.blinkT ?? 1.5) - dt;
+      if (e.blinkT <= 0 && td > 90 && td < 560 && los(w, e, t)) {
+        const rage = e.hp < e.maxHp * 0.5;
+        e.blinkT = elite.bottles.cd * (rage ? 0.8 : 1) + w.rng.next() * 0.6;
+        if (w.rng.chance(.3)) w.say(String(e.id), w.rng.pick([elite.bottles.line, 'Ик!', 'Перекур окончен!', 'Кто моё пиво трогал?!', 'Пустая тара — сдаётся!']), 1.5);
+        const n = rage ? 3 : 1;
+        for (let i = 0; i < n; i++) {
+          const tx = t.x + (i ? (w.rng.next() - 0.5) * 140 : 0), ty = t.y + (i ? (w.rng.next() - 0.5) * 140 : 0);
+          const d = Math.max(60, Math.hypot(tx - e.x, ty - e.y)), ttl = Math.min(1.3, Math.max(0.45, d / 420));
+          w.addProjectile('bottle', e.x, e.y - 10, (tx - e.x) / ttl, (ty - e.y) / ttl, String(e.id), 'chicken', 14 * (w.script.enemyDamage ?? 1), ttl);
+        }
+        w.emit({ e: 'swing', id: e.id, x: Math.round(e.x), y: Math.round(e.y), a: Math.atan2(t.y - e.y, t.x - e.x) });
+        return;
+      }
+      if (td < 170 && e.cd > 0) { steer(w, e, t, td, ENEMIES[e.type].speed * e.speedMul, dt, true); return; }
     }
     if ((e.fleeT ?? 0) > 0 && e.state !== 'charge') {
       // hit-and-run: back into the dark, then come again
@@ -280,7 +324,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
     for (const p of w.players) {
       if (p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < def.radius + 20 && !(p as any)._bossHit) {
         (p as any)._bossHit = true;
-        w.damagePlayer(p, w.rules >= 5 ? 24 : 30, e.x, e.y);
+        w.damagePlayer(p, w.rules >= 7 ? 26 : w.rules >= 5 ? 24 : 30, e.x, e.y);
       }
     }
     for (const o of w.enemies) if (o !== e && dist(o.x, o.y, e.x, e.y) < def.radius + 10) w.damageEnemy(o, 999, e.angle, 600, '', 'melee');
@@ -300,7 +344,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
       for (const p of w.players) {
         if (p.state !== 'alive') continue;
         const d = dist(p.x, p.y, e.x, e.y);
-        if (d < def.attackRange + 30 && Math.abs(angleDiff(e.angle, Math.atan2(p.y - e.y, p.x - e.x))) < 1.2) w.damagePlayer(p, w.rules >= 5 ? 28 : def.damage, e.x, e.y);
+        if (d < def.attackRange + 30 && Math.abs(angleDiff(e.angle, Math.atan2(p.y - e.y, p.x - e.x))) < 1.2) w.damagePlayer(p, w.rules >= 7 ? 30 : w.rules >= 5 ? 28 : def.damage, e.x, e.y);
       }
     }
     return;
@@ -329,7 +373,7 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
       for (let k = 0; k < 2; k++) w.after(k * 0.45, () => {
         for (let i = 0; i < n; i++) {
           const a = (i / n) * TAU + k * 0.17;
-          w.addProjectile('spit', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * 330, Math.sin(a) * 330, String(e.id), 'chicken', w.rules >= 5 ? 9 : 12, 2.2);
+          w.addProjectile('spit', e.x + Math.cos(a) * 60, e.y + Math.sin(a) * 60, Math.cos(a) * 330, Math.sin(a) * 330, String(e.id), 'chicken', w.rules >= 7 ? 10 : w.rules >= 5 ? 9 : 12, 2.2);
         }
       });
     } else if (ab === 'summon') {

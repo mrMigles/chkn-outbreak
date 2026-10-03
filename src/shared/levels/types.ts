@@ -19,7 +19,9 @@ export interface LevelScript {
   /** D69: first floor of a chapter: «Глава 2. Город» above the title card. */
   chapter?: string;
   /** D69: last floor of a chapter: a chapter-complete panel and an achievement for everyone. */
-  chapterEnd?: { title: string; text: string; award?: AchievementKey };
+  chapterEnd?: { title: string; text: string; award?: AchievementKey; chapter?: string };
+  /** D72: map/script revision. A room save made on an older revision restarts this floor (with its entry loadout). */
+  rev?: number;
   onStart?(w: World): void;
   onTick?(w: World, dt: number): void;
   onTrigger?(w: World, id: string, by: Player): void;

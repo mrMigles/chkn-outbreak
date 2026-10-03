@@ -65,6 +65,8 @@ export class GameScene extends Phaser.Scene {
   pickups = new Map<number, Phaser.GameObjects.Image>();
   pickupGlows = new Map<number, Phaser.GameObjects.Image>();
   private pingPong?: { ball: Phaser.GameObjects.Rectangle; x: number; y: number };
+  private vehicles = new Map<number, Phaser.GameObjects.Image>();
+  private engineAt = 0;
   projs = new Map<number, Phaser.GameObjects.Image>();
   doors = new Map<string, Phaser.GameObjects.Image[]>();
   barrels = new Map<number, Phaser.GameObjects.Image>();
@@ -109,6 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.onEnd = data.onEnd;
     this.players = new Map(); this.enemies = new Map(); this.npcs = new Map(); this.pickups = new Map(); this.pickupGlows = new Map();
     this.pingPong = undefined;
+    this.vehicles = new Map();
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
     this.wallFaces = []; this.fadeProps = []; this.introState = 'wait'; this.cineFocus = null;
@@ -221,7 +224,8 @@ export class GameScene extends Phaser.Scene {
     const btn = this.hud.el.querySelector<HTMLElement>('.hud-weapon')!;
     let timer = 0, picker: HTMLElement | null = null, chosen = -1;
     const close = () => { picker?.remove(); picker = null; btn.classList.remove('held'); };
-    const itemAt = (x: number, y: number) => (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('.wp-item');
+    // D72 (issue #3): the tiles live inside the HUD (pointer-events: none for every child) — hit-test by their rectangles
+    const itemAt = (x: number, y: number) => [...(picker?.querySelectorAll<HTMLElement>('.wp-item') ?? [])].find(el => { const r = el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
     const mark = (el: HTMLElement | null | undefined) => { picker?.querySelectorAll('.wp-item').forEach(q => q.classList.toggle('hover', q === el)); chosen = el ? Number(el.dataset.i) : -1; };
     const open = () => {
       const me = this.session.view.players.find(p => p.id === this.session.myId);
@@ -234,7 +238,12 @@ export class GameScene extends Phaser.Scene {
         const a = me.ammo[w], def = WEAPONS[w];
         return `<div class="wp-item ${i === me.cur ? 'cur' : ''}" data-i="${i}"><i style="background-image:url(${this.hud.icons['w_' + w] ?? ''})"></i><b>${def.name}</b><span>${a ? a.mag + (a.reserve >= 0 ? ' / ' + a.reserve : ' / ∞') : ''}</span></div>`;
       }).join('');
-      picker.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); const it = itemAt(e.touches[0].clientX, e.touches[0].clientY); if (it) { this.input2.state.weaponSlot = Number(it.dataset.i); close(); } else close(); }, { passive: false });
+      // a tap on a tile selects it on release (touchend), so the touch is not stolen by the game's sticks
+      let tapped: HTMLElement | undefined;
+      picker.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); tapped = itemAt(e.touches[0].clientX, e.touches[0].clientY); mark(tapped); }, { passive: false });
+      picker.addEventListener('touchmove', (e) => { e.preventDefault(); e.stopPropagation(); tapped = itemAt(e.touches[0].clientX, e.touches[0].clientY); mark(tapped); }, { passive: false });
+      picker.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); if (tapped) { haptic('hit'); this.input2.state.weaponSlot = Number(tapped.dataset.i); } close(); }, { passive: false });
+      picker.addEventListener('click', (e) => { const r = e as MouseEvent; const it = itemAt(r.clientX, r.clientY); if (it) this.input2.state.weaponSlot = Number(it.dataset.i); close(); });
       this.hud.el.appendChild(picker);
     };
     btn.addEventListener('touchstart', (e) => {
@@ -277,7 +286,7 @@ export class GameScene extends Phaser.Scene {
     const v = this.session.view;
     for (const n of v.npcs) { lookTexture(this, n.kind); lookTexture(this, n.kind, true); }
     for (const p of v.players) lookTexture(this, p.look || 'p' + (p.slot % 4));
-    const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'jumper'] as const;
+    const types = ['normal', 'fast', 'fat', 'spitter', 'armored', 'exploder', 'jumper', ...(['office8'].includes(this.session.levelId) ? ['sprout'] as const : []), ...(['lab'].includes(this.session.levelId) ? ['gmo'] as const : [])] as const;
     for (const type of types) for (let i = 0; i < LOOK_POOL; i++) lookTexture(this, enemyLookKey({ type, id: i, appearance: undefined }), true);
     if (this.session.levelId !== 'office') for (const kind of ['manBlue', 'worker', 'arkady', 'guard', 'scientist']) lookTexture(this, kind, true);
     if (this.session.levelId === 'boss') lookTexture(this, enemyLookKey({ type: 'boss', id: 0, appearance: undefined }), true);
@@ -677,6 +686,18 @@ export class GameScene extends Phaser.Scene {
       let ev = this.enemies.get(e.id);
       if (!ev) { ev = new EnemyView(this, e); this.enemies.set(e.id, ev); }
       ev.sync(e, e.x, e.y, dt, time);
+      const npcId = e.appearance?.npcId;
+      if (npcId === 'valera' && this.lighting.ambient > 0.5) {
+        // D72: in the dark Валера is only two red eyes — a beam (or standing right next to him) shows him
+        const seen = v.players.some(p => p.state === 'alive' && (dist(p.x, p.y, e.x, e.y) < 150 || (dist(p.x, p.y, e.x, e.y) < 560 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < 0.42)));
+        const a = seen ? 1 : 0.06;
+        ev.spr.setAlpha(a); ev.shadow.setAlpha(seen ? 0.28 : 0.04); ev.label?.setVisible(seen);
+      }
+      if (npcId === 'tolik' && Math.random() < dt * 9) {
+        // D72: Толик smokes — a grey cloud drifts up from him
+        const h = ev.scale * 46;
+        this.fx.high.emit({ frame: 'smoke', x: e.x + (Math.random() - 0.5) * 30, y: e.y - h + (Math.random() - 0.5) * 20, vx: (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 40, life: 1.4 + Math.random(), drag: 0.5, s0: 0.3, s1: 1.4, a0: 0.6, a1: 0, rot: Math.random() * 6, tint: 0xc8c4bc });
+      }
       if (this.redEyes) {
         ev.eyes(this, e, this.lighting.ambient, time);
         if (e.state === 'idle' && this.lighting.ambient > 0.5 && Math.abs(e.x - this.px) < 260 && Math.abs(e.y - this.py) < 260) nearSleeper = true;
@@ -702,17 +723,20 @@ export class GameScene extends Phaser.Scene {
     // pickups
     if (this.pingPong) {
       const { ball, x, y } = this.pingPong;
-      const playing = v.npcs.some(n => n.id === 'stas' && !n.rescued) && v.npcs.some(n => n.id === 'pasha' && !n.rescued);
+      const playing = v.npcs.some(n => n.id === 'lera' && !n.rescued) && v.npcs.some(n => n.id === 'pasha' && !n.rescued);
       ball.setVisible(playing).setPosition(x + Math.sin(time * 5) * 63, y - Math.abs(Math.cos(time * 5)) * 9);
     }
     const seenK = new Set<number>();
+    const mySlot = v.players.find(p => p.id === this.session.myId)?.slot ?? 0;
     for (const k of v.pickups) {
+      // D72: a gun or ammo this player already took from a shared spot is gone for them (not for teammates)
+      if (((k.ts ?? 0) >> mySlot) & 1) continue;
       seenK.add(k.id);
       let img = this.pickups.get(k.id);
       if (!img) {
-        const special = k.kind in BUFFS || k.kind === 'achievement';
-        img = k.kind === 'weapon' ? this.add.image(k.x, k.y, 'office25', 'gun_' + k.weapon).setDepth(7).setScale(1.2) : this.add.image(k.x, k.y, special ? 'office25' : 'chars', 'pk_' + k.kind).setDepth(7).setScale(special ? .65 : 1.1);
-        const tint = k.kind in BUFFS ? BUFFS[k.kind as BuffKind].color : k.kind === 'achievement' ? 0xffd65c : k.kind === 'health' ? 0xff5a5a : k.kind === 'armor' ? 0x5ab0ff : k.kind === 'weapon' ? 0xffd27a : k.kind === 'keycard' ? 0xffe14a : 0x9cff7a;
+        const special = k.kind in BUFFS || k.kind === 'achievement' || k.kind === 'doc';
+        img = k.kind === 'weapon' ? this.add.image(k.x, k.y, 'office25', 'gun_' + k.weapon).setDepth(7).setScale(1.2) : this.add.image(k.x, k.y, special ? 'office25' : 'chars', k.kind === 'doc' ? 'doc_form' : 'pk_' + k.kind).setDepth(7).setScale(k.kind === 'doc' ? 1 : special ? .65 : 1.1);
+        const tint = k.kind in BUFFS ? BUFFS[k.kind as BuffKind].color : k.kind === 'achievement' ? 0xffd65c : k.kind === 'health' ? 0xff5a5a : k.kind === 'armor' ? 0x5ab0ff : k.kind === 'weapon' ? (k.amount ? 0xff9a3c : 0xffd27a) : k.kind === 'keycard' ? 0xffe14a : k.kind === 'doc' ? 0xfff3c0 : 0x9cff7a;
         const glow = this.add.image(k.x, k.y, 'fx', 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(tint).setDepth(6).setScale(0.8).setAlpha(0.5);
         this.pickups.set(k.id, img); this.pickupGlows.set(k.id, glow);
       }
@@ -723,14 +747,38 @@ export class GameScene extends Phaser.Scene {
     }
     for (const [id, img] of this.pickups) if (!seenK.has(id)) { img.destroy(); this.pickupGlows.get(id)?.destroy(); this.pickups.delete(id); this.pickupGlows.delete(id); }
 
+    // D72: vehicles (street 1: the Lithuanian's getaway car)
+    const seenV = new Set<number>();
+    for (const veh of v.vehicles ?? []) {
+      seenV.add(veh.id);
+      const west = Math.cos(veh.angle) < -0.1;
+      const frame = west && this.textures.get('office25').has(veh.kind + '_l') ? veh.kind + '_l' : veh.kind;
+      let img = this.vehicles.get(veh.id);
+      if (!img) {
+        const meta = (artMeta.office25 as Record<string, { feetY: number }>)[veh.kind];
+        img = this.add.image(veh.x, veh.y, 'office25', frame);
+        img.setOrigin(0.5, meta ? meta.feetY / img.height : 0.85);
+        this.vehicles.set(veh.id, img);
+      }
+      if (img.frame.name !== frame) img.setFrame(frame);
+      const shake = veh.moving ? Math.sin(time * 60) * 1.2 : 0;
+      img.setPosition(veh.x, veh.y + 37 + shake).setDepth(worldDepth(veh.y + 37));
+      if (veh.moving) {
+        const back = west ? 1 : -1;
+        if (Math.random() < dt * 30) this.fx.high.emit({ frame: 'smoke', x: veh.x + back * 120, y: veh.y + 20, vx: back * 60, vy: -20, life: 0.7, drag: 2, s0: 0.3, s1: 1, a0: 0.5, a1: 0, rot: Math.random() * 6, tint: 0x9a948a });
+        if (this.time.now - this.engineAt > 260 && dist(veh.x, veh.y, this.px, this.py) < 1400) { this.engineAt = this.time.now; sfx.play('engine', { x: veh.x, y: veh.y, vol: 0.9 }); }
+      }
+    }
+    for (const [id, img] of this.vehicles) if (!seenV.has(id)) { img.destroy(); this.vehicles.delete(id); }
+
     // projectiles
     const seenR = new Set<number>();
     for (const pr of v.projectiles) {
       seenR.add(pr.id);
       let img = this.projs.get(pr.id);
       if (!img) {
-        const tex = pr.kind === 'egg' ? 'chars' : 'fx';
-        const frame = pr.kind === 'grenade' ? 'grenade' : pr.kind === 'spit' ? 'spit' : 'egg';
+        const tex = pr.kind === 'egg' ? 'chars' : pr.kind === 'bottle' ? 'office25' : 'fx';
+        const frame = pr.kind === 'grenade' ? 'grenade' : pr.kind === 'spit' ? 'spit' : pr.kind === 'bottle' ? 'bottle' : 'egg';
         img = this.add.image(pr.x, pr.y, tex, frame).setDepth(12).setScale(pr.kind === 'spit' ? 1.3 : 1);
         this.projs.set(pr.id, img);
       }
@@ -948,7 +996,7 @@ export class GameScene extends Phaser.Scene {
           fx.light(ev.x, ev.y - 40, 220, 0xffe0a0, 1, 0.35);
           fx.shake(0.12);
           sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1 }); sfx.play('spawn', { x: ev.x, y: ev.y, vol: 0.7 });
-          this.hud.toast(`${who} стал курицей!`);
+          this.hud.toast(`${who} — теперь курица!`);
         }
         break;
       }
@@ -1028,6 +1076,29 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (ev.k === 'spark') { this.fx.impact('wall', ev.x, ev.y - 40, -Math.PI / 2, 0xffe08a, true); sfx.play('spark', { x: ev.x, y: ev.y, vol: 0.8 }); return; }
+    // D72: grain for the grandma's flock, a feathery poof, Валера vanishing, the car breaking the fence, the engine
+    if (ev.k === 'grain') {
+      for (let i = 0; i < 14; i++) { const a = Math.random() * 6.28, sp = 40 + Math.random() * 120; this.fx.low.emit({ frame: 'shard', x: ev.x, y: ev.y - 30, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.5, life: 0.6, drag: 5, s0: 0.6, s1: 0.6, tint: 0xe8c64a, land: true, rot: Math.random() * 6 }); }
+      return;
+    }
+    if (ev.k === 'poof') {
+      for (let i = 0; i < 16; i++) { const a = Math.random() * 6.28, sp = 60 + Math.random() * 220; this.fx.high.emit({ frame: 'shard', x: ev.x, y: ev.y - 50, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80, life: 0.9, drag: 3, s0: 1, s1: 0.8, tint: 0xfff8e8, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 8 }); }
+      this.fx.spawnPuff(ev.x, ev.y - 30, 'egg');
+      if (near) sfx.play('squawk', { x: ev.x, y: ev.y, vol: 0.9, rate: 1.2 });
+      return;
+    }
+    if (ev.k === 'blink') {
+      for (let i = 0; i < 8; i++) { const a = Math.random() * 6.28; this.fx.high.emit({ frame: 'smoke', x: ev.x, y: ev.y - 40, vx: Math.cos(a) * 80, vy: Math.sin(a) * 50, life: 0.6, drag: 3, s0: 0.3, s1: 0.9, a0: 0.6, a1: 0, rot: Math.random() * 6, tint: 0x1a1c24 }); }
+      if (near) sfx.play('whoosh', { x: ev.x, y: ev.y, vol: 0.9, rate: 1.3 });
+      return;
+    }
+    if (ev.k === 'engine') { sfx.play('engine', { x: ev.x, y: ev.y, vol: 1 }); sfx.play('honk', { x: ev.x, y: ev.y, vol: 1 }); return; }
+    if (ev.k === 'crash') {
+      this.fx.boom(ev.x, ev.y, 90, 'barrel');
+      for (let i = 0; i < 18; i++) { const a = Math.random() * 6.28, sp = 120 + Math.random() * 320; this.fx.low.emit({ frame: 'shard', x: ev.x, y: ev.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6, drag: 4, s0: 1.2, s1: 1, tint: 0x8a8f99, land: true, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12 }); }
+      sfx.play('crash', { x: ev.x, y: ev.y, vol: 1 });
+      return;
+    }
     if (!near) return;
     if (ev.k === 'scream') { sfx.play('squawk', { x: ev.x, y: ev.y, vol: 1, rate: 0.55 }); this.fx.shake(0.25); return; }
     // jump: stinger, a red flash at the screen edges, shake, vibration

@@ -276,7 +276,14 @@ export class Fx {
     if (Math.random() < dt * 4) this.light(x, y, 200, 0xff8a30, 0.9, 0.3);
   }
 
-  splat(x: number, y: number, kind: 'spit' | 'egg' | 'grenade') {
+  splat(x: number, y: number, kind: 'spit' | 'egg' | 'grenade' | 'bottle') {
+    if (kind === 'bottle') {
+      // D72: a beer bottle shatters: brown glass, a splash of foam
+      this.decals.draw('fx', 'splat_2', x, y, rand(0, 6), 0.7, 0xe8c070, 0.7);
+      for (let i = 0; i < 10; i++) { const aa = rand(0, 6.28), sp = rand(80, 260); this.low.emit({ frame: 'shard', x, y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: 0.45, drag: 6, s0: 0.9, s1: 0.9, rot: rand(0, 6), vr: rand(-12, 12), tint: i % 3 ? 0x7a4a1a : 0xfff8e8, land: true }); }
+      sfx.play('glass', { x, y, vol: 0.9 });
+      return;
+    }
     if (kind === 'egg') {
       this.decals.draw('fx', 'splat_2', x, y, rand(0, 6), 0.8, 0xffd84a, 0.9);
       for (let i = 0; i < 6; i++) { const aa = rand(0, 6.28), sp = rand(60, 200); this.low.emit({ frame: 'shard', x, y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, life: 0.4, drag: 6, s0: 1, s1: 1, rot: rand(0, 6), vr: rand(-10, 10), tint: 0xfff8e8, land: true }); }

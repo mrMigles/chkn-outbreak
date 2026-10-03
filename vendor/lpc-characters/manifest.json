@@ -716,6 +716,27 @@
       "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/torso/aprons/apron/male/thrust/white.png"
     },
     {
+      "sha256": "753799FC174317F3D10EB2C30CBB8D0E8C17992489CF856DCB1CB5F07BE1021A",
+      "file": "spritesheets/torso/clothes/sleeveless/tanktop/female/walk/white.png",
+      "layer": "top_tank_f",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/torso/clothes/sleeveless/tanktop/female/walk/white.png"
+    },
+    {
+      "sha256": "0934C2D77C89F9FD26BE1657BFC9845F3C0EF8CB1A6B5C6D5DFC0F966DE258D8",
+      "file": "spritesheets/torso/clothes/sleeveless/tanktop/female/hurt/white.png",
+      "layer": "top_tank_f",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/torso/clothes/sleeveless/tanktop/female/hurt/white.png"
+    },
+    {
+      "sha256": "2E50951FE78308E2810F80ACFBCB17F119A59A630E95651B0D0C8E0572F24F1E",
+      "file": "spritesheets/torso/clothes/sleeveless/tanktop/female/thrust/white.png",
+      "layer": "top_tank_f",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/torso/clothes/sleeveless/tanktop/female/thrust/white.png"
+    },
+    {
       "sha256": "2DE5A3247743FFA37FEBDF3464CC0A83E79F64D1028AED410832EE29BEA850B6",
       "file": "spritesheets/legs/pants/male/walk.png",
       "layer": "legs_pants_m",
@@ -819,6 +840,48 @@
       "layer": "legs_skirt_f",
       "license": "CC-BY-SA 3.0",
       "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/skirts/plain/thin/thrust.png"
+    },
+    {
+      "sha256": "5ECD67FEC6A5EDCC1DC517156D15F6AAC93FAB4A0E05E1E7E72DFF30C8D67B83",
+      "file": "spritesheets/legs/shorts/short_shorts/thin/walk.png",
+      "layer": "legs_shorts_f",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/thin/walk.png"
+    },
+    {
+      "sha256": "F60EDA82C6B943A3D15AB5112C22BB63B288456AC400DE7202A21E44ABE926B0",
+      "file": "spritesheets/legs/shorts/short_shorts/thin/hurt.png",
+      "layer": "legs_shorts_f",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/thin/hurt.png"
+    },
+    {
+      "sha256": "8EF12F65796936AFE238ED81EFE7EEA30A92E1F0CEC712EA22A45D3DB7AC1C32",
+      "file": "spritesheets/legs/shorts/short_shorts/thin/thrust.png",
+      "layer": "legs_shorts_f",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/thin/thrust.png"
+    },
+    {
+      "sha256": "A5F85636F69B4ABBFBE573E4FFCB02935AAF5037C7C731AC54BC2F21A4672072",
+      "file": "spritesheets/legs/shorts/short_shorts/male/walk.png",
+      "layer": "legs_shorts_m",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/male/walk.png"
+    },
+    {
+      "sha256": "EF4CEC6655FAD6809362A7974C5DAA7B384E1F5C37D47E4BECEEA18636894E91",
+      "file": "spritesheets/legs/shorts/short_shorts/male/hurt.png",
+      "layer": "legs_shorts_m",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/male/hurt.png"
+    },
+    {
+      "sha256": "7FF6777DE07869892E7D98F3B58764909803C5660D2CE1419503199850DEFA3D",
+      "file": "spritesheets/legs/shorts/short_shorts/male/thrust.png",
+      "layer": "legs_shorts_m",
+      "license": "OGA-BY 3.0",
+      "url": "https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/4963a69795255fb15a934c47f478a8bdcf3668f5/spritesheets/legs/shorts/short_shorts/male/thrust.png"
     },
     {
       "sha256": "F544C6F65A3D87F08D8449E87A4F889BD1BC1BF6D714066EF5C30AB2BDAFAB46",

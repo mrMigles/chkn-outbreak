@@ -10,12 +10,12 @@ import { PLAYER } from '../src/shared/enemies';
 /** Story progression: which object unlocks which lock id. `goal` must become reachable. */
 const STORY: Record<string, { unlock: { by: string; lock: string }[]; goal: string[] }> = {
   office: { unlock: [{ by: 'npc:marat', lock: 'blue' }, { by: 'trigger:security_in', lock: 'server' }, { by: 'use:reboot', lock: 'script' }], goal: ['trigger:elevator'] },
-  office7: { unlock: [{ by: 'trigger:siege7+npc:elena', lock: 'f7_pass' }], goal: ['npc:andrey', 'npc:sergey', 'npc:vlad', 'npc:stas', 'npc:pasha', 'trigger:evacuation'] },
+  office7: { unlock: [{ by: 'trigger:siege7+npc:elena', lock: 'f7_pass' }, { by: 'use:kink_button', lock: 'script' }], goal: ['npc:andrey', 'npc:sergey', 'npc:vlad', 'npc:stas', 'npc:katya', 'npc:pasha', 'npc:lera', 'trigger:evacuation'] },
   // D69
-  office8: { unlock: [{ by: 'use:lock_w+use:lock_e', lock: 'script' }], goal: ['use:breaker', 'npc:valera', 'trigger:lift8'] },
-  office11: { unlock: [{ by: 'npc:zhanna+npc:boris+npc:irina+npc:punktovich+use:form1+use:form2+use:form3', lock: 'script' }], goal: ['npc:director', 'trigger:lift11'] },
+  office8: { unlock: [{ by: 'use:lock_w+use:lock_e', lock: 'script' }, { by: 'trigger:room87+npc:vershkov', lock: 'valera_pass' }], goal: ['use:breaker', 'npc:valera', 'trigger:lift8'] },
+  office11: { unlock: [{ by: 'npc:zhanna+npc:boris+npc:irina+npc:punktovich+pickup:doc', lock: 'script' }], goal: ['npc:director', 'trigger:lift11'] },
   cafe12: { unlock: [], goal: ['use:lunch', 'trigger:exit12'] },
-  street1: { unlock: [], goal: ['npc:pilot', 'npc:ashot', 'npc:babushka', 'npc:courier', 'trigger:south_exit'] },
+  street1: { unlock: [{ by: 'npc:pilot+trigger:lot+npc:litovets', lock: 'prop:fence_v' }], goal: ['npc:pilot', 'npc:ashot', 'npc:babushka', 'npc:courier', 'trigger:lot_exit'] },
   street2: { unlock: [{ by: 'npc:valya', lock: 'script' }], goal: ['npc:semyonych', 'use:gate_panel', 'trigger:exit2'] },
   lab: { unlock: [{ by: 'npc:omletov', lock: 'lab' }, { by: 'use:generator', lock: 'script' }], goal: ['trigger:freight'] },
   factory: { unlock: [{ by: 'use:valve1+use:valve2+use:valve3', lock: 'script' }], goal: ['trigger:exit'] },
@@ -69,6 +69,8 @@ for (const id of Object.keys(STORY)) {
     const ok = u.by.split('+').every((ref) => { const objs = find(ref); if (!objs.length) problems.push(`missing ${ref}`); return objs.some((o) => reach(seen, o)); });
     if (!ok) { problems.push(`cannot reach ${u.by} to unlock "${u.lock}"`); continue; }
     open.add(u.lock);
+    // D72: a scripted breach (the getaway car through the parking fence) removes those props' colliders
+    if (u.lock.startsWith('prop:')) for (const o of map.objects.filter(q => q.type === 'prop' && q.name === u.lock.slice(5))) { const c = map.colliders.find(q => q.id === o.id); if (c) map.removeCollider(c); }
     seen = flood();
   }
   for (const g of story.goal) { const objs = find(g); if (!objs.length || !objs.some((o) => reach(seen, o))) problems.push(`goal ${g} unreachable`); }
