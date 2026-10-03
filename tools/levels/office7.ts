@@ -71,6 +71,8 @@ obj('light', '', 14.5, 20, { kind: 'lamp', color: 'ff4fa8', radius: 150, flicker
 prop('button_panel', 10.6, 19.15);
 obj('use', 'kink_button', 10.5, 19.6, { hint: 'нажать кнопку двери «Уединения»' });
 label('«УЕДИНЕНИЕ»', 14.5, 22.6);
+// D73: frosted glass until the door opens — silhouettes and the pink light show through
+obj('frost', 'kink_glass', 12, 17.3, { door: 'kink_door', label: 'ЗАНЯТО' }, [5, 4.7]);
 obj('note', '', 9.2, 21.6, { text: 'Табличка на двери: «Переговорка “Уединение”. Бронь: Стас + Катя, 17:00–∞. Тема: “дебаг”. НЕ БЕСПОКОИТЬ»' });
 obj('npc', 'elena', 46, 17, { title: 'Елена · офис-администратор', kind: 'womanGreen', mode: 'idle', hp: 100, story: true, essential: true, lines: 'Пропуск у меня. Только через корпоративный портал.|Сначала разгоните стаю у Castor!' });
 for (const [i, [x, y]] of [[54, 24], [56, 24], [57.4, 25], [55, 26], [57, 28], [54, 29]].entries()) obj('npc', 'gate_worker' + i, x, y, { title: 'Сотрудник у Castor', kind: i % 2 ? 'worker' : 'manBrown', tag: 'gate_workers', turn: i === 0 ? 'armored' : i % 2 ? 'fast' : 'normal' });

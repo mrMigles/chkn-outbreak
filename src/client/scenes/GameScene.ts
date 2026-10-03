@@ -25,6 +25,7 @@ import type { Player, SimEvent } from '../../shared/sim/types';
 import { BUFFS, type BuffKind } from '../../shared/sim/types';
 import { TILE } from '../../shared/map';
 import { supportTarget } from '../../shared/sim/support';
+import { ROOTED_SPEED } from '../../shared/sim/World';
 import { rayBody, enemyBox, enemyScale } from '../../shared/sim/hitbox';
 import { settings, saveSettings, TEXT_RES } from '../settings';
 import artMeta from '../../shared/generated/artMeta.json';
@@ -66,6 +67,7 @@ export class GameScene extends Phaser.Scene {
   pickupGlows = new Map<number, Phaser.GameObjects.Image>();
   private pingPong?: { ball: Phaser.GameObjects.Rectangle; x: number; y: number };
   private vehicles = new Map<number, Phaser.GameObjects.Image>();
+  private frosts: { g: Phaser.GameObjects.Graphics; t?: Phaser.GameObjects.Text; door: string; gone: boolean }[] = [];
   private engineAt = 0;
   projs = new Map<number, Phaser.GameObjects.Image>();
   doors = new Map<string, Phaser.GameObjects.Image[]>();
@@ -112,6 +114,7 @@ export class GameScene extends Phaser.Scene {
     this.players = new Map(); this.enemies = new Map(); this.npcs = new Map(); this.pickups = new Map(); this.pickupGlows = new Map();
     this.pingPong = undefined;
     this.vehicles = new Map();
+    this.frosts = [];
     this.projs = new Map(); this.doors = new Map(); this.barrels = new Map(); this.pods = new Map(); this.bubbles = []; this.notes = [];
     this.ended = false; this.paused = false; this.lastTp = -1;
     this.wallFaces = []; this.fadeProps = []; this.introState = 'wait'; this.cineFocus = null;
@@ -176,6 +179,15 @@ export class GameScene extends Phaser.Scene {
         this.add.text(o.cx, o.cy, String(o.props.text ?? o.name), {
           fontFamily: 'Russo One, sans-serif', fontSize: String(o.props.size ?? 22) + 'px', color: String(o.props.color ?? '#ffffff'),
         }).setOrigin(0.5).setAlpha(Number(o.props.alpha ?? 0.32)).setDepth(2).setRotation(Number(o.props.angle ?? 0) * Math.PI / 180).setResolution(TEXT_RES());
+      } else if (o.type === 'frost') {
+        // D73: a frosted-glass pane over a room (o = the rect it covers, props.door = the door that clears it)
+        const g = this.add.graphics().setDepth(13.5);
+        g.fillStyle(0xdfe8ef, 0.74).fillRect(o.x, o.y, o.w, o.h);
+        for (let i = -o.h; i < o.w; i += 26) { g.lineStyle(9, 0xffffff, 0.22).lineBetween(o.x + Math.max(0, i), o.y + Math.max(0, -i), o.x + Math.min(o.w, i + o.h), o.y + Math.min(o.h, o.w - i)); }
+        g.lineStyle(4, 0x8a96a3, 0.9).strokeRect(o.x + 2, o.y + 2, o.w - 4, o.h - 4);
+        g.lineStyle(2, 0xffffff, 0.5).strokeRect(o.x + 7, o.y + 7, o.w - 14, o.h - 14);
+        const t = o.props.label ? this.add.text(o.cx, o.cy, String(o.props.label), { fontFamily: 'Russo One, sans-serif', fontSize: '15px', color: '#5a6470' }).setOrigin(0.5).setAlpha(0.75).setDepth(13.6).setResolution(TEXT_RES()) : undefined;
+        this.frosts.push({ g, t, door: String(o.props.door ?? ''), gone: false });
       } else if (o.type === 'note') {
         this.notes.push({ x: o.cx, y: o.cy, text: String(o.props.text ?? '') });
       }
@@ -353,7 +365,7 @@ export class GameScene extends Phaser.Scene {
       const w = me.weapons[me.cur] as WeaponId | undefined;
       const wdef = w ? WEAPONS[w] : WEAPONS.pistol;
       let speed = 0;
-      if (me.state === 'alive') speed = PLAYER.speed * wdef.speedMul * ((me.buffs?.sprint ?? 0) > 0 ? 1.6 : 1);
+      if (me.state === 'alive') speed = PLAYER.speed * wdef.speedMul * ((me.buffs?.sprint ?? 0) > 0 ? 1.6 : 1) * ((me.slowT ?? 0) > 0 ? ROOTED_SPEED : 1);
       else if (me.state === 'chicken') speed = PLAYER.chickenSpeed * wdef.speedMul;
       else if (me.state === 'downed') speed = 45;
       if (speed > 0) [this.px, this.py] = s.map.move(this.px, this.py, PLAYER.radius, inp.mx * speed * dt, inp.my * speed * dt);
@@ -689,7 +701,7 @@ export class GameScene extends Phaser.Scene {
       const npcId = e.appearance?.npcId;
       if (npcId === 'valera' && this.lighting.ambient > 0.5) {
         // D72: in the dark Валера is only two red eyes — a beam (or standing right next to him) shows him
-        const seen = v.players.some(p => p.state === 'alive' && (dist(p.x, p.y, e.x, e.y) < 150 || (dist(p.x, p.y, e.x, e.y) < 560 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < 0.42)));
+        const seen = v.players.some(p => p.state === 'alive' && (dist(p.x, p.y, e.x, e.y) < 150 || (dist(p.x, p.y, e.x, e.y) < (this.lighting.base >= 0.985 ? 430 : 560) && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < 0.42)));
         const a = seen ? 1 : 0.06;
         ev.spr.setAlpha(a); ev.shadow.setAlpha(seen ? 0.28 : 0.04); ev.label?.setVisible(seen);
       }
@@ -793,6 +805,11 @@ export class GameScene extends Phaser.Scene {
     }
     for (const [id, img] of this.projs) if (!seenR.has(id)) { img.destroy(); this.projs.delete(id); }
 
+    // D73: frosted glass over a closed room — blurred shapes and its light show through until its door opens
+    for (const f of this.frosts) {
+      const open = !!v.doors.find(d => d.id === f.door)?.open;
+      if (open && !f.gone) { f.gone = true; this.tweens.add({ targets: [f.g, ...(f.t ? [f.t] : [])], alpha: 0, duration: 700, onComplete: () => { f.g.setVisible(false); f.t?.setVisible(false); } }); }
+    }
     // doors: 2.5D facades in horizontal walls, side jambs in vertical walls; open doors roll up
     for (const d of v.doors) {
       let parts = this.doors.get(d.id);
@@ -1093,6 +1110,20 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (ev.k === 'engine') { sfx.play('engine', { x: ev.x, y: ev.y, vol: 1 }); sfx.play('honk', { x: ev.x, y: ev.y, vol: 1 }); return; }
+    if (ev.k === 'roots') {
+      // D73: a warning: the ground cracks and green shoots push up where the potato tops will burst out
+      const g = this.add.graphics().setDepth(5);
+      const draw = (k: number) => { g.clear(); g.fillStyle(0x3f7a38, 0.18 + 0.25 * k).fillEllipse(ev.x, ev.y, 150, 66); g.lineStyle(3, 0x8fd16b, 0.5 + 0.5 * k).strokeEllipse(ev.x, ev.y, 150, 66); };
+      this.tweens.addCounter({ from: 0, to: 1, duration: 750, onUpdate: (tw) => draw(tw.getValue() ?? 0), onComplete: () => g.destroy() });
+      for (let i = 0; i < 10; i++) this.fx.low.emit({ frame: 'shard', x: ev.x + (Math.random() - 0.5) * 120, y: ev.y + (Math.random() - 0.5) * 50, vx: 0, vy: -30, life: 0.7, drag: 2, s0: 0.6, s1: 1, tint: 0x6aa857, rot: Math.random() * 6 });
+      if (near) sfx.play('hop', { x: ev.x, y: ev.y, vol: 0.8, rate: 0.55 });
+      return;
+    }
+    if (ev.k === 'rooted') {
+      for (let i = 0; i < 14; i++) { const a = Math.random() * 6.28; this.fx.high.emit({ frame: 'shard', x: ev.x + Math.cos(a) * 26, y: ev.y + Math.sin(a) * 10, vx: Math.cos(a) * 30, vy: -60 - Math.random() * 80, life: 0.8, drag: 2, s0: 1.2, s1: 0.8, tint: i % 3 ? 0x4f9a32 : 0x8fd16b, rot: Math.random() * 6 }); }
+      if (near) sfx.play('chomp', { x: ev.x, y: ev.y, vol: 0.9, rate: 0.7 });
+      return;
+    }
     if (ev.k === 'crash') {
       this.fx.boom(ev.x, ev.y, 90, 'barrel');
       for (let i = 0; i < 18; i++) { const a = Math.random() * 6.28, sp = 120 + Math.random() * 320; this.fx.low.emit({ frame: 'shard', x: ev.x, y: ev.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6, drag: 4, s0: 1.2, s1: 1, tint: 0x8a8f99, land: true, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12 }); }

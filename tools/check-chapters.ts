@@ -125,11 +125,11 @@ const run = (w: World, s: number) => { for (let i = 0; i < s * 30; i++) w.step(1
 }
 {
   // Валера blinks next to his prey in the dark, never while a beam holds him
-  const w = mk('office8'); w.god = true; w.setLight(0.97); w.enemies = []; w.cancelWaves();
+  const w = mk('office8'); w.opts.rules = 7; w.god = true; w.setLight(0.97); w.enemies = []; w.cancelWaves();
   const p = w.players[0]; const v = w.spawnEnemy('fast', p.x + 420, p.y, { aggro: true }); v.appearance = { npcId: 'valera', kind: 'valera', name: 'В' };
   v.blinkT = 0; p.input.aim = Math.PI; w.events = []; run(w, .2);
   assert.ok(w.events.some(e => e.e === 'scare' && e.k === 'blink'), 'blinks in the dark'); assert.ok(Math.hypot(v.x - p.x, v.y - p.y) < 260);
-  const w2 = mk('office8'); w2.god = true; w2.setLight(0.97); w2.enemies = []; w2.cancelWaves();
+  const w2 = mk('office8'); w2.opts.rules = 7; w2.god = true; w2.setLight(0.97); w2.enemies = []; w2.cancelWaves();
   const q = w2.players[0]; const v2 = w2.spawnEnemy('fast', q.x + 300, q.y, { aggro: true }); v2.appearance = { npcId: 'valera', kind: 'valera', name: 'В' };
   v2.blinkT = 0; q.input.aim = Math.atan2(v2.y - q.y, v2.x - q.x); w2.events = []; run(w2, .3);
   assert.ok(!w2.events.some(e => e.e === 'scare' && e.k === 'blink'), 'a flashlight on him: no blink');
@@ -188,4 +188,43 @@ const run = (w: World, s: number) => { for (let i = 0; i < s * 30; i++) w.step(1
   const doc = w.pickups.find(k => k.key === 'form1')!; p.x = p.input.x = doc.x; p.y = p.input.y = doc.y; p.tp++; run(w, .2);
   assert.ok(w.flags.form1, 'picking up the form counts it');
   console.log('PASS office11: three visible forms, each with its scene');
+}
+
+// D73: new abilities and their rules-7 compatibility.
+{
+  for (const rules of [7, 8]) {
+    const w = mk('arena'); w.opts.rules = rules; w.enemies = []; w.npcs = []; w.cancelWaves();
+    const p = w.players[0]; p.x = p.input.x = 900; p.y = p.input.y = 600;
+    const e = w.spawnEnemy('fast', 1200, 600, { aggro: true });
+    e.appearance = { npcId: 'vershkov', kind: 'vershkov', name: 'Вершков' }; e.blinkT = 0; e.abilityCd = 99;
+    w.events = []; run(w, .1);
+    assert.equal(w.events.some(ev => ev.e === 'scare' && ev.k === 'roots'), rules >= 8, 'roots only under rules 8');
+    run(w, .8);
+    assert.equal((p.slowT ?? 0) > 0, rules >= 8, 'roots catch a stationary player');
+    if (rules >= 8) {
+      assert.ok(p.hp < 100, 'roots deal damage');
+      assert.ok(encodeSnapshot(w).p[0].slowT! > 0, 'root duration reaches network clients');
+      w.enemies = []; run(w, 3); assert.equal(p.slowT, 0, 'roots expire');
+    }
+  }
+  const w = mk('arena'); w.enemies = []; w.npcs = []; w.cancelWaves();
+  const p = w.players[0]; p.x = p.input.x = 900; p.y = p.input.y = 600;
+  const e = w.spawnEnemy('fast', 1200, 600, { aggro: true });
+  e.appearance = { npcId: 'vershkov', kind: 'vershkov', name: 'В' }; e.blinkT = 0; e.abilityCd = 99;
+  run(w, .1); p.y = p.input.y = 800; run(w, .8);
+  assert.ok(!(p.slowT ?? 0) && p.hp === 100, 'moving out of the telegraph avoids the roots');
+  console.log('PASS D73 roots: warning, damage, snapshot duration, expiry, dodge and rules-7 compatibility');
+}
+{
+  for (const lamp of [false, true]) {
+    const w = mk('arena'); w.enemies = []; w.npcs = []; w.cancelWaves(); w.setLight(.99); w.god = true;
+    const p = w.players[0]; p.x = p.input.x = 900; p.y = p.input.y = 600; p.input.aim = 0;
+    const e = w.spawnEnemy('fast', 1200, 600, { aggro: true });
+    e.appearance = { npcId: 'valera', kind: 'valera', name: 'В' }; e.blinkT = 0;
+    if (lamp) w.map.objects.push({ id: -1, type: 'light', name: 'qa', x: e.x, y: e.y, cx: e.x, cy: e.y, w: 0, h: 0, rot: 0, props: { kind: 'emergency', radius: 400 } });
+    w.events = []; run(w, .1);
+    assert.equal(w.events.some(ev => ev.e === 'scare' && ev.k === 'blink'), !lamp, 'a lamp prevents blink; the flashlight does not');
+    if (!lamp) assert.ok(e.x < p.x, 'blink lands behind the player');
+  }
+  console.log('PASS D73 Валера: blinks behind a player through the flashlight, stays in emergency lamplight');
 }

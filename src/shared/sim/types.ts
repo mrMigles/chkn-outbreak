@@ -69,6 +69,8 @@ export interface Player {
   supportVersion: number;
   tp: number;             // teleport counter (client resets prediction when it changes)
   saved?: { weapons: WeaponId[]; ammo: Partial<Record<WeaponId, AmmoState>> };
+  /** D73: seconds left held by potato tops (Вершков): the player walks at 30 % speed. */
+  slowT?: number;
   /** D72: personal statistics — this chapter and the whole run (carried between floors; never affect the rules). */
   stats?: { run: PlayerStats; chap: PlayerStats };
 }
@@ -223,7 +225,7 @@ export type SimEvent =
   | { e: 'fuse'; id: number }
   | { e: 'propbreak'; id: number; x: number; y: number; m: string }
   /** D69: scripted horror beats (floor 8) and cutscene props (floor 12). */
-  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock' | 'grain' | 'poof' | 'blink' | 'crash' | 'engine'; x: number; y: number }
+  | { e: 'scare'; k: 'jump' | 'ring' | 'flicker' | 'scream' | 'spark' | 'eyes' | 'knock' | 'grain' | 'poof' | 'blink' | 'crash' | 'engine' | 'roots' | 'rooted'; x: number; y: number }
   /** D72: a chapter is over — per-player mini summary (and the whole run's statistics after the victory). */
   | { e: 'chapter'; summary: ChapterSummary }
   | { e: 'light'; v: number }

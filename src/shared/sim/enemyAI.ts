@@ -18,6 +18,8 @@ interface Elite {
   blink?: boolean;
   /** D72: Толик keeps his distance and lobs beer bottles that shatter where they land */
   bottles?: { cd: number; line: string };
+  /** D73: Вершков makes potato tops burst out under a player: after `delay` they hold whoever stands there */
+  roots?: { cd: number; delay: number; r: number; hold: number; dmg: number };
 }
 export const ELITES: Record<string, Elite> = {
   root_manager: { damage: 42, attackRange: 60, attackCd: .8, windup: .35, charge: { cd: 6.5, wind: .6, run: .75, speed: 460, dmg: 48, line: 'ROOT идёт без согласования!' } },
@@ -25,9 +27,12 @@ export const ELITES: Record<string, Elite> = {
   director: { damage: 34, attackRange: 70, attackCd: 1.05, windup: .42, charge: { cd: 7, wind: .75, run: .8, speed: 470, dmg: 40, line: 'Это не обсуждается!' }, eggs: { cd: 9, n: 5, line: 'Делегирую!' } },
   // D72: floor 7 «Катя» (stronger than a chicken, gentler than the manager), floor 8 Вершков, street 2 Толик
   katya: { damage: 20, attackRange: 52, attackCd: .7, windup: .25, charge: { cd: 6, wind: .5, run: .55, speed: 520, dmg: 26, line: 'ДЕБАГ! ДЕБАГ!' } },
-  vershkov: { damage: 16, attackRange: 52, attackCd: 1, windup: .35, charge: { cd: 9, wind: .7, run: .6, speed: 420, dmg: 22, line: 'Окучу!' }, eggs: { cd: 8.5, n: 3, line: 'Посадка! Всходите!' } },
+  vershkov: { damage: 24, attackRange: 52, attackCd: .85, windup: .3, charge: { cd: 9, wind: .55, run: .65, speed: 460, dmg: 26, line: 'Окучу!' }, eggs: { cd: 11, n: 3, line: 'Посадка! Всходите!' }, roots: { cd: 4, delay: .75, r: 76, hold: 2.4, dmg: 14 } },
   tolik: { damage: 22, attackRange: 52, attackCd: .9, windup: .3, charge: { cd: 11, wind: .7, run: .55, speed: 430, dmg: 26, line: 'Э, слышь! Ко мне!' }, bottles: { cd: 1.9, line: 'Лови, пивасик!' } },
 };
+
+// Preserve rules-7 elite numbers when replaying older room recordings.
+const LEGACY_VERSHKOV: Elite = { damage: 16, attackRange: 52, attackCd: 1, windup: .35, charge: { cd: 9, wind: .7, run: .6, speed: 420, dmg: 22, line: 'Окучу!' }, eggs: { cd: 8.5, n: 3, line: 'Посадка! Всходите!' } };
 
 const losByWorld = new WeakMap<World, Map<number, { t: number; ok: boolean }>>();
 
@@ -79,7 +84,7 @@ function steer(w: World, e: Enemy, t: Target, td: number, speed: number, dt: num
 }
 
 export function updateEnemy(w: World, e: Enemy, dt: number) {
-  const elite = e.appearance ? ELITES[e.appearance.npcId] : undefined;
+  const elite = e.appearance?.npcId === 'vershkov' && w.rules < 8 ? LEGACY_VERSHKOV : e.appearance ? ELITES[e.appearance.npcId] : undefined;
   const def = elite ? { ...ENEMIES[e.type], damage: elite.damage, attackRange: elite.attackRange, attackCd: elite.attackCd, windup: elite.windup } : ENEMIES[e.type];
   e.flashT -= dt; e.stunT -= dt; e.cd -= dt;
   if (e.burnT > 0) {
@@ -134,7 +139,8 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
     e.abilityCd -= dt;
     if (elite.blind) {
       // a flashlight cone on it: slowed and exposed (damage x1.6 in World.damageEnemy)
-      const lit = w.players.some(p => p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < 560 && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < .42 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true));
+      const beam = w.rules >= 8 && (w.light ?? -1) >= 0.985 ? 430 : 560; // D73: in deep darkness flashlights reach less
+      const lit = w.players.some(p => p.state === 'alive' && dist(p.x, p.y, e.x, e.y) < beam && Math.abs(angleDiff(p.aim, Math.atan2(e.y - p.y, e.x - p.x))) < .42 && w.map.lineOfSight(p.x, p.y, e.x, e.y, true));
       const was = (e.blindT ?? 0) > 0;
       e.blindT = lit ? .35 : Math.max(0, (e.blindT ?? 0) - dt);
       e.litT = lit ? (e.litT ?? 0) + dt : 0;
@@ -143,21 +149,51 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
       if (e.litT > 1.1 && e.state !== 'charge' && !(e.fleeT ?? 0)) { e.litT = 0; e.fleeT = 1.5; if (w.rng.chance(.4)) w.say(String(e.id), w.rng.pick(['Не поймаешь!', 'Я в тёмном режиме!', 'Ко-ко… офлайн!']), 1.4); }
     }
     // D72: in the dark (no beam on him) Валера vanishes and reappears beside his prey with a lunge
-    if (elite.blink && (w.light ?? -1) >= 0.5 && !((e.blindT ?? 0) > 0) && e.state !== 'charge' && !((e.fleeT ?? 0) > 0)) {
+    // D73: «light» is a lit place (a lamp; in deep darkness only the red emergency lights), not a flashlight beam:
+    // the beam slows and exposes him, but cannot pin him down
+    if (elite.blink && (w.light ?? -1) >= 0.5 && (w.rules >= 8 ? !inLamplight(w, e.x, e.y) : !((e.blindT ?? 0) > 0)) && e.state !== 'charge' && !((e.fleeT ?? 0) > 0)) {
       e.blinkT = (e.blinkT ?? 2.5) - dt;
       if (e.blinkT <= 0 && td < 1000) {
-        e.blinkT = 3 + w.rng.next() * 1.8;
-        for (let k = 0; k < 8; k++) {
-          const a = w.rng.next() * TAU, r = 150 + w.rng.next() * 80;
+        e.blinkT = w.rules >= 8 ? 1.9 + w.rng.next() * 1.1 : 3 + w.rng.next() * 1.8;
+        // D73: behind the prey — opposite to where it is looking (the beam), then anywhere around it
+        const look = t.isPlayer ? (t.ref as Player).aim : (t.ref as Npc).angle;
+        for (let k = 0; k < (w.rules >= 8 ? 10 : 8); k++) {
+          const behind = w.rules >= 8 && k < 6;
+          const a = behind ? look + Math.PI + (w.rng.next() - 0.5) * 1.3 : w.rng.next() * TAU;
+          const r = w.rules >= 8 ? (behind ? 105 : 150) + w.rng.next() * 60 : 150 + w.rng.next() * 80;
           const x = t.x + Math.cos(a) * r, y = t.y + Math.sin(a) * r;
-          if (w.map.blockedAt(x, y, 22) || !w.map.lineOfSight(t.x, t.y, x, y, false)) continue;
+          if (w.map.blockedAt(x, y, 22) || !w.map.lineOfSight(t.x, t.y, x, y, false) || (w.rules >= 8 && inLamplight(w, x, y))) continue;
           w.scare('blink', e.x, e.y);
           e.x = x; e.y = y; e.vx = 0; e.vy = 0;
-          e.state = 'charge'; e.ability = 'charge_wind'; e.t = 0.5; e.angle = Math.atan2(t.y - y, t.x - x);
+          e.state = 'charge'; e.ability = 'charge_wind'; e.t = w.rules >= 8 ? 0.42 : 0.5; e.angle = Math.atan2(t.y - y, t.x - x);
           w.scare('eyes', x, y);
           if (w.rng.chance(.35)) w.say(String(e.id), w.rng.pick(['Я в каждом углу.', 'Тёмная тема — везде.', 'Ку-ку. То есть КО-КО.', 'Свет выключен. Я — включён.']), 1.6);
           return;
         }
+      }
+    }
+    if (w.rules >= 8 && elite.roots && e.state !== 'charge') {
+      // potato tops burst out under the target (and, below half health, under everyone close), hold them, then he rushes in
+      e.blinkT = (e.blinkT ?? 2) - dt;
+      if (e.blinkT <= 0 && td < 650 && los(w, e, t)) {
+        const R = elite.roots, rage = e.hp < e.maxHp * 0.5;
+        e.blinkT = R.cd * (rage ? 0.75 : 1) + w.rng.next();
+        const spots = [{ x: t.x, y: t.y }];
+        if (rage) for (const p of w.players) if (p.state === 'alive' && p.id !== t.id && dist(p.x, p.y, e.x, e.y) < 700) spots.push({ x: p.x, y: p.y });
+        w.say(String(e.id), w.rng.pick(['Корни пущу!', 'Ботва, держи их!', 'Не уйдёшь с грядки!', 'Окучиваю!']), 1.5);
+        for (const s of spots) w.scare('roots', s.x, s.y);
+        w.after(R.delay, () => {
+          if (e.hp <= 0) return;
+          for (const s of spots) for (const p of w.players) {
+            if (p.state !== 'alive' || dist(p.x, p.y, s.x, s.y) > R.r) continue;
+            p.slowT = Math.max(p.slowT ?? 0, R.hold);
+            w.damagePlayer(p, R.dmg * (w.script.enemyDamage ?? 1), s.x, s.y);
+            w.scare('rooted', p.x, p.y);
+          }
+        });
+        // and comes for the one who is stuck
+        e.abilityCd = Math.min(e.abilityCd, R.delay + 0.25);
+        return;
       }
     }
     if (elite.bottles && e.state !== 'charge') {
@@ -191,7 +227,7 @@ export function updateEnemy(w: World, e: Enemy, dt: number) {
         if (e.t <= 0) { e.ability = 'charge_run'; e.t = ch.run; }
       } else {
         [e.x, e.y] = w.map.move(e.x, e.y, def.radius * .8, Math.cos(e.angle) * ch.speed * dt, Math.sin(e.angle) * ch.speed * dt);
-        if (dist(e.x, e.y, t.x, t.y) <  70 && los(w, e, t)) { hurt(w, e, t, ch.dmg); e.t = 0; e.cd = .9; if (elite.hitRun) e.fleeT = elite.hitRun; }
+        if (dist(e.x, e.y, t.x, t.y) <  70 && los(w, e, t)) { hurt(w, e, t, ch.dmg); e.t = 0; e.cd = .9; if (elite.hitRun) e.fleeT = w.rules >= 8 && elite.blink ? 0.7 : elite.hitRun; if (w.rules >= 8 && elite.blink) e.blinkT = Math.min(e.blinkT ?? 9, 0.8); }
         if (e.t <= 0) { e.state = 'chase'; e.ability = ''; }
       }
       return;
@@ -388,6 +424,17 @@ function updateBoss(w: World, e: Enemy, t: Target, td: number, dt: number) {
     return;
   }
   steer(w, e, t, td, def.speed * rage, dt);
+}
+
+/** D73: is a point inside a lamp's light (in deep darkness only emergency lights still shine)? */
+function inLamplight(w: World, x: number, y: number) {
+  const deep = (w.light ?? -1) >= 0.985;
+  for (const o of w.map.objects) {
+    if (o.type !== 'light' || (deep && o.props.kind !== 'emergency')) continue;
+    const r = Number(o.props.radius ?? 260) * 0.55;
+    if ((o.cx - x) ** 2 + (o.cy - y) ** 2 < r * r) return true;
+  }
+  return false;
 }
 
 /** D69: a sleeping chicken wakes when someone steps close or holds a flashlight on it. */

@@ -57,7 +57,7 @@ function openKink(w: World, by: Player) {
 }
 
 const level: LevelScript = {
-  id: 'office7', title: 'Этаж 7. Пятеро на одного петуха', rev: 2,
+  id: 'office7', title: 'Этаж 7. Пятеро на одного петуха', rev: 3,
   subtitle: 'Capella · Castor · Phoenix. Эвакуация без записи в календаре', next: 'office8', enemyDamage: .8,
   onStart(w) {
     objective(w);
@@ -88,7 +88,10 @@ const level: LevelScript = {
     }
     if (w.time >= w.flags.escortWaveAt && !w.flags.evacuated && !w.flags.rootStarted) {
       w.flags.escortWaveAt = w.time + (allFound(w) ? 9 : 12);
-      if (w.enemies.length < 65) w.spawnWave('escort', ['normal', 'fast', 'fast', 'spitter', 'armored'], allFound(w) ? 12 : 8, .3, true, 'escort7', true);
+      // D73: far fewer armoured chickens on this floor (they were ~18 % of everything)
+      if (w.enemies.length < 65) {
+        w.spawnWave('escort', allFound(w) ? ['normal', 'fast', 'fast', 'spitter', 'normal', 'fast', 'normal', 'armored'] : ['normal', 'fast', 'fast', 'spitter', 'normal'], allFound(w) ? 12 : 8, .3, true, 'escort7', true);
+      }
     }
     if (w.flags.siegeStarted && !w.flags.siegeCleared && !w.countTag('siege7')) {
       w.flags.siegeCleared = true;
@@ -106,7 +109,7 @@ const level: LevelScript = {
     }
     if (boss && w.time >= w.flags.rootSupportAt && w.countTag('root_attack') < 48) {
       w.flags.rootSupportAt = w.time + 9;
-      w.spawnWave('escort', ['fast', 'armored', 'spitter', 'normal'], 8, .25, true, 'root_attack', true);
+      w.spawnWave('escort', ['fast', 'normal', 'spitter', 'normal', 'fast', 'armored'], 8, .25, true, 'root_attack', true);
       w.say(String(boss.id), 'СРОЧНЫЙ ДЕЙЛИ! Всем клевать сотрудника!', 2.5);
     }
     if (Math.floor(w.time) !== Math.floor(w.time - dt)) objective(w);
@@ -128,7 +131,7 @@ const level: LevelScript = {
     if (id === 'siege7' && !w.flags.siegeStarted) {
       w.flags.siegeStarted = true;
       for (const n of w.npcs.filter(n => n.tag === 'gate_workers')) w.infect(n, n.props?.turn || 'normal', 'siege7');
-      w.spawnWave('siege7', ['normal', 'fast', 'armored', 'spitter'], 16, .25, true, 'siege7', true);
+      w.spawnWave('siege7', ['normal', 'fast', 'normal', 'spitter', 'fast', 'normal', 'armored'], 16, .25, true, 'siege7', true);
       w.say('andrey', 'Мы за этой дверью! Они заполнили весь коридор!', 4);
       objective(w);
     }
@@ -141,7 +144,7 @@ const level: LevelScript = {
       w.say(n.id, 'Эвакуация? Тикет согласован? Сейчас вы получите ROOT-ПЕТУШКА!', 4);
       w.infect(n, 'armored', 'root_attack');
       w.setAlarm(true);
-      w.spawnWave('escort', ['fast', 'normal', 'armored', 'spitter'], 28, .25, true, 'root_attack', true);
+      w.spawnWave('escort', ['fast', 'normal', 'normal', 'spitter', 'fast', 'armored'], 28, .25, true, 'root_attack', true);
       w.say(by.id, 'sudo увольнение. Без пароля.', 3);
       objective(w);
     }

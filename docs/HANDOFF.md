@@ -2,6 +2,19 @@
 
 _Last updated: 2026-10-03_
 
+## Iteration 15 (2026-10-03, Codex) — проверка и публикация изменений D73
+
+Рабочая ветка `codex/office-25d-coop`. Седьмой этаж: матовое стекло «Уединения» исчезает после открытия двери, меньше бронепетухов. Восьмой: Вершков 2000 HP (+60% за игрока), предупреждённые корни замедляют до 30% на 2.4 с; Валера 2800 HP (+60%), прыгает за спину, обычные лампы гаснут и луч сокращается в глубокой темноте. Карта office7 перестроена, office7/8 rev=3, RULES=8; старые правила AI сохранены. Исправлен комментарий, поглотивший `speedMul` и `abilityCd` Валеры.
+
+Баланс: `LOADOUT=smg,shotgun`, цепочка office7 → office8, seed=1; все 24 прохождения завершены. В таблице: среднее retries / диапазон minHp. Показатель stuck отмечает временный обход, постоянных застреваний нет.
+
+| Этаж | Соло ×5 | Дуэт ×4 | Квартет ×3 |
+|---|---|---|---|
+| office7 | 0.8 / 4–42 | 0 / 3–81 | 0 / 71–90 |
+| office8 | 0.2 / 8–72 | 0 / 71–100 | 0 / 54–90 |
+
+Все быстрые проверки, сборка, network, telegram, chapters-net, network-ui, lobby-ui прошли. Telegram game-button links пропущены: нет SESSION_SECRET; реальная авторизация Telegram не проверялась. `check:chapters` проверил точное восстановление 29 сохранений на пяти этажах и новые сценарии корней/ламп/старых правил. Браузерный `qa-campaign` (arsenal, без бессмертия): office7 157 с, minHp 53.6; office8 94 с, minHp 95.5; оба без поражений и ошибок страницы. Отчёт: `docs/qa/d73-e2e/report.json`. Визуальный QA: `tools/qa-d73.mjs`, `docs/qa/d73/` (desktop и эмуляция Pixel 7). Реальный телефон и кооператив живых людей не проверены.
+
 ## Iteration 14 (2026-10-03, Claude) — feedback round (D72)
 
 16 items, decision D72, story in [design/chapters.md](design/chapters.md). Floor 7: Лера at ping-pong, Стас and Катя in «Уединение» (button door, swimsuit, a «ДЕБАГ!» mini-boss), root manager boss bar. Floor 8: Валера's pass in room 87 (Вершков, potato beds, red grow lamps, plant chickens `sprout`, Вершков as a mild mini-boss); Валера blinks in the dark, only his eyes show without a beam. Floor 11: visible forms with a scene each, more chickens, a meeting twice as dense in packs. Street 1: a bigger flock, the grandma crumbles into hens; the VIP parking lot, Литовец's getaway car runs the flock over and breaks the fence (scripted vehicles in the sim and snapshots). Street 2: 24 eggs, Толик throws beer bottles and smokes. Lab: full incubator, GMO roosters (`gmo`) also at the generator. Fat yellow CEO (10 000 HP solo), the trade-union medkit fixed (issue #4). Mini-bosses drop part-loaded miniguns/lasers. In a team every player takes their own gun/ammo from one spot (rules 7). Chapter summaries per player (kills, help, moments, titles, achievements), the whole run's personal statistics after the victory, «📜 Летопись» (carry + device). New rooms no longer talk about continuing. Issues #2, #3 (phone picker selection), #5, #6.

@@ -64,6 +64,7 @@ export function encodeSnapshot(w: WorldView): Snapshot {
       weapons: p.weapons, cur: p.cur, ammo: p.ammo, reloadT: Math.round(p.reloadT * 100) / 100, firing: p.firing,
       kills: p.kills, score: Math.floor(p.score), combo: p.combo, tp: p.tp, keys: p.keys, hurtT: Math.round(p.hurtT * 100) / 100, bloom: Math.round(p.bloom * 1000) / 1000,
       supplies: p.supplies, support: p.support, supportVersion: p.supportVersion, connected: p.connected, buffs: p.buffs, achievements: p.achievements, ...(p.benched ? { benched: true } : {}),
+      slowT: p.slowT ? Math.round(p.slowT * 10) / 10 : 0,
     })),
     e, bm, appearances: Object.fromEntries(w.enemies.filter(x => x.appearance).map(x => [x.id, x.appearance!])),
     n: w.npcs.filter((x) => x.mode !== 'gone').map((x) => ({ id: x.id, kind: x.kind, name: x.name, x: r1(x.x), y: r1(x.y), angle: Math.round(x.angle * 100) / 100, hp: Math.ceil(x.hp), maxHp: x.maxHp, mode: x.mode, weapon: x.weapon, rescued: x.rescued, follow: x.follow, hurtT: x.hurtT > 0 ? 0.2 : 0, mutation: x.mutation })),

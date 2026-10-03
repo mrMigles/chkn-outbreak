@@ -131,7 +131,7 @@ function harvest(w: World, by: string) {
 }
 
 const office8: LevelScript = {
-  id: 'office8', title: 'Этаж 8. Тёмная тема', rev: 2,
+  id: 'office8', title: 'Этаж 8. Тёмная тема', rev: 3,
   subtitle: 'Здесь работает человек, который не любит свет',
   next: 'office11', enemyDamage: .8, enemyHp: .9,
 
@@ -183,15 +183,16 @@ const office8: LevelScript = {
     }
     const vr = w.enemies.find(e => e.appearance?.npcId === 'vershkov');
     if (vr && !w.flags.vershkovScaled) {
-      // D72: not a hard fight — slow, plants seedlings (chicks), a lunge now and then
+      // D72: plants seedlings (chicks), a lunge now and then; D73: potato tops hold you while he hits
       w.flags.vershkovScaled = true;
-      vr.hp = vr.maxHp = 850 * (1 + .4 * (w.players.length - 1)); vr.speedMul = .95; vr.abilityCd = 5;
+      vr.hp = vr.maxHp = 2000 * (1 + .6 * (w.players.length - 1)); vr.speedMul = 1; vr.abilityCd = 4; // D73: tougher, with roots
       w.setBoss(vr, 'Вершков · ботва-петух');
     }
     const v = valeraEnemy(w);
     if (v && !w.flags.valeraScaled) {
       w.flags.valeraScaled = true;
-      v.hp = v.maxHp = 2000 * (1 + .45 * (w.players.length - 1)); v.speedMul = 1.15; v.abilityCd = 4;
+      v.hp = v.maxHp = 2800 * (1 + .6 * (w.players.length - 1)); // D73: he vanishes and strikes from behind
+      v.speedMul = 1.15; v.abilityCd = 4;
       w.setBoss(v, 'Петух Тёмной Темы · Валера');
       w.flags.summonAt = w.time + 10;
       w.spawnWave('den', ['fast', 'normal', 'fast'], 4 + 2 * (w.players.length - 1), .4, true, 'den');
@@ -258,7 +259,8 @@ const office8: LevelScript = {
     w.say(by.id, 'Да будет свет!', 2);
     w.after(0.6, () => { w.say(n.id, 'А-А-А-А! СВЕТ! МОИ ГЛАЗА! МОЯ ТЁМНАЯ ТЕМА!!!', 3); w.infect(n, 'fast', 'valera'); });
     w.after(2.6, () => {
-      w.setLight(0.97);
+      // D73: deeper than the floor's darkness — the desk lamps die too, flashlights reach less
+      w.setLight(0.99);
       w.scare('jump', n.x, n.y);
       w.msg('ЩЁЛК', 'Валера перегрыз кабель. Свет — только ваши фонарики', 3);
     });

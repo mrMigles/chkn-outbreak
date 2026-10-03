@@ -137,7 +137,20 @@ export class PlayerView {
       this.rig.layout(x, y, a, moving, dt);
       this.rig.body.setTint(p.hurtT > 0.15 ? 0xff8080 : 0xffffff);
     }
-    this.ring.setPosition(x, y + 2).setTint((p.buffs?.invincible ?? 0) > 0 ? 0xffd65c : PLAYER_COLORS[p.slot % 4]);
+    this.ring.setPosition(x, y + 2).setTint((p.buffs?.invincible ?? 0) > 0 ? 0xffd65c : (p.slowT ?? 0) > 0 ? 0x4f9a32 : PLAYER_COLORS[p.slot % 4]);
+    // D73: held by potato tops — green leaves wrapped around the legs
+    const held = (p.slowT ?? 0) > 0 && p.state === 'alive';
+    if (held && !this.vines) this.vines = this.rig.root.scene.add.graphics().setDepth(worldDepth(y) + 0.00001);
+    if (this.vines) {
+      this.vines.clear().setVisible(held);
+      if (held) {
+        this.vines.setDepth(worldDepth(y) + 0.00001);
+        for (let k = 0; k < 7; k++) {
+          const a = k / 7 * Math.PI * 2 + time * 0.6, lx = x + Math.cos(a) * 16, ly = y - 6 + Math.sin(a) * 6;
+          this.vines.fillStyle(k % 2 ? 0x4f9a32 : 0x8fd16b, 0.95).fillTriangle(lx - 5, ly, lx + 5, ly, lx + Math.cos(a) * 4, ly - 26 - (k % 3) * 6);
+        }
+      }
+    }
     this.label.setPosition(x, y - 104).setText(p.state === 'downed' ? `${p.name} ✚ ${Math.ceil(p.downT)}` : p.name);
     const g = this.timer.clear();
     if (p.state === 'downed') {
@@ -149,7 +162,8 @@ export class PlayerView {
     }
   }
 
-  destroy() { this.rig.destroy(); this.ring.destroy(); this.label.destroy(); this.timer.destroy(); }
+  private vines?: Phaser.GameObjects.Graphics;
+  destroy() { this.rig.destroy(); this.ring.destroy(); this.label.destroy(); this.timer.destroy(); this.vines?.destroy(); }
 }
 
 /** Visual height of the body (world units) for aiming at the torso and placing labels. */

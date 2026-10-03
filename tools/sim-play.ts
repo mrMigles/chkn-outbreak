@@ -144,7 +144,7 @@ export function botStep(w: World, b: Bot, skill: number) {
   if (Math.hypot(p.x - b.lastX, p.y - b.lastY) > 24) { b.lastX = p.x; b.lastY = p.y; b.stuckT = 0; }
   else if (mv) { b.stuckT += DT; if (b.stuckT > 2.5) { b.stuckT = 0; b.wander = 1; b.wanderA = Math.atan2(mv[1], mv[0]) + (rnd() < 0.3 ? Math.PI : rnd() < 0.5 ? 1.6 : -1.6); (b as any).stuck = ((b as any).stuck ?? 0) + 1; } }
   if (b.wander > 0 && b.stuckT === 0 && mv && (b as any).stuck && b.wander > 0.01) { b.wander -= DT; if (b.wander > 0) mv = [Math.cos(b.wanderA), Math.sin(b.wanderA)]; }
-  const speed = (p.state === 'downed' ? 45 : PLAYER.speed * WEAPONS[p.weapons[p.cur]].speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1));
+  const speed = (p.state === 'downed' ? 45 : PLAYER.speed * WEAPONS[p.weapons[p.cur]].speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1) * ((p.slowT ?? 0) > 0 ? 0.3 : 1));
   let [nx, ny] = [p.x, p.y];
   if (mv) [nx, ny] = w.map.move(p.x, p.y, PLAYER.radius, mv[0] * speed * DT, mv[1] * speed * DT);
   // ---- aim and fire (reaction time, aim error, chest/head height like a mouse player)

@@ -81,6 +81,8 @@ export class Lighting {
       if (s.flicker && !settings.reducedFlashes) { s.ph += dt; on = Math.sin(s.ph * 23) + Math.sin(s.ph * 7.3) > -1.2 * (1 - s.flicker) ? 1 : 0.15; }
       if (s.kind === 'alarm') { on = this.alarm ? 1 : 0; if (s.beam) s.beam.setRotation(settings.reducedFlashes ? s.ph : this.t * 3 + s.ph).setVisible(on > 0); }
       if (s.kind === 'emergency') on = this.blackout || this.alarm || this.base > 0.5 ? on * (settings.reducedFlashes ? .7 : .6 + .4 * Math.abs(Math.sin(this.t * 2 + s.ph))) : 0;
+      // D73: deep darkness (a script sets ≥ 0.985): desk lamps die too, only emergency red stays
+      if (this.base >= 0.985 && s.kind === 'lamp') on = 0;
       s.on = on;
       s.glow.setVisible(on > 0.05).setAlpha((s.kind === 'emergency' ? 0.5 : 0.22) * on);
     }
@@ -121,7 +123,8 @@ export class Lighting {
     for (const l of dyn) radial(l.x, l.y, l.r, l.a * (1 - l.t / l.life));
 
     // flashlights: cone clipped by a ray fan (walls/crates cast shadows) + a personal halo
-    const R = 680, N = 36, half = 0.46;
+    const deep = this.base >= 0.985;
+    const R = deep ? 430 : 680, N = 36, half = 0.46;
     const ray = new Float32Array(N + 1);
     for (const f of flashlights) {
       for (let k = 0; k <= N; k++) ray[k] = Math.min(R, this.map.raycast(f.x, f.y, f.a - half + (2 * half * k) / N, R, true).d + 10);
@@ -142,7 +145,7 @@ export class Lighting {
           L[j * cols + i] += 1.1 * (1 - (d / R) ** 2) * edge;
         }
       }
-      radial(f.x, f.y, 120, 0.8);
+      radial(f.x, f.y, deep ? 80 : 120, deep ? 0.6 : 0.8);
     }
 
     // emit quads

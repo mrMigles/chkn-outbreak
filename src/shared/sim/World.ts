@@ -40,6 +40,8 @@ interface Timer { t: number; fn: () => void; every?: number }
 interface Wave { group: string; types: EnemyType[]; left: number; interval: number; t: number; aggro: boolean; tag: string; waited: number; corridorOnly?: boolean }
 
 const HUMAN_R = PLAYER.radius;
+/** D73: speed factor while held by Вершков's potato tops (client prediction uses the same). */
+export const ROOTED_SPEED = 0.3;
 const BARREL_BOX: BodyBox = { hw: 26, h: 68, head: 0 };
 const POD_BOX: BodyBox = { hw: 22, h: 64, head: 0 };
 
@@ -645,7 +647,9 @@ export class World implements WorldView {
     }
 
     const def0 = WEAPONS[p.weapons[p.cur]];
-    const speed = (p.state === 'chicken' ? PLAYER.chickenSpeed : PLAYER.speed) * def0.speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1);
+    // D73: held by potato tops — barely moving
+    if (this.rules >= 8 && p.slowT) p.slowT = Math.max(0, p.slowT - dt);
+    const speed = (p.state === 'chicken' ? PLAYER.chickenSpeed : PLAYER.speed) * def0.speedMul * ((p.buffs?.sprint ?? 0) > 0 ? 1.6 : 1) * (this.rules >= 8 && (p.slowT ?? 0) > 0 ? ROOTED_SPEED : 1);
     this.acceptMove(p, inp.x, inp.y, dt, speed);
     p.aim = inp.aim;
     const helping = this.supportController.update(this, p, dt, () => this.interact(p));
