@@ -1,0 +1,4485 @@
+[
+  {
+    "id": "START-UI-001",
+    "title": "Первый запуск без сохранения",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Чистый профиль на изолированной production-сборке, без dev=1",
+    "steps": [
+      "Открыть игру",
+      "осмотреть основные действия",
+      "открыть помощь и вернуться"
+    ],
+    "expected": "Solo и co-op различимы, Continue без сохранения отключён",
+    "screenshotCheckpoints": [
+      "Начало: Первый запуск без сохранения",
+      "Ключевое действие: Открыть игру",
+      "Результат: Solo и co-op различимы, Continue без сохранения отключён"
+    ],
+    "visual": "Подписи, контраст кнопок, отсутствие DEV-панели",
+    "risks": "Случайный вход в co-op, dev-контролы",
+    "status": "Not Run"
+  },
+  {
+    "id": "START-FLOW-002",
+    "title": "Новая solo и быстрые клики",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Чистый профиль на изолированной production-сборке, без dev=1",
+    "steps": [
+      "Быстро нажать Новая игра дважды",
+      "закрыть controls",
+      "начать движение"
+    ],
+    "expected": "Одна сессия office, один HUD и одно окно помощи",
+    "screenshotCheckpoints": [
+      "Начало: Новая solo и быстрые клики",
+      "Ключевое действие: Быстро нажать Новая игра дважды",
+      "Результат: Одна сессия office, один HUD и одно окно помощи"
+    ],
+    "visual": "Начальный objective и единственный персонаж",
+    "risks": "Двойные сцены или input listeners",
+    "status": "Not Run"
+  },
+  {
+    "id": "START-SAVE-003",
+    "title": "Продолжить solo",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Есть сохранение входа на office7",
+    "steps": [
+      "Вернуться в меню",
+      "нажать Продолжить",
+      "перезагрузить страницу и повторить"
+    ],
+    "expected": "Начало сохранённого этажа с его entry loadout, не точная позиция боя",
+    "screenshotCheckpoints": [
+      "Начало: Продолжить solo",
+      "Ключевое действие: Вернуться в меню",
+      "Результат: Начало сохранённого этажа с его entry loadout, не точная позиция боя"
+    ],
+    "visual": "Правильные номер этапа и снаряжение",
+    "risks": "Ложное ожидание exact solo save, устаревший caption",
+    "status": "Not Run"
+  },
+  {
+    "id": "START-CONFIRM-004",
+    "title": "Защита существующего прогресса",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Есть solo-сохранение",
+    "steps": [
+      "Нажать Новая игра один раз",
+      "отменить возвратом",
+      "повторить и подтвердить"
+    ],
+    "expected": "Сохранение заменяется только после явного второго действия",
+    "screenshotCheckpoints": [
+      "Начало: Защита существующего прогресса",
+      "Ключевое действие: Нажать Новая игра один раз",
+      "Результат: Сохранение заменяется только после явного второго действия"
+    ],
+    "visual": "Текст подтверждения и доступный возврат",
+    "risks": "Перезапись одним тапом",
+    "status": "Not Run"
+  },
+  {
+    "id": "START-LOOK-005",
+    "title": "Редактор сотрудника",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Чистый профиль на изолированной production-сборке, без dev=1",
+    "steps": [
+      "Изменить тело, волосы и одежду",
+      "проверить preview мутации",
+      "сохранить",
+      "вновь открыть"
+    ],
+    "expected": "Внешность сохранена, имя и портрет согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Редактор сотрудника",
+      "Ключевое действие: Изменить тело, волосы и одежду",
+      "Результат: Внешность сохранена, имя и портрет согласованы"
+    ],
+    "visual": "Спрайт, preview, controls редактора",
+    "risks": "Пропавшие части тела, сохранение вместо отмены",
+    "status": "Not Run"
+  },
+  {
+    "id": "START-INSTALL-006",
+    "title": "PWA install и справка",
+    "area": "01 START / Main Menu / New Game",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Браузер с PWA либо без поддержки установки",
+    "steps": [
+      "Открыть Установить игру",
+      "проверить инструкции",
+      "вернуться",
+      "открыть credits"
+    ],
+    "expected": "Понятные инструкции соответствуют браузеру, меню доступно",
+    "screenshotCheckpoints": [
+      "Начало: PWA install и справка",
+      "Ключевое действие: Открыть Установить игру",
+      "Результат: Понятные инструкции соответствуют браузеру, меню доступно"
+    ],
+    "visual": "Текст и кнопки установки",
+    "risks": "Кнопка обещает недоступное действие",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-FLOW-001",
+    "title": "Первые 5–10 минут",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Новый профиль, tutorials включены, office без читов",
+    "steps": [
+      "Начать solo",
+      "читать только подсказки игры",
+      "двигаться, целиться, стрелять",
+      "следовать цели до серверной"
+    ],
+    "expected": "Управление, E, reload, цель и стрелка понятны без исходников",
+    "screenshotCheckpoints": [
+      "Начало: Первые 5–10 минут",
+      "Ключевое действие: Начать solo",
+      "Результат: Управление, E, reload, цель и стрелка понятны без исходников"
+    ],
+    "visual": "Порядок подсказок и видимость врага",
+    "risks": "Слишком ранняя опасность, непонятная цель",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-RELOAD-002",
+    "title": "Первый пустой магазин",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Новый профиль, tutorials включены, office без читов",
+    "steps": [
+      "Расстрелять пистолет",
+      "наблюдать автоперезарядку",
+      "выполнить ручной reload"
+    ],
+    "expected": "Магазин конечен, запас пистолета бесконечен, правило объяснено",
+    "screenshotCheckpoints": [
+      "Начало: Первый пустой магазин",
+      "Ключевое действие: Расстрелять пистолет",
+      "Результат: Магазин конечен, запас пистолета бесконечен, правило объяснено"
+    ],
+    "visual": "Ammo и подсказка",
+    "risks": "Обещание бесконечного магазина",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-WEAPON-003",
+    "title": "Получение нового оружия",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Найден первый weapon pickup",
+    "steps": [
+      "Подобрать оружие",
+      "прочитать подсказку",
+      "переключить и стрелять"
+    ],
+    "expected": "Подсказка позволяет выбрать полученный ствол",
+    "screenshotCheckpoints": [
+      "Начало: Получение нового оружия",
+      "Ключевое действие: Подобрать оружие",
+      "Результат: Подсказка позволяет выбрать полученный ствол"
+    ],
+    "visual": "Оружие в руках и панель",
+    "risks": "Игрок не понимает смену",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-QUEUE-004",
+    "title": "Подсказки во время опасности",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Новый профиль, tutorials включены, office без читов",
+    "steps": [
+      "Вызвать бой, objective update и pickup подряд",
+      "открыть pause",
+      "вернуться"
+    ],
+    "expected": "Подсказки идут по очереди, не скрывают обязательные опасности",
+    "screenshotCheckpoints": [
+      "Начало: Подсказки во время опасности",
+      "Ключевое действие: Вызвать бой, objective update и pickup подряд",
+      "Результат: Подсказки идут по очереди, не скрывают обязательные опасности"
+    ],
+    "visual": "Одновременные notice, radio и tip",
+    "risks": "Наложения и потерянные tips",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-MOBILE-005",
+    "title": "Тест новичка с twin-stick",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Touch-профиль на 390×844",
+    "steps": [
+      "Начать игру",
+      "применить схему controls",
+      "прицелиться малым отклонением",
+      "довести правый стик до края"
+    ],
+    "expected": "Внутри стика только aim, у края fire; обе руки понятны",
+    "screenshotCheckpoints": [
+      "Начало: Тест новичка с twin-stick",
+      "Ключевое действие: Начать игру",
+      "Результат: Внутри стика только aim, у края fire; обе руки понятны"
+    ],
+    "visual": "Ghost sticks и зона действия",
+    "risks": "Старое обещание autofire по наличию врага",
+    "status": "Not Run"
+  },
+  {
+    "id": "TUTORIAL-RESET-006",
+    "title": "Повторный показ подсказок",
+    "area": "02 Tutorial / First Minutes",
+    "priority": "Low",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Профиль уже видел tips",
+    "steps": [
+      "Отключить tips",
+      "играть",
+      "включить и сбросить в настройках",
+      "начать этаж"
+    ],
+    "expected": "Настройка сохраняется, сброс вновь показывает актуальные tips",
+    "screenshotCheckpoints": [
+      "Начало: Повторный показ подсказок",
+      "Ключевое действие: Отключить tips",
+      "Результат: Настройка сохраняется, сброс вновь показывает актуальные tips"
+    ],
+    "visual": "Состояние toggle и текст",
+    "risks": "Советы навсегда потеряны",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-SINGLE-001",
+    "title": "Первый враг и попадания",
+    "area": "03 Core Combat",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo office/arena с обычным HP; co-op повторить с двумя клиентами",
+    "steps": [
+      "Подойти к одному normal",
+      "стрелять в тело",
+      "повторить в голову"
+    ],
+    "expected": "Урон соответствует месту попадания, смерть читается",
+    "screenshotCheckpoints": [
+      "Начало: Первый враг и попадания",
+      "Ключевое действие: Подойти к одному normal",
+      "Результат: Урон соответствует месту попадания, смерть читается"
+    ],
+    "visual": "Hit flash, кровь, headshot feedback",
+    "risks": "Пули проходят нарисованную цель",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-CROWD-002",
+    "title": "Стая и стрельба на ходу",
+    "area": "03 Core Combat",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Волна office или factory",
+    "steps": [
+      "Двигаться боком и назад",
+      "удерживать fire",
+      "резко сменить направление"
+    ],
+    "expected": "Input отзывчив, толпа читаема, движение и огонь одновременны",
+    "screenshotCheckpoints": [
+      "Начало: Стая и стрельба на ходу",
+      "Ключевое действие: Двигаться боком и назад",
+      "Результат: Input отзывчив, толпа читаема, движение и огонь одновременны"
+    ],
+    "visual": "Игрок среди FX, силуэты угроз",
+    "risks": "Залипание, потеря aim",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-DOOR-003",
+    "title": "Стрельба через дверь",
+    "area": "03 Core Combat",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Открытая дверь с врагами за ней",
+    "steps": [
+      "Стрелять через центр проёма",
+      "вдоль косяка",
+      "затем через закрытую дверь"
+    ],
+    "expected": "Открытый проём пропускает выстрел, закрытая преграда блокирует",
+    "screenshotCheckpoints": [
+      "Начало: Стрельба через дверь",
+      "Ключевое действие: Стрелять через центр проёма",
+      "Результат: Открытый проём пропускает выстрел, закрытая преграда блокирует"
+    ],
+    "visual": "Трассер и место попадания",
+    "risks": "Невидимая коллизия или пробитие стены",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-WALL-004",
+    "title": "Ближний бой у мебели",
+    "area": "03 Core Combat",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Враг и игрок рядом со столом",
+    "steps": [
+      "Обойти стол",
+      "стрелять в упор сверху и снизу",
+      "прижаться к стене"
+    ],
+    "expected": "Видимый противник поражается при свободной линии; база мебели ограничивает движение",
+    "screenshotCheckpoints": [
+      "Начало: Ближний бой у мебели",
+      "Ключевое действие: Обойти стол",
+      "Результат: Видимый противник поражается при свободной линии; база мебели ограничивает движение"
+    ],
+    "visual": "Стопы, ствол, foreground",
+    "risks": "Hitbox смещён относительно спрайта",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-HEAD-005",
+    "title": "Headshot и вертикальное расположение",
+    "area": "03 Core Combat",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Normal без брони",
+    "steps": [
+      "Прицелиться в голову сверху, снизу и сбоку",
+      "сравнить с телом"
+    ],
+    "expected": "Headshot ×2 для соответствующего оружия, визуальная точка совпадает",
+    "screenshotCheckpoints": [
+      "Начало: Headshot и вертикальное расположение",
+      "Ключевое действие: Прицелиться в голову сверху, снизу и сбоку",
+      "Результат: Headshot ×2 для соответствующего оружия, визуальная точка совпадает"
+    ],
+    "visual": "Цифры урона и реальная голова",
+    "risks": "Headshot требует целиться в пустоту",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-KNOCK-006",
+    "title": "Отбрасывание в стену",
+    "area": "03 Core Combat",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Shotgun и fat/normal",
+    "steps": [
+      "Стрелять вблизи",
+      "направить knockback к мебели",
+      "добить"
+    ],
+    "expected": "Отбрасывание различимо и не переносит врага в недоступную область",
+    "screenshotCheckpoints": [
+      "Начало: Отбрасывание в стену",
+      "Ключевое действие: Стрелять вблизи",
+      "Результат: Отбрасывание различимо и не переносит врага в недоступную область"
+    ],
+    "visual": "Контакт стоп и оснований",
+    "risks": "Враг застревает в стене",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-RELOAD-007",
+    "title": "Последний патрон и смена во время reload",
+    "area": "03 Core Combat",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Два оружия, малый магазин",
+    "steps": [
+      "Выстрелить последним патроном",
+      "начать reload",
+      "сменить оружие",
+      "вернуться"
+    ],
+    "expected": "Reload отменяется при switching, ammo не дублируется",
+    "screenshotCheckpoints": [
+      "Начало: Последний патрон и смена во время reload",
+      "Ключевое действие: Выстрелить последним патроном",
+      "Результат: Reload отменяется при switching, ammo не дублируется"
+    ],
+    "visual": "Индикатор reload и ammo",
+    "risks": "Бесплатные патроны, запрет смены",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-COMBO-008",
+    "title": "Комбо и kill feedback",
+    "area": "03 Core Combat",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Стая обычных врагов",
+    "steps": [
+      "Убить подряд",
+      "сделать паузу в убийствах",
+      "продолжить"
+    ],
+    "expected": "Combo растёт и истекает по правилам, сообщения не мешают бою",
+    "screenshotCheckpoints": [
+      "Начало: Комбо и kill feedback",
+      "Ключевое действие: Убить подряд",
+      "Результат: Combo растёт и истекает по правилам, сообщения не мешают бою"
+    ],
+    "visual": "Комбо x10/x25/x40 и счёт",
+    "risks": "Засчитывание одного kill несколько раз",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-EMPTY-009",
+    "title": "Нет боеприпасов под давлением",
+    "area": "03 Core Combat",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Оружие с конечным запасом",
+    "steps": [
+      "Израсходовать магазин и резерв",
+      "попытаться fire/reload",
+      "выбрать пистолет"
+    ],
+    "expected": "Нет выстрелов без ресурса, пистолет позволяет продолжить",
+    "screenshotCheckpoints": [
+      "Начало: Нет боеприпасов под давлением",
+      "Ключевое действие: Израсходовать магазин и резерв",
+      "Результат: Нет выстрелов без ресурса, пистолет позволяет продолжить"
+    ],
+    "visual": "Предупреждение dry и выбор оружия",
+    "risks": "Soft-lock на пустом стволе",
+    "status": "Not Run"
+  },
+  {
+    "id": "COMBAT-FEEL-010",
+    "title": "Оценка темпа и решений",
+    "area": "03 Core Combat",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Обычный бой office и factory без god mode",
+    "steps": [
+      "Играть по 3 минуты",
+      "использовать дистанцию, двери и два оружия",
+      "записать причины смены тактики"
+    ],
+    "expected": "Зафиксировать время убийства, downtime и реальные решения; subjective findings оформить Improvement",
+    "screenshotCheckpoints": [
+      "Начало: Оценка темпа и решений",
+      "Ключевое действие: Играть по 3 минуты",
+      "Результат: Зафиксировать время убийства, downtime и реальные решения; subjective findings оформить Improvement"
+    ],
+    "visual": "Различимость попаданий и смертей",
+    "risks": "Монотонность, слабый feedback, чрезмерные popup",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-PISTOL-001",
+    "title": "ПМ: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup pistol, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "12, бесконечный резерв, reload 1 с; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: ПМ: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 12, бесконечный резерв, reload 1 с; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-PISTOL-002",
+    "title": "ПМ: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "pistol и одиночную цель и голову",
+    "steps": [
+      "Стрелять в одиночную цель и голову",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: ПМ: характер огня",
+      "Ключевое действие: Стрелять в одиночную цель и голову",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SMG-001",
+    "title": "Дедлайн: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup smg, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "42, reload 1.35 с, быстрая очередь; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Дедлайн: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 42, reload 1.35 с, быстрая очередь; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SMG-002",
+    "title": "Дедлайн: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "smg и движущуюся стаю",
+    "steps": [
+      "Стрелять в движущуюся стаю",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: Дедлайн: характер огня",
+      "Ключевое действие: Стрелять в движущуюся стаю",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SHOTGUN-001",
+    "title": "Тимбилдинг: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup shotgun, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "8, reload 1.9 с, 10 дробин; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Тимбилдинг: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 8, reload 1.9 с, 10 дробин; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SHOTGUN-002",
+    "title": "Тимбилдинг: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "shotgun и близкую группу и дальнюю цель",
+    "steps": [
+      "Стрелять в близкую группу и дальнюю цель",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: Тимбилдинг: характер огня",
+      "Ключевое действие: Стрелять в близкую группу и дальнюю цель",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-RIFLE-001",
+    "title": "KPI-47: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup rifle, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "30, reload 1.7 с, piercing 1; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: KPI-47: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 30, reload 1.7 с, piercing 1; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-RIFLE-002",
+    "title": "KPI-47: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "rifle и двоих в линии",
+    "steps": [
+      "Стрелять в двоих в линии",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: KPI-47: характер огня",
+      "Ключевое действие: Стрелять в двоих в линии",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-MACHINEGUN-001",
+    "title": "Квартальный отчёт: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup machinegun, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "150, reload 3 с, speedMul 0.78; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Квартальный отчёт: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 150, reload 3 с, speedMul 0.78; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-MACHINEGUN-002",
+    "title": "Квартальный отчёт: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "machinegun и большую стаю и троих в линии",
+    "steps": [
+      "Стрелять в большую стаю и троих в линии",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: Квартальный отчёт: характер огня",
+      "Ключевое действие: Стрелять в большую стаю и троих в линии",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-GRENADE-001",
+    "title": "Оптимизация: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup grenade, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "6, reload 2.3 с, splash 150; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Оптимизация: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 6, reload 2.3 с, splash 150; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-GRENADE-002",
+    "title": "Оптимизация: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "grenade и группу возле стены",
+    "steps": [
+      "Стрелять в группу возле стены",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: Оптимизация: характер огня",
+      "Ключевое действие: Стрелять в группу возле стены",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-FLAME-001",
+    "title": "Выгорание: получение и ресурс",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Pickup flamethrower, обычный HP",
+    "steps": [
+      "Подобрать",
+      "выбрать",
+      "сделать серию",
+      "reload",
+      "проверить reserve"
+    ],
+    "expected": "160, reload 2.2 с, range 260; ammo HUD и выбранный ствол согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Выгорание: получение и ресурс",
+      "Ключевое действие: Подобрать",
+      "Результат: 160, reload 2.2 с, range 260; ammo HUD и выбранный ствол согласованы"
+    ],
+    "visual": "Pickup, спрайт в руках, ammo",
+    "risks": "Неверный магазин или другой спрайт",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-FLAME-002",
+    "title": "Выгорание: характер огня",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "flamethrower и группу в пределах и за пределами огня",
+    "steps": [
+      "Стрелять в группу в пределах и за пределами огня",
+      "двигаться",
+      "сравнить звук и отдачу с ПМ"
+    ],
+    "expected": "Тип огня и дистанция согласованы с weapons.ts; оружие различимо",
+    "screenshotCheckpoints": [
+      "Начало: Выгорание: характер огня",
+      "Ключевое действие: Стрелять в группу в пределах и за пределами огня",
+      "Результат: Тип огня и дистанция согласованы с weapons.ts; оружие различимо"
+    ],
+    "visual": "Дуло, звук, отдача и death feedback",
+    "risks": "Одинаковое ощущение или неверное поражение",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-MINIGUN-001",
+    "title": "Миниган у вертолёта",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Street1, pickup минигана",
+    "steps": [
+      "Подобрать",
+      "удерживать огонь",
+      "попытаться reload",
+      "взять ammo box"
+    ],
+    "expected": "280 зарядов, резерв 0; ammo box не пополняет специальное оружие",
+    "screenshotCheckpoints": [
+      "Начало: Миниган у вертолёта",
+      "Ключевое действие: Подобрать",
+      "Результат: 280 зарядов, резерв 0; ammo box не пополняет специальное оружие"
+    ],
+    "visual": "Pickup, очередь, ammo bar",
+    "risks": "Бесконечный миниган",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-MINIGUN-002",
+    "title": "Исчерпание минигана",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Миниган почти пуст, есть ПМ",
+    "steps": [
+      "Выстрелить последними зарядами",
+      "продолжить удерживать огонь"
+    ],
+    "expected": "Пустой миниган удалён из loadout, игра выбирает доступное оружие",
+    "screenshotCheckpoints": [
+      "Начало: Исчерпание минигана",
+      "Ключевое действие: Выстрелить последними зарядами",
+      "Результат: Пустой миниган удалён из loadout, игра выбирает доступное оружие"
+    ],
+    "visual": "Сообщение и выбранный слот",
+    "risks": "Пустой слот, зависание ввода",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-LASER-001",
+    "title": "Лазер Омлетова",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Lab, спасён Омлетов",
+    "steps": [
+      "Подобрать лазер",
+      "стрелять в ряд врагов",
+      "reload",
+      "подобрать ammo"
+    ],
+    "expected": "10/20 при получении, piercing, ограниченные заряды; обычные ammo boxes не добавляют charges",
+    "screenshotCheckpoints": [
+      "Начало: Лазер Омлетова",
+      "Ключевое действие: Подобрать лазер",
+      "Результат: 10/20 при получении, piercing, ограниченные заряды; обычные ammo boxes не добавляют charges"
+    ],
+    "visual": "Бирюзовый луч, попадания по линии",
+    "risks": "Непонятный остаток или неограниченный ресурс",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SWITCH-001",
+    "title": "Все девять видов в picker",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Доступны 9 видов через setup",
+    "steps": [
+      "На ПК нажать 1–9, Q и wheel",
+      "на телефоне открыть picker и выбрать laser/minigun"
+    ],
+    "expected": "Все доступные виды выбираются, выбранный слот совпадает с оружием",
+    "screenshotCheckpoints": [
+      "Начало: Все девять видов в picker",
+      "Ключевое действие: На ПК нажать 1–9, Q и wheel",
+      "Результат: Все доступные виды выбираются, выбранный слот совпадает с оружием"
+    ],
+    "visual": "Полнота picker и touch targets",
+    "risks": "Новые оружия недоступны по UI",
+    "status": "Not Run"
+  },
+  {
+    "id": "WEAPON-SAFE-001",
+    "title": "Огонь возле союзников",
+    "area": "04 Weapons",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape",
+    "preconditions": "Co-op 2 клиента или вооружённый NPC",
+    "steps": [
+      "Стрелять каждым типом возле союзника",
+      "проверить HP",
+      "отдельно проверить опасную бочку"
+    ],
+    "expected": "Дружественный огонь игроков отключён; environmental damage проверять отдельно",
+    "screenshotCheckpoints": [
+      "Начало: Огонь возле союзников",
+      "Ключевое действие: Стрелять каждым типом возле союзника",
+      "Результат: Дружественный огонь игроков отключён; environmental damage проверять отдельно"
+    ],
+    "visual": "HP обоих и источник damage",
+    "risks": "Смешение friendly fire и barrel damage",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-NORMAL-001",
+    "title": "Офисный кур: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча normal, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "подойти и отступить от melee",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Офисный кур: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-FAST-001",
+    "title": "Стажёр: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча fast, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "бежать от быстрой атаки",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Стажёр: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-FAT-001",
+    "title": "Менеджер: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча fat, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "сравнить скорость, живучесть и knockback",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Менеджер: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-SPITTER-001",
+    "title": "Плевун: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча spitter, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "уклониться от плевка и спрятаться за стеной",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Плевун: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-ARMORED-001",
+    "title": "Охранник: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча armored, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "сравнить пули с огнём и взрывом",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Охранник: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-EXPLODER-001",
+    "title": "Химик: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча exploder, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "наблюдать fuse, отойти и убить на расстоянии",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Химик: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-CHICK-001",
+    "title": "Цыплёнок: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча chick, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "отбиться от небольшой стаи",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Цыплёнок: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-JUMPER-001",
+    "title": "Прыгун: угроза и ответ",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Встреча jumper, обычный HP",
+    "steps": [
+      "Распознать врага до урона",
+      "уклониться от прыжка на улице",
+      "добить"
+    ],
+    "expected": "Атака соответствует типу, опасность читается до попадания",
+    "screenshotCheckpoints": [
+      "Начало: Прыгун: угроза и ответ",
+      "Ключевое действие: Распознать врага до урона",
+      "Результат: Атака соответствует типу, опасность читается до попадания"
+    ],
+    "visual": "Силуэт, telegraph, смерть",
+    "risks": "Неотличимый тип или скрытая атака",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-AI-001",
+    "title": "Пути через двери и мебель",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Смешанная группа у дверей",
+    "steps": [
+      "Увести группу вокруг столов",
+      "пройти дверной проём",
+      "вернуться"
+    ],
+    "expected": "Враги достигают игрока по доступному пути, не атакуют сквозь стену",
+    "screenshotCheckpoints": [
+      "Начало: Пути через двери и мебель",
+      "Ключевое действие: Увести группу вокруг столов",
+      "Результат: Враги достигают игрока по доступному пути, не атакуют сквозь стену"
+    ],
+    "visual": "Заторы и атаки у косяков",
+    "risks": "Недоступный последний враг",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-SPAWN-002",
+    "title": "Вход новой стаи",
+    "area": "05 Enemy Types",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Scripted wave кампании",
+    "steps": [
+      "Встать у входа волны",
+      "вызвать событие",
+      "наблюдать появление"
+    ],
+    "expected": "Нет неконтролируемого появления прямо в теле игрока, выход видим",
+    "screenshotCheckpoints": [
+      "Начало: Вход новой стаи",
+      "Ключевое действие: Встать у входа волны",
+      "Результат: Нет неконтролируемого появления прямо в теле игрока, выход видим"
+    ],
+    "visual": "Rise и расстояние spawn",
+    "risks": "Мгновенный невидимый урон",
+    "status": "Not Run"
+  },
+  {
+    "id": "ENEMY-DEATH-003",
+    "title": "Однократная смерть и drop",
+    "area": "05 Enemy Types",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Враг под перекрёстным огнём",
+    "steps": [
+      "Добить одновременно несколькими попаданиями",
+      "проверить score/drop"
+    ],
+    "expected": "Одна смерть и один допустимый drop",
+    "screenshotCheckpoints": [
+      "Начало: Однократная смерть и drop",
+      "Ключевое действие: Добить одновременно несколькими попаданиями",
+      "Результат: Одна смерть и один допустимый drop"
+    ],
+    "visual": "Труп, pickup, счёт",
+    "risks": "Двойной kill/drop",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-RESCUE-001",
+    "title": "Пять друзей на этаже 7",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office7 до открытия Castor",
+    "steps": [
+      "Победить мутировавшую Елену",
+      "взять пропуск",
+      "освободить Андрея/Серёгу, Влада, Стаса и Пашу"
+    ],
+    "expected": "Все пять спасены, objective отражает реальный прогресс",
+    "screenshotCheckpoints": [
+      "Начало: Пять друзей на этаже 7",
+      "Ключевое действие: Победить мутировавшую Елену",
+      "Результат: Все пять спасены, objective отражает реальный прогресс"
+    ],
+    "visual": "Имена, counter и follow",
+    "risks": "Пропуск потерян, неверный rescue count",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-ESCORT-002",
+    "title": "Группа в дверном проёме",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Несколько following NPC",
+    "steps": [
+      "Пройти узкую дверь и вокруг мебели",
+      "резко развернуться"
+    ],
+    "expected": "NPC не блокируют игрока и следуют по пути",
+    "screenshotCheckpoints": [
+      "Начало: Группа в дверном проёме",
+      "Ключевое действие: Пройти узкую дверь и вокруг мебели",
+      "Результат: NPC не блокируют игрока и следуют по пути"
+    ],
+    "visual": "Расстояния и стопы",
+    "risks": "Колонна застревает",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-FOLLOW-003",
+    "title": "Tap и удержание E возле NPC",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Следующий NPC рядом",
+    "steps": [
+      "Нажать E один раз",
+      "удерживать",
+      "отпустить",
+      "повторить tap"
+    ],
+    "expected": "World interaction выполняется один раз на нажатие, follow не переключается многократно",
+    "screenshotCheckpoints": [
+      "Начало: Tap и удержание E возле NPC",
+      "Ключевое действие: Нажать E один раз",
+      "Результат: World interaction выполняется один раз на нажатие, follow не переключается многократно"
+    ],
+    "visual": "Реплика и состояние NPC",
+    "risks": "Дребезг режима",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-COMBAT-004",
+    "title": "Вооружённый спутник",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Вооружённый companion и враги",
+    "steps": [
+      "Вступить в бой",
+      "отойти за стену",
+      "вернуться"
+    ],
+    "expected": "NPC стреляет в доступных врагов, не сквозь стены",
+    "screenshotCheckpoints": [
+      "Начало: Вооружённый спутник",
+      "Ключевое действие: Вступить в бой",
+      "Результат: NPC стреляет в доступных врагов, не сквозь стены"
+    ],
+    "visual": "Ствол, линия огня и kill",
+    "risks": "Прострел мебели или постоянно стреляет в пустоту",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-SEPARATE-005",
+    "title": "Потерявшийся спутник",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Following NPC",
+    "steps": [
+      "Убежать далеко",
+      "вернуться",
+      "пройти несколько комнат"
+    ],
+    "expected": "Companion сохраняет follow и может догнать без телепорта в препятствие",
+    "screenshotCheckpoints": [
+      "Начало: Потерявшийся спутник",
+      "Ключевое действие: Убежать далеко",
+      "Результат: Companion сохраняет follow и может догнать без телепорта в препятствие"
+    ],
+    "visual": "Маршрут и marker",
+    "risks": "Потеря companion без объяснения",
+    "status": "Not Run"
+  },
+  {
+    "id": "NPC-TRANSITION-006",
+    "title": "Эвакуация сюжетных друзей",
+    "area": "06 NPC / Rescue / Escort / Companions",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Все друзья office7 у выхода",
+    "steps": [
+      "Завершить escort",
+      "перейти office8",
+      "проверить спутников и реплики"
+    ],
+    "expected": "Сюжетная эвакуация согласована с переходом, перенесены только предусмотренные companions",
+    "screenshotCheckpoints": [
+      "Начало: Эвакуация сюжетных друзей",
+      "Ключевое действие: Завершить escort",
+      "Результат: Сюжетная эвакуация согласована с переходом, перенесены только предусмотренные companions"
+    ],
+    "visual": "Result и новые NPC",
+    "risks": "Дубли NPC, ложное ожидание переноса всех друзей",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-VISUAL-001",
+    "title": "Предвестник превращения",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "NPC перед scheduled mutation",
+    "steps": [
+      "Наблюдать twitch/перья",
+      "не пропускать реплики",
+      "дождаться превращения"
+    ],
+    "expected": "Понятно, какой союзник превращается; визуальная мутация около 2.2 с",
+    "screenshotCheckpoints": [
+      "Начало: Предвестник превращения",
+      "Ключевое действие: Наблюдать twitch/перья",
+      "Результат: Понятно, какой союзник превращается; визуальная мутация около 2.2 с"
+    ],
+    "visual": "Человек, промежуточная стадия и мутант",
+    "risks": "Исчезновение и случайный spawn",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-COMBAT-002",
+    "title": "Прекращение союзного огня",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Вооружённый NPC начинает мутацию",
+    "steps": [
+      "Драться рядом",
+      "следить за NPC во время превращения и после"
+    ],
+    "expected": "Не стреляет как союзник при mutation, враг не атакует до завершения",
+    "screenshotCheckpoints": [
+      "Начало: Прекращение союзного огня",
+      "Ключевое действие: Драться рядом",
+      "Результат: Не стреляет как союзник при mutation, враг не атакует до завершения"
+    ],
+    "visual": "Оружие, aim и damage",
+    "risks": "Одновременно союзник и враг",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-DROP-003",
+    "title": "Ключ и оружие после мутации",
+    "area": "07 NPC Mutation",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Елена или Ирина с сюжетным предметом",
+    "steps": [
+      "Дождаться мутации",
+      "убить",
+      "подобрать ключ",
+      "пройти gate"
+    ],
+    "expected": "Сюжетный предмет доступен ровно один раз, прохождение сохраняется",
+    "screenshotCheckpoints": [
+      "Начало: Ключ и оружие после мутации",
+      "Ключевое действие: Дождаться мутации",
+      "Результат: Сюжетный предмет доступен ровно один раз, прохождение сохраняется"
+    ],
+    "visual": "Ключ и objective",
+    "risks": "Обязательный drop в стене или исчезает",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-WALL-004",
+    "title": "Превращение в узком месте",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "NPC у двери/мебели",
+    "steps": [
+      "Дождаться мутации возле стены",
+      "уйти и вернуться",
+      "добить"
+    ],
+    "expected": "Мутант занимает доступную позицию и не остаётся невидимым",
+    "screenshotCheckpoints": [
+      "Начало: Превращение в узком месте",
+      "Ключевое действие: Дождаться мутации возле стены",
+      "Результат: Мутант занимает доступную позицию и не остаётся невидимым"
+    ],
+    "visual": "Feet/depth до и после",
+    "risks": "Невидимый враг, stale sprite",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-NETWORK-005",
+    "title": "Одна мутация на двух клиентах",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Co-op 2 клиента до мутации",
+    "steps": [
+      "Наблюдать одновременно",
+      "третьим клиентом войти в середине"
+    ],
+    "expected": "Все видят одно состояние, один мутант и drop",
+    "screenshotCheckpoints": [
+      "Начало: Одна мутация на двух клиентах",
+      "Ключевое действие: Наблюдать одновременно",
+      "Результат: Все видят одно состояние, один мутант и drop"
+    ],
+    "visual": "Скриншоты A/B/C с timestamp",
+    "risks": "Двойная сущность или рассинхрон",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-REJOIN-006",
+    "title": "Возврат во время мутации",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Co-op, NPC начинает mutation",
+    "steps": [
+      "Разорвать соединение A",
+      "вернуть после превращения"
+    ],
+    "expected": "Стадия не перезапускается, назначение не reroll, drop не повторяется",
+    "screenshotCheckpoints": [
+      "Начало: Возврат во время мутации",
+      "Ключевое действие: Разорвать соединение A",
+      "Результат: Стадия не перезапускается, назначение не reroll, drop не повторяется"
+    ],
+    "visual": "Внешность и pickup после возврата",
+    "risks": "Reroll или повторная выдача",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-MULTI-007",
+    "title": "Несколько сюжетных превращений",
+    "area": "07 NPC Mutation",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Этаж с несколькими мутирующими NPC",
+    "steps": [
+      "Вызвать близкие сюжетные события",
+      "наблюдать каждый NPC"
+    ],
+    "expected": "Каждая сущность очищена и заменена один раз; ограничения random не применять к scripted",
+    "screenshotCheckpoints": [
+      "Начало: Несколько сюжетных превращений",
+      "Ключевое действие: Вызвать близкие сюжетные события",
+      "Результат: Каждая сущность очищена и заменена один раз; ограничения random не применять к scripted"
+    ],
+    "visual": "Отдельные силуэты и имена",
+    "risks": "Смешение двух мутаций",
+    "status": "Not Run"
+  },
+  {
+    "id": "MUTATION-TRANSITION-008",
+    "title": "Смена этажа после превращения",
+    "area": "07 NPC Mutation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Companion мутировал у финальной цели",
+    "steps": [
+      "Закончить этаж",
+      "перейти дальше"
+    ],
+    "expected": "Не остаются старые FX, заражение не дублирует companion",
+    "screenshotCheckpoints": [
+      "Начало: Смена этажа после превращения",
+      "Ключевое действие: Закончить этаж",
+      "Результат: Не остаются старые FX, заражение не дублирует companion"
+    ],
+    "visual": "Новая сцена и result",
+    "risks": "Призрачные следы и двойной companion",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-AMMO-001",
+    "title": "Короткий tap передаёт магазин",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A имеет ammo supply, B с дефицитом резерва",
+    "steps": [
+      "Подойти на свободной линии",
+      "tap E короче 0.22 с",
+      "проверить A/B"
+    ],
+    "expected": "A тратит 1 supply, B получает один магазин в reserve до cap",
+    "screenshotCheckpoints": [
+      "Начало: Короткий tap передаёт магазин",
+      "Ключевое действие: Подойти на свободной линии",
+      "Результат: A тратит 1 supply, B получает один магазин в reserve до cap"
+    ],
+    "visual": "Имя цели, ammo и help feedback",
+    "risks": "Неверное оружие, двойной расход",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-HEAL-002",
+    "title": "Лечение союзника удержанием",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A имеет аптечку, B ранен",
+    "steps": [
+      "Удерживать E 1.2 с",
+      "продолжить удерживать ещё секунду"
+    ],
+    "expected": "B +40 HP до max, одна аптечка списана один раз",
+    "screenshotCheckpoints": [
+      "Начало: Лечение союзника удержанием",
+      "Ключевое действие: Удерживать E 1.2 с",
+      "Результат: B +40 HP до max, одна аптечка списана один раз"
+    ],
+    "visual": "Progress и здоровье",
+    "risks": "Повтор лечения от удержания",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-SELF-003",
+    "title": "Самолечение без друга",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Ранен A с аптечкой, рядом нет eligible B",
+    "steps": [
+      "Удержать E",
+      "отпустить",
+      "повторить без ресурса"
+    ],
+    "expected": "+40 HP один раз, без аптечки эффекта нет",
+    "screenshotCheckpoints": [
+      "Начало: Самолечение без друга",
+      "Ключевое действие: Удержать E",
+      "Результат: +40 HP один раз, без аптечки эффекта нет"
+    ],
+    "visual": "Self target и progress",
+    "risks": "Self-heal скрыт или бесплатен",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-REVIVE-004",
+    "title": "Поднятие раненого",
+    "area": "08 Support / One-button Interaction",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B downed, A жив",
+    "steps": [
+      "Подойти",
+      "удерживать E 2.6 с"
+    ],
+    "expected": "B alive с 45 HP, расходники не нужны",
+    "screenshotCheckpoints": [
+      "Начало: Поднятие раненого",
+      "Ключевое действие: Подойти",
+      "Результат: B alive с 45 HP, расходники не нужны"
+    ],
+    "visual": "Down alert, кольцо, progress, standing pose",
+    "risks": "Бегущий downed, неправильное HP",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-CANCEL-005",
+    "title": "Отмена перед завершением",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A помогает B",
+    "steps": [
+      "Отпустить E на 90%",
+      "начать снова"
+    ],
+    "expected": "Отменённый progress сброшен, resource не списан",
+    "screenshotCheckpoints": [
+      "Начало: Отмена перед завершением",
+      "Ключевое действие: Отпустить E на 90%",
+      "Результат: Отменённый progress сброшен, resource не списан"
+    ],
+    "visual": "Сброс кольца",
+    "risks": "Продолжение старого progress",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-MOVE-006",
+    "title": "Отмена движением и стрельбой",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Идёт hold heal/revive",
+    "steps": [
+      "Сдвинуться дальше 8 units",
+      "повторить и выстрелить"
+    ],
+    "expected": "Помощь отменена, ресурс не потрачен",
+    "screenshotCheckpoints": [
+      "Начало: Отмена движением и стрельбой",
+      "Ключевое действие: Сдвинуться дальше 8 units",
+      "Результат: Помощь отменена, ресурс не потрачен"
+    ],
+    "visual": "HUD и отсутствие help completion",
+    "risks": "Heal при беге или fire",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-LOS-007",
+    "title": "Преграда между игроками",
+    "area": "08 Support / One-button Interaction",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B близко по разные стороны стены",
+    "steps": [
+      "Tap/hold E",
+      "открыть дверь",
+      "повторить"
+    ],
+    "expected": "Через стену нет помощи, с открытой линией действие доступно",
+    "screenshotCheckpoints": [
+      "Начало: Преграда между игроками",
+      "Ключевое действие: Tap/hold E",
+      "Результат: Через стену нет помощи, с открытой линией действие доступно"
+    ],
+    "visual": "Target prompt и progress",
+    "risks": "Поднятие сквозь стену",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-RANGE-008",
+    "title": "Граница 110 units",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "2 клиента на свежей rules6 комнате",
+    "steps": [
+      "Проверить чуть внутри/снаружи 110",
+      "отвести B во время hold"
+    ],
+    "expected": "Помощь доступна только в радиусе, выход отменяет",
+    "screenshotCheckpoints": [
+      "Начало: Граница 110 units",
+      "Ключевое действие: Проверить чуть внутри/снаружи 110",
+      "Результат: Помощь доступна только в радиусе, выход отменяет"
+    ],
+    "visual": "Подсказка на границе",
+    "risks": "Плановые 80 ошибочно считаются current rules",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-PRIORITY-009",
+    "title": "Приоритет downed и фиксация цели",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A рядом с раненым B и downed C",
+    "steps": [
+      "Начать E",
+      "двигать B ближе",
+      "завершить"
+    ],
+    "expected": "Выбран C, цель не прыгает во время hold",
+    "screenshotCheckpoints": [
+      "Начало: Приоритет downed и фиксация цели",
+      "Ключевое действие: Начать E",
+      "Результат: Выбран C, цель не прыгает во время hold"
+    ],
+    "visual": "Имя C и progress",
+    "risks": "Лечится не тот игрок",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-TWO-010",
+    "title": "Два помощника одному",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/C с аптечкой, B ранен/downed",
+    "steps": [
+      "Одновременно hold на B",
+      "завершить",
+      "проверить всех"
+    ],
+    "expected": "Один владелец действия, нет ускорения/двойного расхода",
+    "screenshotCheckpoints": [
+      "Начало: Два помощника одному",
+      "Ключевое действие: Одновременно hold на B",
+      "Результат: Один владелец действия, нет ускорения/двойного расхода"
+    ],
+    "visual": "Progress A/C и B HP",
+    "risks": "+80 HP или двойной revive",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-NONE-011",
+    "title": "Отсутствие расходника и полный reserve",
+    "area": "08 Support / One-button Interaction",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A без supplies или B с полным резервом",
+    "steps": [
+      "Tap/hold возле B",
+      "рядом использовать NPC/пульт"
+    ],
+    "expected": "Нет phantom support, world interaction остаётся доступным",
+    "screenshotCheckpoints": [
+      "Начало: Отсутствие расходника и полный reserve",
+      "Ключевое действие: Tap/hold возле B",
+      "Результат: Нет phantom support, world interaction остаётся доступным"
+    ],
+    "visual": "Правильная подпись E",
+    "risks": "Фальшивое обещание передачи",
+    "status": "Not Run"
+  },
+  {
+    "id": "SUPPORT-HIT-012",
+    "title": "Помощь под атакой",
+    "area": "08 Support / One-button Interaction",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B downed, враг рядом",
+    "steps": [
+      "Начать revive",
+      "получить урон",
+      "завершить либо погибнуть"
+    ],
+    "expected": "Результат согласован с фактическими правилами; смерть/утрата valid state отменяет, сам урон не обязан отменять",
+    "screenshotCheckpoints": [
+      "Начало: Помощь под атакой",
+      "Ключевое действие: Начать revive",
+      "Результат: Результат согласован с фактическими правилами; смерть/утрата valid state отменяет, сам урон не обязан отменять"
+    ],
+    "visual": "HP, timer и progress",
+    "risks": "Ложное требование cancel от любого урона",
+    "status": "Not Run"
+  },
+  {
+    "id": "OBJECTIVE-FLOW-001",
+    "title": "Последовательная цель",
+    "area": "09 Objectives and Navigation",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Кампания без знания карты; yellow path guide включён",
+    "steps": [
+      "Выполнить действие objective",
+      "посмотреть следующий текст и стрелку"
+    ],
+    "expected": "Текст и target обновляются после действия",
+    "screenshotCheckpoints": [
+      "Начало: Последовательная цель",
+      "Ключевое действие: Выполнить действие objective",
+      "Результат: Текст и target обновляются после действия"
+    ],
+    "visual": "Точный объект новой цели",
+    "risks": "Старый objective",
+    "status": "Not Run"
+  },
+  {
+    "id": "OBJECTIVE-NAV-002",
+    "title": "Обход стены",
+    "area": "09 Objectives and Navigation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Цель за стеной и дверным маршрутом",
+    "steps": [
+      "Следовать yellow guide",
+      "обойти мебель и дверь"
+    ],
+    "expected": "Стрелка ведёт по доступному маршруту, цель достигается",
+    "screenshotCheckpoints": [
+      "Начало: Обход стены",
+      "Ключевое действие: Следовать yellow guide",
+      "Результат: Стрелка ведёт по доступному маршруту, цель достигается"
+    ],
+    "visual": "Направление у развилок",
+    "risks": "Указатель сквозь стену",
+    "status": "Not Run"
+  },
+  {
+    "id": "OBJECTIVE-MULTI-003",
+    "title": "Несколько целей",
+    "area": "09 Objectives and Navigation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Вентили factory или визы office11",
+    "steps": [
+      "Выбрать одну из целей",
+      "выполнить",
+      "сменить маршрут"
+    ],
+    "expected": "Выполненная цель исключена, остальные доступны",
+    "screenshotCheckpoints": [
+      "Начало: Несколько целей",
+      "Ключевое действие: Выбрать одну из целей",
+      "Результат: Выполненная цель исключена, остальные доступны"
+    ],
+    "visual": "Counter и стабильность guide",
+    "risks": "Стрелка мечется",
+    "status": "Not Run"
+  },
+  {
+    "id": "OBJECTIVE-KEY-004",
+    "title": "Ключ подобрал другой клиент",
+    "area": "09 Objectives and Navigation",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B, key лежит после мутации",
+    "steps": [
+      "B берёт ключ",
+      "A проверяет дверь и objective"
+    ],
+    "expected": "Общая сюжетная цель и доступ обновлены на обоих",
+    "screenshotCheckpoints": [
+      "Начало: Ключ подобрал другой клиент",
+      "Ключевое действие: B берёт ключ",
+      "Результат: Общая сюжетная цель и доступ обновлены на обоих"
+    ],
+    "visual": "HUD A/B и дверь",
+    "risks": "Ключ есть, UI обещает найти снова",
+    "status": "Not Run"
+  },
+  {
+    "id": "OBJECTIVE-UX-005",
+    "title": "Самостоятельный маршрут игрока",
+    "area": "09 Objectives and Navigation",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Кампания без знания карты; yellow path guide включён",
+    "steps": [
+      "Записать 3 места остановки из-за непонятного маршрута",
+      "измерить поиск цели"
+    ],
+    "expected": "UX findings содержат конкретное место, время и небольшое предложение",
+    "screenshotCheckpoints": [
+      "Начало: Самостоятельный маршрут игрока",
+      "Ключевое действие: Записать 3 места остановки из-за непонятного маршрута",
+      "Результат: UX findings содержат конкретное место, время и небольшое предложение"
+    ],
+    "visual": "Ориентир, arrow и подсказки",
+    "risks": "Длительный поиск без решения",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE-FLOW-001",
+    "title": "Этаж 6 от старта до лифта",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Новая игра office",
+    "steps": [
+      "Осмотреть офис",
+      "открыть сюжетный маршрут",
+      "перезагрузить сервер",
+      "закончить этаж"
+    ],
+    "expected": "Цепочка ведёт в office7 без soft-lock",
+    "screenshotCheckpoints": [
+      "Начало: Этаж 6 от старта до лифта",
+      "Ключевое действие: Осмотреть офис",
+      "Результат: Цепочка ведёт в office7 без soft-lock"
+    ],
+    "visual": "Objective, blackout и лифт",
+    "risks": "Застрявший последний враг",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE-COMBAT-002",
+    "title": "Коридорные мутации и лифтовая встреча",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office rules6",
+    "steps": [
+      "Пройти коридор",
+      "дождаться превращений",
+      "восстановить электричество"
+    ],
+    "expected": "Текущие сюжетные встречи конечны и читаемы",
+    "screenshotCheckpoints": [
+      "Начало: Коридорные мутации и лифтовая встреча",
+      "Ключевое действие: Пройти коридор",
+      "Результат: Текущие сюжетные встречи конечны и читаемы"
+    ],
+    "visual": "NPC до/после, дверь",
+    "risks": "Недоступный обязательный бой",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE-VISUAL-003",
+    "title": "Передние стены и столы",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Игрок среди офисной мебели",
+    "steps": [
+      "Обойти стол сверху/снизу",
+      "пройти за фасадом"
+    ],
+    "expected": "Feet depth корректен, закрывающая стена прозрачна",
+    "screenshotCheckpoints": [
+      "Начало: Передние стены и столы",
+      "Ключевое действие: Обойти стол сверху/снизу",
+      "Результат: Feet depth корректен, закрывающая стена прозрачна"
+    ],
+    "visual": "Игрок и оружие за мебелью",
+    "risks": "Персонаж полностью потерян",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE7-FLOW-001",
+    "title": "Castor и ключ Елены",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Вход office7",
+    "steps": [
+      "Снять осаду",
+      "встретить Елену",
+      "победить мутанта",
+      "открыть Castor"
+    ],
+    "expected": "Ключ доступен, спасение Андрея/Серёги продолжается",
+    "screenshotCheckpoints": [
+      "Начало: Castor и ключ Елены",
+      "Ключевое действие: Снять осаду",
+      "Результат: Ключ доступен, спасение Андрея/Серёги продолжается"
+    ],
+    "visual": "Пропуск и счёт спасённых",
+    "risks": "Ключ за препятствием",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE7-ESCORT-002",
+    "title": "Менеджер и Рутовый петушок",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Пять друзей спасены",
+    "steps": [
+      "Сопроводить к менеджеру",
+      "уклоняться от тарана",
+      "подобрать трофей",
+      "уйти в лифт"
+    ],
+    "expected": "Manager и trophy gate завершены, следующий office8",
+    "screenshotCheckpoints": [
+      "Начало: Менеджер и Рутовый петушок",
+      "Ключевое действие: Сопроводить к менеджеру",
+      "Результат: Manager и trophy gate завершены, следующий office8"
+    ],
+    "visual": "Таран, трофей и result",
+    "risks": "Пропущенный трофей без навигации",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE7-ORDER-003",
+    "title": "Разный порядок спасений",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office7 новый run",
+    "steps": [
+      "Спасти Влада/Стаса/Пашу в другом порядке",
+      "вернуть группу к выходу"
+    ],
+    "expected": "Порядок не ломает counters и unlock",
+    "screenshotCheckpoints": [
+      "Начало: Разный порядок спасений",
+      "Ключевое действие: Спасти Влада/Стаса/Пашу в другом порядке",
+      "Результат: Порядок не ломает counters и unlock"
+    ],
+    "visual": "Objective после каждого rescue",
+    "risks": "Скрытая зависимость от порядка",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE8-SOLO-001",
+    "title": "Два размыкателя с Нелей",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office8 solo",
+    "steps": [
+      "Выслушать Нелю",
+      "идти к западному",
+      "дождаться готовности",
+      "активировать"
+    ],
+    "expected": "Неля помогает восточным, дверь открывается без второго человека",
+    "screenshotCheckpoints": [
+      "Начало: Два размыкателя с Нелей",
+      "Ключевое действие: Выслушать Нелю",
+      "Результат: Неля помогает восточным, дверь открывается без второго человека"
+    ],
+    "visual": "Ready сообщение и lock states",
+    "risks": "Solo soft-lock",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE8-COOP-002",
+    "title": "Окно размыкателей",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office8 2 живых клиента",
+    "steps": [
+      "Активировать оба за 6 с",
+      "повторить с интервалом больше 6 с"
+    ],
+    "expected": "В окне открывается, просроченная попытка сбрасывается и повторима",
+    "screenshotCheckpoints": [
+      "Начало: Окно размыкателей",
+      "Ключевое действие: Активировать оба за 6 с",
+      "Результат: В окне открывается, просроченная попытка сбрасывается и повторима"
+    ],
+    "visual": "Отсчёт и дверь",
+    "risks": "Невозможный retry",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE8-DROP-003",
+    "title": "Один коллега выбыл",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office8 2 клиента до открытия",
+    "steps": [
+      "Отключить или потерять второго",
+      "продолжить одним"
+    ],
+    "expected": "Неля берёт помощь на себя, этап остаётся проходимым",
+    "screenshotCheckpoints": [
+      "Начало: Один коллега выбыл",
+      "Ключевое действие: Отключить или потерять второго",
+      "Результат: Неля берёт помощь на себя, этап остаётся проходимым"
+    ],
+    "visual": "Objective для solo",
+    "risks": "Старая двухигроковая задача",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE8-SLEEP-004",
+    "title": "Спящие и фонарь",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Тёмный коридор office8",
+    "steps": [
+      "Подойти, посветить, стрелять в спящих",
+      "наблюдать соседей"
+    ],
+    "expected": "Спящие/проснувшиеся различимы, луч влияет по текущей механике",
+    "screenshotCheckpoints": [
+      "Начало: Спящие и фонарь",
+      "Ключевое действие: Подойти, посветить, стрелять в спящих",
+      "Результат: Спящие/проснувшиеся различимы, луч влияет по текущей механике"
+    ],
+    "visual": "Красные глаза, flashlight cone",
+    "risks": "Невидимые активные враги",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE8-HORROR-005",
+    "title": "Пугалки и Валера",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "До рубильника office8",
+    "steps": [
+      "Пережить scripted scares",
+      "включить рубильник",
+      "держать Валеру в луче",
+      "победить"
+    ],
+    "expected": "Нет spawn внутри непроходимой стены; свет и лифт доступны после победы",
+    "screenshotCheckpoints": [
+      "Начало: Пугалки и Валера",
+      "Ключевое действие: Пережить scripted scares",
+      "Результат: Нет spawn внутри непроходимой стены; свет и лифт доступны после победы"
+    ],
+    "visual": "Telegraph, boss HP и возвращение света",
+    "risks": "Scare damage без реакции",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE11-VISAS-001",
+    "title": "Три визы в разном порядке",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office11 до разговора с Жанной",
+    "steps": [
+      "Получить финансы",
+      "собрать 3 анкеты HR",
+      "убить Ирину",
+      "сопроводить юриста"
+    ],
+    "expected": "Все визы доступны, objective 3/3, запись на совещание открыта",
+    "screenshotCheckpoints": [
+      "Начало: Три визы в разном порядке",
+      "Ключевое действие: Получить финансы",
+      "Результат: Все визы доступны, objective 3/3, запись на совещание открыта"
+    ],
+    "visual": "Counter, анкеты, drop HR",
+    "risks": "Виза теряется",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE11-ESCORT-002",
+    "title": "Юрист до приёмной",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Аркадий следует за игроком",
+    "steps": [
+      "Провести через двери",
+      "уйти и вернуться",
+      "доставить"
+    ],
+    "expected": "Виза выдаётся в приёмной однократно",
+    "screenshotCheckpoints": [
+      "Начало: Юрист до приёмной",
+      "Ключевое действие: Провести через двери",
+      "Результат: Виза выдаётся в приёмной однократно"
+    ],
+    "visual": "Путь NPC и штамп",
+    "risks": "NPC застрял у входа",
+    "status": "Not Run"
+  },
+  {
+    "id": "OFFICE11-MEETING-003",
+    "title": "Совещание 75 секунд",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "3 визы получены",
+    "steps": [
+      "Начать у Жанны",
+      "выдержать 75 с",
+      "повторно E",
+      "победить директора"
+    ],
+    "expected": "Одно совещание, конечные события, пропуск на cafe12",
+    "screenshotCheckpoints": [
+      "Начало: Совещание 75 секунд",
+      "Ключевое действие: Начать у Жанны",
+      "Результат: Одно совещание, конечные события, пропуск на cafe12"
+    ],
+    "visual": "Timer, волны, director telegraph",
+    "risks": "Двойной timer, бесконечные волны",
+    "status": "Not Run"
+  },
+  {
+    "id": "CAFE12-FLOW-001",
+    "title": "Обед и падение вертолёта",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Вход cafe12, часть команды ранена",
+    "steps": [
+      "Подойти к окну/обеду",
+      "дождаться сцены",
+      "войти в лифт"
+    ],
+    "expected": "Передышка лечит по реализации, scene заканчивается, next street1",
+    "screenshotCheckpoints": [
+      "Начало: Обед и падение вертолёта",
+      "Ключевое действие: Подойти к окну/обеду",
+      "Результат: Передышка лечит по реализации, scene заканчивается, next street1"
+    ],
+    "visual": "Окно, камера, chapter result",
+    "risks": "Кат-сцена не отпускает input",
+    "status": "Not Run"
+  },
+  {
+    "id": "CAFE12-TEAM-002",
+    "title": "Команда и lift gate",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Cafe12 2 клиента",
+    "steps": [
+      "Оставить B у окна",
+      "A идти в лифт",
+      "затем подвести B"
+    ],
+    "expected": "Живых игроков корректно ждут, gate объясним",
+    "screenshotCheckpoints": [
+      "Начало: Команда и lift gate",
+      "Ключевое действие: Оставить B у окна",
+      "Результат: Живых игроков корректно ждут, gate объясним"
+    ],
+    "visual": "Waiting message и положение B",
+    "risks": "Непонятное ожидание второго",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET1-DEFENSE-001",
+    "title": "Вертолёт и 60 секунд",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Street1 обычный loadout",
+    "steps": [
+      "Дойти до Крылова",
+      "начать оборону",
+      "выжить",
+      "пройти выход"
+    ],
+    "expected": "Оборона завершается и открывает street2",
+    "screenshotCheckpoints": [
+      "Начало: Вертолёт и 60 секунд",
+      "Ключевое действие: Дойти до Крылова",
+      "Результат: Оборона завершается и открывает street2"
+    ],
+    "visual": "Timer, цель и выход",
+    "risks": "Неясный старт обороны",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET1-SIDE-002",
+    "title": "Шаурма и пирожок",
+    "area": "10 Campaign / Locations",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Street1 до optional NPC",
+    "steps": [
+      "Поговорить с Ашотом и Зиной",
+      "собрать награды",
+      "повторить"
+    ],
+    "expected": "Необязательные награды не дублируются и не блокируют сюжет",
+    "screenshotCheckpoints": [
+      "Начало: Шаурма и пирожок",
+      "Ключевое действие: Поговорить с Ашотом и Зиной",
+      "Результат: Необязательные награды не дублируются и не блокируют сюжет"
+    ],
+    "visual": "Реплика и pickup",
+    "risks": "Обязательный расход для optional",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET1-JUMPER-003",
+    "title": "Прыгун среди машин",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Street1 встреча jumper",
+    "steps": [
+      "Уклоняться возле машины/бордюра",
+      "атаковать в прыжке"
+    ],
+    "expected": "Атака видима и столкновения согласованы",
+    "screenshotCheckpoints": [
+      "Начало: Прыгун среди машин",
+      "Ключевое действие: Уклоняться возле машины/бордюра",
+      "Результат: Атака видима и столкновения согласованы"
+    ],
+    "visual": "Траектория прыжка",
+    "risks": "Прыжок сквозь твёрдую машину",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET2-MARKET-001",
+    "title": "Яйца и конечная ловушка",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Street2 вход рынка",
+    "steps": [
+      "Поговорить с Валей",
+      "активировать событие",
+      "пережить волну"
+    ],
+    "expected": "Маршрут к заводу остаётся доступным",
+    "screenshotCheckpoints": [
+      "Начало: Яйца и конечная ловушка",
+      "Ключевое действие: Поговорить с Валей",
+      "Результат: Маршрут к заводу остаётся доступным"
+    ],
+    "visual": "Gate, hatch FX и враги",
+    "risks": "Бесконечный hatch",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET2-ESCORT-002",
+    "title": "Стёпа и мутация",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Блогер следует",
+    "steps": [
+      "Провести по скверу",
+      "наблюдать scripted mutation",
+      "продолжить к проходной"
+    ],
+    "expected": "Потеря NPC понятна и не лишает обязательного ключа",
+    "screenshotCheckpoints": [
+      "Начало: Стёпа и мутация",
+      "Ключевое действие: Провести по скверу",
+      "Результат: Потеря NPC понятна и не лишает обязательного ключа"
+    ],
+    "visual": "Стрим-реплика и узнаваемый мутант",
+    "risks": "Сюжет зависим от исчезнувшего NPC",
+    "status": "Not Run"
+  },
+  {
+    "id": "STREET2-GATE-003",
+    "title": "Толик, пропуск, ворота 40 с",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "У проходной до пропуска",
+    "steps": [
+      "Победить Толика",
+      "подобрать пропуск",
+      "включить пульт",
+      "пережить 40 с"
+    ],
+    "expected": "Одно открытие gate, следующий factory",
+    "screenshotCheckpoints": [
+      "Начало: Толик, пропуск, ворота 40 с",
+      "Ключевое действие: Победить Толика",
+      "Результат: Одно открытие gate, следующий factory"
+    ],
+    "visual": "Timer, reinforcement и chapter result",
+    "risks": "Повторный E сбрасывает timer",
+    "status": "Not Run"
+  },
+  {
+    "id": "FACTORY-VALVES-001",
+    "title": "Три вентиля и синтез",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Factory до цеха",
+    "steps": [
+      "Открывать в произвольном порядке",
+      "повторить E",
+      "выдержать 30 с"
+    ],
+    "expected": "Каждый вентиль один раз, синтез один раз, склад/лифт открыты",
+    "screenshotCheckpoints": [
+      "Начало: Три вентиля и синтез",
+      "Ключевое действие: Открывать в произвольном порядке",
+      "Результат: Каждый вентиль один раз, синтез один раз, склад/лифт открыты"
+    ],
+    "visual": "0/3→3/3 и alarm",
+    "risks": "Двойная волна от spam",
+    "status": "Not Run"
+  },
+  {
+    "id": "FACTORY-COMBAT-002",
+    "title": "Бочки и тесные проходы",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Двор/склад с большой группой",
+    "steps": [
+      "Использовать цепной взрыв",
+      "отступить между стеллажами"
+    ],
+    "expected": "Взрыв читается, проходы остаются доступны",
+    "screenshotCheckpoints": [
+      "Начало: Бочки и тесные проходы",
+      "Ключевое действие: Использовать цепной взрыв",
+      "Результат: Взрыв читается, проходы остаются доступны"
+    ],
+    "visual": "Barrels, blast radius и трупы",
+    "risks": "FX скрывают угрозы",
+    "status": "Not Run"
+  },
+  {
+    "id": "FACTORY-NPC-003",
+    "title": "Михалыч после обороны",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Warehouse wave",
+    "steps": [
+      "Закончить tagged wave",
+      "проверить follow",
+      "пройти exit"
+    ],
+    "expected": "Михалыч следует при допустимом состоянии, смерть не блокирует основной сюжет",
+    "screenshotCheckpoints": [
+      "Начало: Михалыч после обороны",
+      "Ключевое действие: Закончить tagged wave",
+      "Результат: Михалыч следует при допустимом состоянии, смерть не блокирует основной сюжет"
+    ],
+    "visual": "NPC и objective",
+    "risks": "Застрявший враг запрещает rescue",
+    "status": "Not Run"
+  },
+  {
+    "id": "LAB-LIGHTING-001",
+    "title": "Фонарик и капсулы",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Lab без god",
+    "steps": [
+      "Пройти тёмный атриум",
+      "навести фонарь",
+      "вызвать hatch"
+    ],
+    "expected": "Враги, капсулы и кислота читаются до урона",
+    "screenshotCheckpoints": [
+      "Начало: Фонарик и капсулы",
+      "Ключевое действие: Пройти тёмный атриум",
+      "Результат: Враги, капсулы и кислота читаются до урона"
+    ],
+    "visual": "Луч, emergency lights и силуэты",
+    "risks": "Чёрный враг на чёрном фоне",
+    "status": "Not Run"
+  },
+  {
+    "id": "LAB-DOORS-002",
+    "title": "Дезинфекция с отстающим другом",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Lab rules6, A впереди B",
+    "steps": [
+      "A входит в decon",
+      "B догоняет позже",
+      "пройти назад через arrival"
+    ],
+    "expected": "Двери decon/arrival не запираются в rules6, никто не отрезан",
+    "screenshotCheckpoints": [
+      "Начало: Дезинфекция с отстающим другом",
+      "Ключевое действие: A входит в decon",
+      "Результат: Двери decon/arrival не запираются в rules6, никто не отрезан"
+    ],
+    "visual": "Door state на обоих",
+    "risks": "Применение старого lockBehind",
+    "status": "Not Run"
+  },
+  {
+    "id": "LAB-RESCUE-003",
+    "title": "Омлетов, armory и laser",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Lab до Омлетова",
+    "steps": [
+      "Спасти",
+      "взять lab key и laser",
+      "открыть armory",
+      "включить generator"
+    ],
+    "expected": "Все обязательные действия доступны и ведут к boss",
+    "screenshotCheckpoints": [
+      "Начало: Омлетов, armory и laser",
+      "Ключевое действие: Спасти",
+      "Результат: Все обязательные действия доступны и ведут к boss"
+    ],
+    "visual": "Drops и objective",
+    "risks": "Pickup недоступен у мебели",
+    "status": "Not Run"
+  },
+  {
+    "id": "LAB-GENERATOR-004",
+    "title": "Последняя волна генератора",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Generator активирован",
+    "steps": [
+      "Выдержать волны",
+      "найти последнего tagged enemy",
+      "пойти к freight"
+    ],
+    "expected": "Завершение конечное, lift goal соответствует реальному gate",
+    "screenshotCheckpoints": [
+      "Начало: Последняя волна генератора",
+      "Ключевое действие: Выдержать волны",
+      "Результат: Завершение конечное, lift goal соответствует реальному gate"
+    ],
+    "visual": "Остаток врагов и выход",
+    "risks": "Один застрявший enemy блокирует",
+    "status": "Not Run"
+  },
+  {
+    "id": "BOSS-FLOW-001",
+    "title": "Представление и фазы",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Boss с естественным campaign loadout",
+    "steps": [
+      "Дождаться introduction",
+      "сражаться через все фазы"
+    ],
+    "expected": "HP, фаза и атаки читаемы, бой требует ответа на угрозы",
+    "screenshotCheckpoints": [
+      "Начало: Представление и фазы",
+      "Ключевое действие: Дождаться introduction",
+      "Результат: HP, фаза и атаки читаемы, бой требует ответа на угрозы"
+    ],
+    "visual": "Boss pose, HP, charge/attacks",
+    "risks": "Большой normal без telegraph",
+    "status": "Not Run"
+  },
+  {
+    "id": "BOSS-SUPPLY-002",
+    "title": "Подкрепления и аптечка",
+    "area": "10 Campaign / Locations",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Длительный boss fight rules6",
+    "steps": [
+      "Удерживать дистанцию",
+      "наблюдать reinforcements",
+      "проверить центр зала"
+    ],
+    "expected": "Припасы и подкрепления ведут себя как код; риск timer проверить фактически",
+    "screenshotCheckpoints": [
+      "Начало: Подкрепления и аптечка",
+      "Ключевое действие: Удерживать дистанцию",
+      "Результат: Припасы и подкрепления ведут себя как код; риск timer проверить фактически"
+    ],
+    "visual": "Health pickup и плотность толпы",
+    "risks": "Недоступная или вообще не возникающая аптечка",
+    "status": "Not Run"
+  },
+  {
+    "id": "BOSS-VICTORY-003",
+    "title": "Смерть босса и финал",
+    "area": "10 Campaign / Locations",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Boss близок к смерти, A/B",
+    "steps": [
+      "Добить",
+      "не нажимать skip",
+      "дождаться victory",
+      "вернуться в меню"
+    ],
+    "expected": "Все видят finale, враги/снаряды очищены, сохранение победы снято",
+    "screenshotCheckpoints": [
+      "Начало: Смерть босса и финал",
+      "Ключевое действие: Добить",
+      "Результат: Все видят finale, враги/снаряды очищены, сохранение победы снято"
+    ],
+    "visual": "Камера, confetti FX и result",
+    "risks": "Смерть после победы, зависшая cinematic",
+    "status": "Not Run"
+  },
+  {
+    "id": "ARENA-SANDBOX-001",
+    "title": "Полигон отдельно от кампании",
+    "area": "10 Campaign / Locations",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Меню, есть solo save",
+    "steps": [
+      "Открыть Полигон",
+      "тестировать оружие",
+      "вернуться",
+      "Continue solo"
+    ],
+    "expected": "Arena не заменяет campaign save и не входит в порядок глав",
+    "screenshotCheckpoints": [
+      "Начало: Полигон отдельно от кампании",
+      "Ключевое действие: Открыть Полигон",
+      "Результат: Arena не заменяет campaign save и не входит в порядок глав"
+    ],
+    "visual": "Название и saved caption",
+    "risks": "Arena записан как этап кампании",
+    "status": "Not Run"
+  },
+  {
+    "id": "PICKUP-AMMO-001",
+    "title": "Патроны и запас",
+    "area": "11 Pickups and Buffs",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Оружие с дефицитом и supply <1",
+    "steps": [
+      "Пройти по ammo",
+      "проверить reserve и supply",
+      "повторить при cap"
+    ],
+    "expected": "Ресурсы меняются по weapons.ts/World.ts, нет переполнения",
+    "screenshotCheckpoints": [
+      "Начало: Патроны и запас",
+      "Ключевое действие: Пройти по ammo",
+      "Результат: Ресурсы меняются по weapons.ts/World.ts, нет переполнения"
+    ],
+    "visual": "Pickup toast, счётчики",
+    "risks": "Ресурс исчез без выгоды",
+    "status": "Not Run"
+  },
+  {
+    "id": "PICKUP-HEALTH-002",
+    "title": "Здоровье, броня и аптечка",
+    "area": "11 Pickups and Buffs",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Раненый игрок",
+    "steps": [
+      "Подобрать health/armor",
+      "удержать self heal",
+      "проверить max"
+    ],
+    "expected": "HP/armor ограничены cap, аптечка выдаётся по текущему коду",
+    "screenshotCheckpoints": [
+      "Начало: Здоровье, броня и аптечка",
+      "Ключевое действие: Подобрать health/armor",
+      "Результат: HP/armor ограничены cap, аптечка выдаётся по текущему коду"
+    ],
+    "visual": "Полоски и supplies",
+    "risks": "Отрицательный HP или лишнее списание",
+    "status": "Not Run"
+  },
+  {
+    "id": "BUFF-INVINCIBLE-003",
+    "title": "Неуязвимость и окончание",
+    "area": "11 Pickups and Buffs",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "10-second invincible pickup",
+    "steps": [
+      "Подобрать",
+      "получить удар",
+      "дождаться конца",
+      "снова получить удар"
+    ],
+    "expected": "Во время buff нет damage, после damage возвращается",
+    "screenshotCheckpoints": [
+      "Начало: Неуязвимость и окончание",
+      "Ключевое действие: Подобрать",
+      "Результат: Во время buff нет damage, после damage возвращается"
+    ],
+    "visual": "Аура и timer",
+    "risks": "Неясная длительность",
+    "status": "Not Run"
+  },
+  {
+    "id": "BUFF-DAMAGE-004",
+    "title": "Тройной урон",
+    "area": "11 Pickups and Buffs",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Damage buff, одинаковые normal враги",
+    "steps": [
+      "Сравнить попадание до/после",
+      "дождаться 10 с",
+      "повторить"
+    ],
+    "expected": "Урон ×3 только в активное время",
+    "screenshotCheckpoints": [
+      "Начало: Тройной урон",
+      "Ключевое действие: Сравнить попадание до/после",
+      "Результат: Урон ×3 только в активное время"
+    ],
+    "visual": "Damage numbers и icon",
+    "risks": "Постоянный buff",
+    "status": "Not Run"
+  },
+  {
+    "id": "BUFF-INFINITE-005",
+    "title": "Бесконечные патроны при пустом магазине",
+    "area": "11 Pickups and Buffs",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Empty ammo, infinite pickup",
+    "steps": [
+      "Подобрать",
+      "стрелять",
+      "дождаться 10 с",
+      "попытаться ещё"
+    ],
+    "expected": "Огонь доступен во время buff без расхода, после возвращаются обычные ограничения",
+    "screenshotCheckpoints": [
+      "Начало: Бесконечные патроны при пустом магазине",
+      "Ключевое действие: Подобрать",
+      "Результат: Огонь доступен во время buff без расхода, после возвращаются обычные ограничения"
+    ],
+    "visual": "Ammo и expiration",
+    "risks": "Бесплатный refill после buff",
+    "status": "Not Run"
+  },
+  {
+    "id": "BUFF-SPRINT-006",
+    "title": "Sprint, повтор и смена уровня",
+    "area": "11 Pickups and Buffs",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Sprint buff",
+    "steps": [
+      "Бежать с разными guns",
+      "подобрать повтор",
+      "перейти уровень"
+    ],
+    "expected": "Время/перенос сверять с текущим кодом; временный buff не обещает permanent carry",
+    "screenshotCheckpoints": [
+      "Начало: Sprint, повтор и смена уровня",
+      "Ключевое действие: Бежать с разными guns",
+      "Результат: Время/перенос сверять с текущим кодом; временный buff не обещает permanent carry"
+    ],
+    "visual": "Timer и скорость",
+    "risks": "Суммирование сверх ожидаемого, скрытое окончание",
+    "status": "Not Run"
+  },
+  {
+    "id": "HUD-COMBAT-001",
+    "title": "Основная информация в толпе",
+    "area": "12 HUD",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Бой с objective, supplies, bonus и несколькими notices",
+    "steps": [
+      "Провести интенсивный бой",
+      "reload",
+      "получить damage",
+      "выполнить objective"
+    ],
+    "expected": "HP, ammo, weapon и цель читаются без перекрытия игрока",
+    "screenshotCheckpoints": [
+      "Начало: Основная информация в толпе",
+      "Ключевое действие: Провести интенсивный бой",
+      "Результат: HP, ammo, weapon и цель читаются без перекрытия игрока"
+    ],
+    "visual": "Верхний objective и нижний dock",
+    "risks": "Периферийная информация неразличима",
+    "status": "Not Run"
+  },
+  {
+    "id": "HUD-MOBILE-002",
+    "title": "Телефон и крупный HUD",
+    "area": "12 HUD",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "390×844 и 844×390, hudScale 1.15",
+    "steps": [
+      "Играть двумя стиками",
+      "открыть weapon picker",
+      "проверить длинную цель"
+    ],
+    "expected": "Controls и важные counters доступны, мир остаётся видимым",
+    "screenshotCheckpoints": [
+      "Начало: Телефон и крупный HUD",
+      "Ключевое действие: Играть двумя стиками",
+      "Результат: Controls и важные counters доступны, мир остаётся видимым"
+    ],
+    "visual": "Touch regions и text wrap",
+    "risks": "Dock закрывает половину боя",
+    "status": "Not Run"
+  },
+  {
+    "id": "HUD-TEAM-003",
+    "title": "Состояния команды",
+    "area": "12 HUD",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "2–4 клиента, один downed/dead",
+    "steps": [
+      "Ранить одного",
+      "дать bleedout",
+      "вернуть/поднять другого"
+    ],
+    "expected": "Alive/downed/spectating различимы, своё состояние понятно",
+    "screenshotCheckpoints": [
+      "Начало: Состояния команды",
+      "Ключевое действие: Ранить одного",
+      "Результат: Alive/downed/spectating различимы, своё состояние понятно"
+    ],
+    "visual": "Карты команды и down arrow",
+    "risks": "Ложный статус teammate",
+    "status": "Not Run"
+  },
+  {
+    "id": "HUD-NOTIFICATION-004",
+    "title": "Поток уведомлений",
+    "area": "12 HUD",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Бой с objective, supplies, bonus и несколькими notices",
+    "steps": [
+      "Pickup, achievement, radio, tip и mutation подряд"
+    ],
+    "expected": "Очередь не накапливает бесконечные overlays",
+    "screenshotCheckpoints": [
+      "Начало: Поток уведомлений",
+      "Ключевое действие: Pickup, achievement, radio, tip и mutation подряд",
+      "Результат: Очередь не накапливает бесконечные overlays"
+    ],
+    "visual": "Слои сообщений",
+    "risks": "Обязательная цель скрыта",
+    "status": "Not Run"
+  },
+  {
+    "id": "HUD-BONUS-005",
+    "title": "Бонус этажа",
+    "area": "12 HUD",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Bonus близок к goal",
+    "steps": [
+      "Выполнить",
+      "выключить отображение",
+      "закончить этаж без другого bonus"
+    ],
+    "expected": "Бонус однократен и необязателен, +300 KPI и supplies до текущего cap",
+    "screenshotCheckpoints": [
+      "Начало: Бонус этажа",
+      "Ключевое действие: Выполнить",
+      "Результат: Бонус однократен и необязателен, +300 KPI и supplies до текущего cap"
+    ],
+    "visual": "Progress и reward",
+    "risks": "Bonus блокирует story",
+    "status": "Not Run"
+  },
+  {
+    "id": "MENU-PAUSE-001",
+    "title": "Пауза и resume",
+    "area": "13 Pause / Settings / Menus",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo и co-op в бою; меню доступны",
+    "steps": [
+      "Нажать Esc в бою",
+      "подождать",
+      "resume"
+    ],
+    "expected": "Solo заморожен, co-op следует фактическому server lifecycle; input восстановлен",
+    "screenshotCheckpoints": [
+      "Начало: Пауза и resume",
+      "Ключевое действие: Нажать Esc в бою",
+      "Результат: Solo заморожен, co-op следует фактическому server lifecycle; input восстановлен"
+    ],
+    "visual": "Overlay и HP",
+    "risks": "Скрытая смерть в solo pause",
+    "status": "Not Run"
+  },
+  {
+    "id": "MENU-SETTINGS-002",
+    "title": "Сохранение настроек",
+    "area": "13 Pause / Settings / Menus",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo и co-op в бою; меню доступны",
+    "steps": [
+      "Изменить sound/music/shake, flashes, HUD",
+      "reload страницы"
+    ],
+    "expected": "Настройки сохранены, изменения видны/слышны",
+    "screenshotCheckpoints": [
+      "Начало: Сохранение настроек",
+      "Ключевое действие: Изменить sound/music/shake, flashes, HUD",
+      "Результат: Настройки сохранены, изменения видны/слышны"
+    ],
+    "visual": "Slider и HUD scale",
+    "risks": "Настройка не применяется",
+    "status": "Not Run"
+  },
+  {
+    "id": "MENU-INPUT-003",
+    "title": "Огонь после popup",
+    "area": "13 Pause / Settings / Menus",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo и co-op в бою; меню доступны",
+    "steps": [
+      "Стрелять",
+      "открыть pause",
+      "отпустить огонь",
+      "закрыть",
+      "быстро повторить"
+    ],
+    "expected": "Нет продолжающегося fire/held E без нового ввода",
+    "screenshotCheckpoints": [
+      "Начало: Огонь после popup",
+      "Ключевое действие: Стрелять",
+      "Результат: Нет продолжающегося fire/held E без нового ввода"
+    ],
+    "visual": "Muzzle и progress",
+    "risks": "Залипшая стрельба",
+    "status": "Not Run"
+  },
+  {
+    "id": "MENU-HELP-004",
+    "title": "Help, achievements и Back",
+    "area": "13 Pause / Settings / Menus",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo и co-op в бою; меню доступны",
+    "steps": [
+      "Открыть помощь и профиль из pause",
+      "вернуться",
+      "нажать browser Back один раз"
+    ],
+    "expected": "Игра даёт предусмотренное pause/guard, возврат доступен",
+    "screenshotCheckpoints": [
+      "Начало: Help, achievements и Back",
+      "Ключевое действие: Открыть помощь и профиль из pause",
+      "Результат: Игра даёт предусмотренное pause/guard, возврат доступен"
+    ],
+    "visual": "Navigation и названия",
+    "risks": "Неожиданный выход с потерей боя",
+    "status": "Not Run"
+  },
+  {
+    "id": "DEATH-SOLO-001",
+    "title": "Solo смерть и restart",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Solo natural fight",
+    "steps": [
+      "Погибнуть",
+      "нажать restart",
+      "повторить"
+    ],
+    "expected": "Текущий этаж начинается с entry loadout, старые entities очищены",
+    "screenshotCheckpoints": [
+      "Начало: Solo смерть и restart",
+      "Ключевое действие: Погибнуть",
+      "Результат: Текущий этаж начинается с entry loadout, старые entities очищены"
+    ],
+    "visual": "Death panel и initial HP",
+    "risks": "Текущие pickups дублируются",
+    "status": "Not Run"
+  },
+  {
+    "id": "DEATH-COOP-002",
+    "title": "Downed и bleedout",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B живы",
+    "steps": [
+      "B погибает",
+      "не поднимать 15 с",
+      "наблюдать состояние"
+    ],
+    "expected": "B переходит в spectating/реализованный return flow, не становится enemy player",
+    "screenshotCheckpoints": [
+      "Начало: Downed и bleedout",
+      "Ключевое действие: B погибает",
+      "Результат: B переходит в spectating/реализованный return flow, не становится enemy player"
+    ],
+    "visual": "Timer и spectating UI",
+    "risks": "Игрок-мутант вопреки текущим правилам",
+    "status": "Not Run"
+  },
+  {
+    "id": "DEATH-RETURN-003",
+    "title": "Возврат человека",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A жив, B spectating",
+    "steps": [
+      "Закончить предусмотренный combat-clear/этап",
+      "наблюдать B"
+    ],
+    "expected": "Возврат соответствует существующему rally/transition, не требовать P15 intermission",
+    "screenshotCheckpoints": [
+      "Начало: Возврат человека",
+      "Ключевое действие: Закончить предусмотренный combat-clear/этап",
+      "Результат: Возврат соответствует существующему rally/transition, не требовать P15 intermission"
+    ],
+    "visual": "Человеческий sprite и HUD",
+    "risks": "Возврат за стеной",
+    "status": "Not Run"
+  },
+  {
+    "id": "DEATH-WIPE-004",
+    "title": "Вся команда погибла",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "2 клиента",
+    "steps": [
+      "Погибнуть обоим",
+      "host нажимает restart",
+      "guest ждёт"
+    ],
+    "expected": "Единый defeat, host управляет новой попыткой",
+    "screenshotCheckpoints": [
+      "Начало: Вся команда погибла",
+      "Ключевое действие: Погибнуть обоим",
+      "Результат: Единый defeat, host управляет новой попыткой"
+    ],
+    "visual": "Панель A/B",
+    "risks": "Два несогласованных restart",
+    "status": "Not Run"
+  },
+  {
+    "id": "RESTART-STATE-005",
+    "title": "Входное снаряжение новой попытки",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "На этаже потрачены ammo и собраны новые guns",
+    "steps": [
+      "Вызвать wipe",
+      "restart",
+      "сравнить с entry loadout"
+    ],
+    "expected": "Текущие достижения/снаряжение восстанавливаются по checkpoint rules без dupes",
+    "screenshotCheckpoints": [
+      "Начало: Входное снаряжение новой попытки",
+      "Ключевое действие: Вызвать wipe",
+      "Результат: Текущие достижения/снаряжение восстанавливаются по checkpoint rules без dupes"
+    ],
+    "visual": "Ammo, оружие и companions",
+    "risks": "Неверный loadout или повтор награды",
+    "status": "Not Run"
+  },
+  {
+    "id": "DEATH-RACE-006",
+    "title": "Смерть в момент завершения",
+    "area": "14 Game Over / Death / Restart",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Последний enemy и low HP",
+    "steps": [
+      "Убить enemy одновременно с получением смертельного урона"
+    ],
+    "expected": "Одно согласованное итоговое состояние, можно продолжить/retry",
+    "screenshotCheckpoints": [
+      "Начало: Смерть в момент завершения",
+      "Ключевое действие: Убить enemy одновременно с получением смертельного урона",
+      "Результат: Одно согласованное итоговое состояние, можно продолжить/retry"
+    ],
+    "visual": "Result и death overlay",
+    "risks": "Два окна и soft-lock",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-ORDER-001",
+    "title": "Все 10 этапов",
+    "area": "15 Level Complete / Progression",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Новая игра",
+    "steps": [
+      "Пройти office→office7→office8→office11→cafe12→street1→street2→factory→lab→boss"
+    ],
+    "expected": "Порядок и chapter captions совпадают с next в коде",
+    "screenshotCheckpoints": [
+      "Начало: Все 10 этапов",
+      "Ключевое действие: Пройти office→office7→office8→office11→cafe12→street1→street2→factory→lab→boss",
+      "Результат: Порядок и chapter captions совпадают с next в коде"
+    ],
+    "visual": "Каждый result и начало следующего",
+    "risks": "Устаревший README-порядок",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-STATE-002",
+    "title": "Перенос снаряжения",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Этаж заканчивается с несколькими guns/supplies",
+    "steps": [
+      "Записать HP/armor/ammo",
+      "перейти",
+      "сравнить"
+    ],
+    "expected": "Loadout переносится по carryOut; HP минимум 60 в текущем коде",
+    "screenshotCheckpoints": [
+      "Начало: Перенос снаряжения",
+      "Ключевое действие: Записать HP/armor/ammo",
+      "Результат: Loadout переносится по carryOut; HP минимум 60 в текущем коде"
+    ],
+    "visual": "Entry HUD",
+    "risks": "Ложный баг о предусмотренном HP floor",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-DOUBLE-003",
+    "title": "Двойное Дальше",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Level complete panel",
+    "steps": [
+      "Быстро нажать Дальше дважды",
+      "на mobile повторить"
+    ],
+    "expected": "Один переход и одна session",
+    "screenshotCheckpoints": [
+      "Начало: Двойное Дальше",
+      "Ключевое действие: Быстро нажать Дальше дважды",
+      "Результат: Один переход и одна session"
+    ],
+    "visual": "HUD и номер этапа",
+    "risks": "Пропущен этаж",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-TEAM-004",
+    "title": "Разделённая команда у выхода",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Exit требует humanPlayers в зоне",
+    "steps": [
+      "Оставить B далеко",
+      "A входит",
+      "B догоняет"
+    ],
+    "expected": "Gate ждёт живых по current script; сообщение объясняет ожидание",
+    "screenshotCheckpoints": [
+      "Начало: Разделённая команда у выхода",
+      "Ключевое действие: Оставить B далеко",
+      "Результат: Gate ждёт живых по current script; сообщение объясняет ожидание"
+    ],
+    "visual": "Arrow/teammate и exit",
+    "risks": "Невидимый запрет перехода",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-SAVE-005",
+    "title": "Solo reload после перехода",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Только вошли следующий этаж",
+    "steps": [
+      "Reload",
+      "Continue"
+    ],
+    "expected": "Возврат на вход следующего этажа с carry",
+    "screenshotCheckpoints": [
+      "Начало: Solo reload после перехода",
+      "Ключевое действие: Reload",
+      "Результат: Возврат на вход следующего этажа с carry"
+    ],
+    "visual": "Continue caption",
+    "risks": "Сохранён прежний этаж",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-RECONNECT-006",
+    "title": "Разрыв в границе этапов",
+    "area": "15 Level Complete / Progression",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "2 клиента на result",
+    "steps": [
+      "Разорвать B",
+      "A продолжает",
+      "B возвращается"
+    ],
+    "expected": "B входит на текущий server floor с корректным loadout",
+    "screenshotCheckpoints": [
+      "Начало: Разрыв в границе этапов",
+      "Ключевое действие: Разорвать B",
+      "Результат: B входит на текущий server floor с корректным loadout"
+    ],
+    "visual": "Уровень A/B",
+    "risks": "Устаревшая карта и snapshot",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-COMPANION-007",
+    "title": "Companion и story state",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Following не-сюжетный NPC",
+    "steps": [
+      "Завершить этап",
+      "проверить предусмотренный carry NPC и заражение"
+    ],
+    "expected": "Story evacuation и companion carry различаются; нет повторных drops",
+    "screenshotCheckpoints": [
+      "Начало: Companion и story state",
+      "Ключевое действие: Завершить этап",
+      "Результат: Story evacuation и companion carry различаются; нет повторных drops"
+    ],
+    "visual": "NPC в начале следующего",
+    "risks": "Clone companion",
+    "status": "Not Run"
+  },
+  {
+    "id": "PROGRESS-VICTORY-008",
+    "title": "Сохранение после победы",
+    "area": "15 Level Complete / Progression",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Boss defeated",
+    "steps": [
+      "Вернуться в меню",
+      "reload",
+      "посмотреть Continue и room code"
+    ],
+    "expected": "Победа очищает соответствующий save, новая игра доступна",
+    "screenshotCheckpoints": [
+      "Начало: Сохранение после победы",
+      "Ключевое действие: Вернуться в меню",
+      "Результат: Победа очищает соответствующий save, новая игра доступна"
+    ],
+    "visual": "Main menu caption",
+    "risks": "Continue ведёт в завершённый бой",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-CREATE-001",
+    "title": "Создать и войти по коду",
+    "area": "16 Multiplayer Lobby",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Нет комнат",
+    "steps": [
+      "A создаёт",
+      "B вводит код",
+      "оба смотрят cards"
+    ],
+    "expected": "Одна комната, оба имени и host видимы",
+    "screenshotCheckpoints": [
+      "Начало: Создать и войти по коду",
+      "Ключевое действие: A создаёт",
+      "Результат: Одна комната, оба имени и host видимы"
+    ],
+    "visual": "Code, portraits и readiness",
+    "risks": "Join не выполняется",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-LIMIT-002",
+    "title": "2, 3, 4 и пятый",
+    "area": "16 Multiplayer Lobby",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Одна комната",
+    "steps": [
+      "Подключить B/C/D",
+      "попытаться E"
+    ],
+    "expected": "4 места заняты, пятый получает понятный отказ",
+    "screenshotCheckpoints": [
+      "Начало: 2, 3, 4 и пятый",
+      "Ключевое действие: Подключить B/C/D",
+      "Результат: 4 места заняты, пятый получает понятный отказ"
+    ],
+    "visual": "Состав и error E",
+    "risks": "Пятый вытесняет коллегу",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-HOST-003",
+    "title": "Передача host",
+    "area": "16 Multiplayer Lobby",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A host, B/C connected",
+    "steps": [
+      "A выходит",
+      "проверить B",
+      "повторить host disconnect"
+    ],
+    "expected": "Следующий подключённый ведёт, controls обновлены",
+    "screenshotCheckpoints": [
+      "Начало: Передача host",
+      "Ключевое действие: A выходит",
+      "Результат: Следующий подключённый ведёт, controls обновлены"
+    ],
+    "visual": "Host badge A/B",
+    "risks": "Комната без ведущего",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-PROFILE-004",
+    "title": "Имя, внешность и readiness",
+    "area": "16 Multiplayer Lobby",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B в lobby",
+    "steps": [
+      "Изменить look/name",
+      "переключить ready",
+      "host начать при B not ready"
+    ],
+    "expected": "Cards синхронны; ready информационен, start остаётся по current rules",
+    "screenshotCheckpoints": [
+      "Начало: Имя, внешность и readiness",
+      "Ключевое действие: Изменить look/name",
+      "Результат: Cards синхронны; ready информационен, start остаётся по current rules"
+    ],
+    "visual": "Portrait и имя",
+    "risks": "Ложное обязательное ready",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-SAVED-005",
+    "title": "Продолжить и Новая игра комнаты",
+    "area": "16 Multiplayer Lobby",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Есть server save под кодом",
+    "steps": [
+      "Вернуться по коду",
+      "Continue",
+      "вернуться и подтвердить New Game"
+    ],
+    "expected": "Continue реального floor, fresh требует подтверждения и сбрасывает save",
+    "screenshotCheckpoints": [
+      "Начало: Продолжить и Новая игра комнаты",
+      "Ключевое действие: Вернуться по коду",
+      "Результат: Continue реального floor, fresh требует подтверждения и сбрасывает save"
+    ],
+    "visual": "Saved caption и confirm",
+    "risks": "Прогресс стёрт первым тапом",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-REJOIN-006",
+    "title": "Повтор той же identity",
+    "area": "16 Multiplayer Lobby",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A в lobby или игре",
+    "steps": [
+      "Закрыть вкладку",
+      "вновь открыть тем же профилем"
+    ],
+    "expected": "Вернулся в своё место, не новый игрок",
+    "screenshotCheckpoints": [
+      "Начало: Повтор той же identity",
+      "Ключевое действие: Закрыть вкладку",
+      "Результат: Вернулся в своё место, не новый игрок"
+    ],
+    "visual": "Player card и loadout",
+    "risks": "Двойное место A",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-LATE-007",
+    "title": "Вход в текущую игру",
+    "area": "16 Multiplayer Lobby",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A уже играет",
+    "steps": [
+      "B входит по коду",
+      "проверить spawn"
+    ],
+    "expected": "Новый коллега в текущем floor как fresh employee",
+    "screenshotCheckpoints": [
+      "Начало: Вход в текущую игру",
+      "Ключевое действие: B входит по коду",
+      "Результат: Новый коллега в текущем floor как fresh employee"
+    ],
+    "visual": "A/B position и HUD",
+    "risks": "Guest заперт в пустом lobby",
+    "status": "Not Run"
+  },
+  {
+    "id": "LOBBY-CODE-008",
+    "title": "Неверный код и отмена",
+    "area": "16 Multiplayer Lobby",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Главное меню",
+    "steps": [
+      "Ввести пустой/неверный код",
+      "cancel",
+      "быстро Create и Back"
+    ],
+    "expected": "Понятная ошибка, нет зависшей сессии после cancel",
+    "screenshotCheckpoints": [
+      "Начало: Неверный код и отмена",
+      "Ключевое действие: Ввести пустой/неверный код",
+      "Результат: Понятная ошибка, нет зависшей сессии после cancel"
+    ],
+    "visual": "Error и возврат",
+    "risks": "Late connection после ухода",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-MOVE-001",
+    "title": "Движение и стрельба на обоих",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B играют",
+    "steps": [
+      "Двигаться навстречу",
+      "стрелять разным оружием",
+      "сравнить"
+    ],
+    "expected": "A/B видят согласованные позиции и свои/чужие выстрелы",
+    "screenshotCheckpoints": [
+      "Начало: Движение и стрельба на обоих",
+      "Ключевое действие: Двигаться навстречу",
+      "Результат: A/B видят согласованные позиции и свои/чужие выстрелы"
+    ],
+    "visual": "Feet, muzzle и remote smoothing",
+    "risks": "У себя нет tracers",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-KILL-002",
+    "title": "Общая смерть врага",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B целят одного",
+    "steps": [
+      "Стрелять одновременно",
+      "проверить kill/drop на обоих"
+    ],
+    "expected": "Enemy удалён один раз, один pickup",
+    "screenshotCheckpoints": [
+      "Начало: Общая смерть врага",
+      "Ключевое действие: Стрелять одновременно",
+      "Результат: Enemy удалён один раз, один pickup"
+    ],
+    "visual": "Труп и pickup A/B",
+    "risks": "Ghost enemy",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-PICKUP-003",
+    "title": "Один pickup двум игрокам",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B у weapon/ammo",
+    "steps": [
+      "Одновременно пройти по pickup"
+    ],
+    "expected": "Результат authoritative, ресурс не выдан дважды",
+    "screenshotCheckpoints": [
+      "Начало: Один pickup двум игрокам",
+      "Ключевое действие: Одновременно пройти по pickup",
+      "Результат: Результат authoritative, ресурс не выдан дважды"
+    ],
+    "visual": "HUD и disappearance",
+    "risks": "Разные inventories",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-NPC-004",
+    "title": "Rescue и мутация",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B у NPC",
+    "steps": [
+      "A rescue",
+      "B следит",
+      "затем mutation"
+    ],
+    "expected": "Одни follow/appearance/mutation states",
+    "screenshotCheckpoints": [
+      "Начало: Rescue и мутация",
+      "Ключевое действие: A rescue",
+      "Результат: Одни follow/appearance/mutation states"
+    ],
+    "visual": "NPC и objective A/B",
+    "risks": "Companion только на одном экране",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-SUPPORT-005",
+    "title": "Tap/hold через реальные UI",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B с supplies",
+    "steps": [
+      "Выполнить ammo, heal, revive",
+      "сменить helper"
+    ],
+    "expected": "UI обоих согласован с server, расход однократен",
+    "screenshotCheckpoints": [
+      "Начало: Tap/hold через реальные UI",
+      "Ключевое действие: Выполнить ammo, heal, revive",
+      "Результат: UI обоих согласован с server, расход однократен"
+    ],
+    "visual": "Progress и HP",
+    "risks": "Local optimistic effect без server",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-OBJECTIVE-006",
+    "title": "Разные комнаты и общая цель",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B разделены по карте",
+    "steps": [
+      "A выполняет key/action",
+      "B проверяет guide и gate"
+    ],
+    "expected": "Основная цель и flags общие",
+    "screenshotCheckpoints": [
+      "Начало: Разные комнаты и общая цель",
+      "Ключевое действие: A выполняет key/action",
+      "Результат: Основная цель и flags общие"
+    ],
+    "visual": "Arrow на обоих",
+    "risks": "B ведут к старому key",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-SPECTATE-007",
+    "title": "Наблюдатель и поздний вход",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B dead, A жив",
+    "steps": [
+      "B наблюдает",
+      "C входит",
+      "A завершает этап"
+    ],
+    "expected": "Dead seat не заменяется новым игроком, spectator controls понятны",
+    "screenshotCheckpoints": [
+      "Начало: Наблюдатель и поздний вход",
+      "Ключевое действие: B наблюдает",
+      "Результат: Dead seat не заменяется новым игроком, spectator controls понятны"
+    ],
+    "visual": "Camera и roster",
+    "risks": "Спектатор управляет живым",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-BOSS-008",
+    "title": "Босс для команды",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "2–4 клиента, естественный loadout",
+    "steps": [
+      "Играть через фазы",
+      "один downed",
+      "добить"
+    ],
+    "expected": "Фазы, revive и victory едины; scaling не оценивать по solo HP",
+    "screenshotCheckpoints": [
+      "Начало: Босс для команды",
+      "Ключевое действие: Играть через фазы",
+      "Результат: Фазы, revive и victory едины; scaling не оценивать по solo HP"
+    ],
+    "visual": "Boss HP и finale A/B",
+    "risks": "Один клиент продолжает бой",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-PAUSE-009",
+    "title": "Pause одного клиента",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B в бою",
+    "steps": [
+      "A pause",
+      "B продолжает",
+      "A resume"
+    ],
+    "expected": "Локальный overlay не рассинхронизирует комнату",
+    "screenshotCheckpoints": [
+      "Начало: Pause одного клиента",
+      "Ключевое действие: A pause",
+      "Результат: Локальный overlay не рассинхронизирует комнату"
+    ],
+    "visual": "HP/position A/B",
+    "risks": "Скрытый held fire",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-LATENCY-010",
+    "title": "100–200 мс задержки",
+    "area": "17 Multiplayer Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Сетевая эмуляция на A, B обычный",
+    "steps": [
+      "Провести бой, pickup и revive",
+      "вернуть обычную сеть"
+    ],
+    "expected": "Нет двойных действий, задержка не оставляет permanently stale HUD",
+    "screenshotCheckpoints": [
+      "Начало: 100–200 мс задержки",
+      "Ключевое действие: Провести бой, pickup и revive",
+      "Результат: Нет двойных действий, задержка не оставляет permanently stale HUD"
+    ],
+    "visual": "Remote движение и progress",
+    "risks": "Ошибка prediction или freeze",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-001",
+    "title": "Короткий разрыв",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A/B в бою",
+    "steps": [
+      "Отключить сеть B на 5 с",
+      "вернуть"
+    ],
+    "expected": "B автоматически возвращается с тем же seat/position/loadout",
+    "screenshotCheckpoints": [
+      "Начало: Короткий разрыв",
+      "Ключевое действие: Отключить сеть B на 5 с",
+      "Результат: B автоматически возвращается с тем же seat/position/loadout"
+    ],
+    "visual": "Reconnect panel и HUD",
+    "risks": "Новый персонаж вместо старого",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-002",
+    "title": "Окно 25 секунд истекло",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B отключён",
+    "steps": [
+      "Ждать >25 с",
+      "вернуть",
+      "проверить автоматическое rejoin по pid/code"
+    ],
+    "expected": "Понятный flow возврата; reservation seat сохраняется по текущей реализации",
+    "screenshotCheckpoints": [
+      "Начало: Окно 25 секунд истекло",
+      "Ключевое действие: Ждать >25 с",
+      "Результат: Понятный flow возврата; reservation seat сохраняется по текущей реализации"
+    ],
+    "visual": "Timeout message и roster",
+    "risks": "Ложное ожидание удаления места",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-003",
+    "title": "Выход при reconnect",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Reconnect panel B",
+    "steps": [
+      "Нажать Выйти в меню",
+      "восстановить сеть"
+    ],
+    "expected": "Нет позднего подключения после отмены",
+    "screenshotCheckpoints": [
+      "Начало: Выход при reconnect",
+      "Ключевое действие: Нажать Выйти в меню",
+      "Результат: Нет позднего подключения после отмены"
+    ],
+    "visual": "Меню и roster A",
+    "risks": "Late successful room живёт скрыто",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-004",
+    "title": "Разрыв во время удержания",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B fire или support hold",
+    "steps": [
+      "Разорвать сеть",
+      "вернуть без нажатия"
+    ],
+    "expected": "Input сброшен, нет phantom firing/heal",
+    "screenshotCheckpoints": [
+      "Начало: Разрыв во время удержания",
+      "Ключевое действие: Разорвать сеть",
+      "Результат: Input сброшен, нет phantom firing/heal"
+    ],
+    "visual": "Muzzle/progress после возврата",
+    "risks": "Повторный consumable",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-005",
+    "title": "Закрытая вкладка и takeover",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A играет с persistent pid",
+    "steps": [
+      "Закрыть и открыть",
+      "затем открыть вторую вкладку той же identity"
+    ],
+    "expected": "Новое окно получает прежний seat, старое показывает takeover",
+    "screenshotCheckpoints": [
+      "Начало: Закрытая вкладка и takeover",
+      "Ключевое действие: Закрыть и открыть",
+      "Результат: Новое окно получает прежний seat, старое показывает takeover"
+    ],
+    "visual": "Old/new panels",
+    "risks": "Два владельца одного player",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-006",
+    "title": "Server restart и save",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Сохранённая комната с NPC/story flags",
+    "steps": [
+      "Остановить только QA server",
+      "запустить с тем же save dir",
+      "войти по коду"
+    ],
+    "expected": "Текущий checkpoint комнаты восстановлен, одноразовые события не повторены",
+    "screenshotCheckpoints": [
+      "Начало: Server restart и save",
+      "Ключевое действие: Остановить только QA server",
+      "Результат: Текущий checkpoint комнаты восстановлен, одноразовые события не повторены"
+    ],
+    "visual": "Position, enemies, timers",
+    "risks": "Сохранение заменено entry loadout",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-007",
+    "title": "Разрыв ведущего",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "A host, B жив",
+    "steps": [
+      "Отключить A",
+      "B завершает floor",
+      "A возвращается"
+    ],
+    "expected": "B получает управление host, возврат A не ломает transition",
+    "screenshotCheckpoints": [
+      "Начало: Разрыв ведущего",
+      "Ключевое действие: Отключить A",
+      "Результат: B получает управление host, возврат A не ломает transition"
+    ],
+    "visual": "Host и result",
+    "risks": "Два host",
+    "status": "Not Run"
+  },
+  {
+    "id": "MP-RECONNECT-008",
+    "title": "Возврат к мёртвому seat",
+    "area": "18 Reconnect / Network Edge Cases",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "B dead до закрытия",
+    "steps": [
+      "Закрыть B",
+      "открыть прежним профилем"
+    ],
+    "expected": "Dead seat не выдаёт бесплатное новое тело; ждёт предусмотренный return",
+    "screenshotCheckpoints": [
+      "Начало: Возврат к мёртвому seat",
+      "Ключевое действие: Закрыть B",
+      "Результат: Dead seat не выдаёт бесплатное новое тело; ждёт предусмотренный return"
+    ],
+    "visual": "Spectating message",
+    "risks": "Обход смерти reload",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-LAUNCH-001",
+    "title": "Mini App и HTML5 Game",
+    "area": "19 Telegram Integration",
+    "priority": "Critical",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Тестовый бот настроен",
+    "steps": [
+      "Открыть game card /play",
+      "отдельно Mini App /app"
+    ],
+    "expected": "Имя и identity Telegram, правильная chat/personal room",
+    "screenshotCheckpoints": [
+      "Начало: Mini App и HTML5 Game",
+      "Ключевое действие: Открыть game card /play",
+      "Результат: Имя и identity Telegram, правильная chat/personal room"
+    ],
+    "visual": "Fullscreen, lobby и имя",
+    "risks": "Потеря chat room",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-ROOM-002",
+    "title": "Два коллеги из чата",
+    "area": "19 Telegram Integration",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Два Telegram пользователя в тестовом чате",
+    "steps": [
+      "Открыть одну game card",
+      "войти в игру"
+    ],
+    "expected": "Оба в одной комнате под своим именем",
+    "screenshotCheckpoints": [
+      "Начало: Два коллеги из чата",
+      "Ключевое действие: Открыть одну game card",
+      "Результат: Оба в одной комнате под своим именем"
+    ],
+    "visual": "Room code и cards",
+    "risks": "Личная комната вместо общей",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-BACK-003",
+    "title": "Назад и viewport",
+    "area": "19 Telegram Integration",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Игра в Telegram",
+    "steps": [
+      "Использовать Telegram Back",
+      "изменить высоту окна",
+      "вернуться"
+    ],
+    "expected": "Back даёт предусмотренный guard/pause, UI не перекрыт Telegram header",
+    "screenshotCheckpoints": [
+      "Начало: Назад и viewport",
+      "Ключевое действие: Использовать Telegram Back",
+      "Результат: Back даёт предусмотренный guard/pause, UI не перекрыт Telegram header"
+    ],
+    "visual": "Controls и top inset",
+    "risks": "Случайный exit",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-HANDOFF-004",
+    "title": "Открыть в браузере",
+    "area": "19 Telegram Integration",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Telegram desktop small window",
+    "steps": [
+      "Нажать баннер",
+      "открыть браузер",
+      "проверить старое окно"
+    ],
+    "expected": "Тот же Telegram seat и loadout, старое уступает управление",
+    "screenshotCheckpoints": [
+      "Начало: Открыть в браузере",
+      "Ключевое действие: Нажать баннер",
+      "Результат: Тот же Telegram seat и loadout, старое уступает управление"
+    ],
+    "visual": "Identity и takeover",
+    "risks": "Новый player",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-HAPTIC-005",
+    "title": "Vibration и безопасные зоны",
+    "area": "19 Telegram Integration",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Физический телефон, Telegram",
+    "steps": [
+      "Получить damage",
+      "выключить vibration",
+      "играть у краёв"
+    ],
+    "expected": "Вибрация следует настройке/поддержке платформы, targets доступны",
+    "screenshotCheckpoints": [
+      "Начало: Vibration и безопасные зоны",
+      "Ключевое действие: Получить damage",
+      "Результат: Вибрация следует настройке/поддержке платформы, targets доступны"
+    ],
+    "visual": "Safe area и пальцы",
+    "risks": "Эмуляция выдана за real device",
+    "status": "Not Run"
+  },
+  {
+    "id": "TG-SUMMON-006",
+    "title": "Приглашение и achievement share",
+    "area": "19 Telegram Integration",
+    "priority": "Low",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram / Multiplayer",
+    "preconditions": "Тестовый чат, явно разрешённая отправка сообщений",
+    "steps": [
+      "Нажать Призвать чат",
+      "повторить до минуты",
+      "share rare achievement"
+    ],
+    "expected": "Rate limit и сообщения соответствуют действию, без дублей",
+    "screenshotCheckpoints": [
+      "Начало: Приглашение и achievement share",
+      "Ключевое действие: Нажать Призвать чат",
+      "Результат: Rate limit и сообщения соответствуют действию, без дублей"
+    ],
+    "visual": "Кнопки и результат",
+    "risks": "Не тестировать отправку в реальный чужой чат",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-MOVE-001",
+    "title": "Левый floating stick",
+    "area": "20 Mobile Controls",
+    "priority": "Critical",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Touch environment (coarse pointer + реальные touch events); физический телефон отдельный обязательный прогон",
+    "steps": [
+      "Начать touch в разных местах слева",
+      "медленно тянуть",
+      "ускорить",
+      "отпустить"
+    ],
+    "expected": "Движение соответствует вектору, release останавливает",
+    "screenshotCheckpoints": [
+      "Начало: Левый floating stick",
+      "Ключевое действие: Начать touch в разных местах слева",
+      "Результат: Движение соответствует вектору, release останавливает"
+    ],
+    "visual": "Основание и персонаж",
+    "risks": "Stick залипает",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-AIM-002",
+    "title": "Правый стик и fire edge",
+    "area": "20 Mobile Controls",
+    "priority": "Critical",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Touch environment (coarse pointer + реальные touch events); физический телефон отдельный обязательный прогон",
+    "steps": [
+      "Повернуть aim в 8 сторон внутри круга",
+      "довести deflection до 0.8",
+      "отпустить"
+    ],
+    "expected": "Внутри aim без fire, у края огонь по deflection",
+    "screenshotCheckpoints": [
+      "Начало: Правый стик и fire edge",
+      "Ключевое действие: Повернуть aim в 8 сторон внутри круга",
+      "Результат: Внутри aim без fire, у края огонь по deflection"
+    ],
+    "visual": "Aim/fire state и ствол",
+    "risks": "Огонь зависит от наличия enemy вопреки controls",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-COMBAT-003",
+    "title": "Две руки в бою",
+    "area": "20 Mobile Controls",
+    "priority": "Critical",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Реальная стая office",
+    "steps": [
+      "Одновременно move/aim/fire",
+      "сменить направление",
+      "отступить"
+    ],
+    "expected": "Оба stick независимы, движение не сбрасывает огонь",
+    "screenshotCheckpoints": [
+      "Начало: Две руки в бою",
+      "Ключевое действие: Одновременно move/aim/fire",
+      "Результат: Оба stick независимы, движение не сбрасывает огонь"
+    ],
+    "visual": "Две touch зоны и игрок",
+    "risks": "Потеря одного touch",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-INTERACT-004",
+    "title": "Третье касание action",
+    "area": "20 Mobile Controls",
+    "priority": "High",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "NPC или support target рядом",
+    "steps": [
+      "Держать левый стик",
+      "tap action",
+      "затем hold с отпущенным движением"
+    ],
+    "expected": "Tap/hold различимы, случайный touch не переключает NPC многократно",
+    "screenshotCheckpoints": [
+      "Начало: Третье касание action",
+      "Ключевое действие: Держать левый стик",
+      "Результат: Tap/hold различимы, случайный touch не переключает NPC многократно"
+    ],
+    "visual": "Context label и progress",
+    "risks": "Control перехватывает палец",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-RELOAD-005",
+    "title": "Reload и выбор из 9",
+    "area": "20 Mobile Controls",
+    "priority": "High",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Несколько guns, малый magazine",
+    "steps": [
+      "Нажать reload",
+      "открыть picker",
+      "выбрать спецоружие",
+      "закрыть"
+    ],
+    "expected": "Кнопки доступны пальцем, действия не уходят в aim zone",
+    "screenshotCheckpoints": [
+      "Начало: Reload и выбор из 9",
+      "Ключевое действие: Нажать reload",
+      "Результат: Кнопки доступны пальцем, действия не уходят в aim zone"
+    ],
+    "visual": "Picker/dock",
+    "risks": "Непопадаемый touch target",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-CANCEL-006",
+    "title": "Touchcancel и смена приложения",
+    "area": "20 Mobile Controls",
+    "priority": "High",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Оба стика и E held",
+    "steps": [
+      "Вызвать touchcancel/переключить приложение",
+      "вернуть"
+    ],
+    "expected": "Нет продолжающегося движения, fire или E",
+    "screenshotCheckpoints": [
+      "Начало: Touchcancel и смена приложения",
+      "Ключевое действие: Вызвать touchcancel/переключить приложение",
+      "Результат: Нет продолжающегося движения, fire или E"
+    ],
+    "visual": "Ghost sticks после возврата",
+    "risks": "Старый pointerId",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-ROTATE-007",
+    "title": "Поворот во время боя",
+    "area": "20 Mobile Controls",
+    "priority": "High",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "390×844 portrait",
+    "steps": [
+      "Играть",
+      "повернуть в 844×390",
+      "продолжить"
+    ],
+    "expected": "Canvas, aim и controls перестроены, input не залипает",
+    "screenshotCheckpoints": [
+      "Начало: Поворот во время боя",
+      "Ключевое действие: Играть",
+      "Результат: Canvas, aim и controls перестроены, input не залипает"
+    ],
+    "visual": "Safe area и HUD",
+    "risks": "Старые координаты",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-LEFT-008",
+    "title": "Левша",
+    "area": "20 Mobile Controls",
+    "priority": "Medium",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Настройка левша включена",
+    "steps": [
+      "Начать новый бой",
+      "aim слева, move справа",
+      "проверить controls help"
+    ],
+    "expected": "Зоны и подсказка согласованы с настройкой",
+    "screenshotCheckpoints": [
+      "Начало: Левша",
+      "Ключевое действие: Начать новый бой",
+      "Результат: Зоны и подсказка согласованы с настройкой"
+    ],
+    "visual": "Схема и реальные sticks",
+    "risks": "Подсказка учит наоборот",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-EDGE-009",
+    "title": "Бой у края экрана",
+    "area": "20 Mobile Controls",
+    "priority": "High",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Игрок у края комнаты",
+    "steps": [
+      "Начать sticks у краёв и возле dock",
+      "вести бой 2 минуты"
+    ],
+    "expected": "Пальцы не скрывают основную угрозу, случайные действия не мешают",
+    "screenshotCheckpoints": [
+      "Начало: Бой у края экрана",
+      "Ключевое действие: Начать sticks у краёв и возле dock",
+      "Результат: Пальцы не скрывают основную угрозу, случайные действия не мешают"
+    ],
+    "visual": "Точки контакта и visible world",
+    "risks": "Слишком малый обзор",
+    "status": "Not Run"
+  },
+  {
+    "id": "MOBILE-FEEL-010",
+    "title": "Удобство реального телефона",
+    "area": "20 Mobile Controls",
+    "priority": "Medium",
+    "modes": "Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Физический телефон, естественный loadout",
+    "steps": [
+      "Пройти первый бой 5 минут",
+      "записать промахи и accidental taps"
+    ],
+    "expected": "Отдельная UX оценка с моделью телефона, без экстраполяции emulation",
+    "screenshotCheckpoints": [
+      "Начало: Удобство реального телефона",
+      "Ключевое действие: Пройти первый бой 5 минут",
+      "Результат: Отдельная UX оценка с моделью телефона, без экстраполяции emulation"
+    ],
+    "visual": "Пальцы, aim response и text",
+    "risks": "Мелкие targets, input lag",
+    "status": "Not Run"
+  },
+  {
+    "id": "RESP-MENU-001",
+    "title": "Все размеры меню",
+    "area": "21 Responsive / Viewports",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Матрица 1920×1080, 1280×720, 390×844, 844×390, 640×720, 480×640 Telegram desktop; viewport ≠ touch emulation",
+    "steps": [
+      "На каждом размере открыть main, editor, settings, lobby"
+    ],
+    "expected": "Действия и Back достижимы, scroll при необходимости работает",
+    "screenshotCheckpoints": [
+      "Начало: Все размеры меню",
+      "Ключевое действие: На каждом размере открыть main, editor, settings, lobby",
+      "Результат: Действия и Back достижимы, scroll при необходимости работает"
+    ],
+    "visual": "Clipping и touch targets",
+    "risks": "Кнопки за экраном",
+    "status": "Not Run"
+  },
+  {
+    "id": "RESP-HUD-002",
+    "title": "Все размеры боя",
+    "area": "21 Responsive / Viewports",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Матрица 1920×1080, 1280×720, 390×844, 844×390, 640×720, 480×640 Telegram desktop; viewport ≠ touch emulation",
+    "steps": [
+      "Начать office",
+      "включить long objective",
+      "ammo, buff и downed notice"
+    ],
+    "expected": "HP, objective и dock не перекрыты",
+    "screenshotCheckpoints": [
+      "Начало: Все размеры боя",
+      "Ключевое действие: Начать office",
+      "Результат: HP, objective и dock не перекрыты"
+    ],
+    "visual": "HUD margins и world visibility",
+    "risks": "Overflow и overlap",
+    "status": "Not Run"
+  },
+  {
+    "id": "RESP-OVERLAY-003",
+    "title": "Все размеры результата",
+    "area": "21 Responsive / Viewports",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Матрица 1920×1080, 1280×720, 390×844, 844×390, 640×720, 480×640 Telegram desktop; viewport ≠ touch emulation",
+    "steps": [
+      "Показать pause, death, floor complete, victory"
+    ],
+    "expected": "Основная кнопка и выход доступны, текст переносится",
+    "screenshotCheckpoints": [
+      "Начало: Все размеры результата",
+      "Ключевое действие: Показать pause, death, floor complete, victory",
+      "Результат: Основная кнопка и выход доступны, текст переносится"
+    ],
+    "visual": "Panel scroll и кнопки",
+    "risks": "Непроходимый result",
+    "status": "Not Run"
+  },
+  {
+    "id": "RESP-RESIZE-004",
+    "title": "Resize без перезагрузки",
+    "area": "21 Responsive / Viewports",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Telegram",
+    "preconditions": "Desktop или Telegram окно",
+    "steps": [
+      "В бою сузить 1280→640→480",
+      "увеличить обратно"
+    ],
+    "expected": "Canvas и input bounds соответствуют viewport",
+    "screenshotCheckpoints": [
+      "Начало: Resize без перезагрузки",
+      "Ключевое действие: В бою сузить 1280→640→480",
+      "Результат: Canvas и input bounds соответствуют viewport"
+    ],
+    "visual": "Aim и края canvas",
+    "risks": "Растянутый UI, старый input offset",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-DEPTH-001",
+    "title": "Обход мебели в 8 направлениях",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Стол/шкаф с foreground",
+    "steps": [
+      "Обойти сверху, снизу и сбоку",
+      "повторить с enemy/NPC"
+    ],
+    "expected": "Feet-based depth одинаков для всех actors",
+    "screenshotCheckpoints": [
+      "Начало: Обход мебели в 8 направлениях",
+      "Ключевое действие: Обойти сверху, снизу и сбоку",
+      "Результат: Feet-based depth одинаков для всех actors"
+    ],
+    "visual": "Feet, тень и façade",
+    "risks": "Actor поверх высоких props",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-OCCLUSION-002",
+    "title": "Прозрачная передняя стена",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Игрок за фасадом",
+    "steps": [
+      "Зайти за стену",
+      "целиться и стрелять",
+      "выйти"
+    ],
+    "expected": "Закрывающий фасад позволяет видеть игрока и угрозу",
+    "screenshotCheckpoints": [
+      "Начало: Прозрачная передняя стена",
+      "Ключевое действие: Зайти за стену",
+      "Результат: Закрывающий фасад позволяет видеть игрока и угрозу"
+    ],
+    "visual": "Alpha и переход прозрачности",
+    "risks": "Player исчезает",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-WEAPON-003",
+    "title": "Ствол и FX в 8 направлениях",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "ПМ и длинный gun",
+    "steps": [
+      "Прицелиться в 8 сторон",
+      "fire стоя и в движении"
+    ],
+    "expected": "Muzzle/tracer из дула, оружие в руках",
+    "screenshotCheckpoints": [
+      "Начало: Ствол и FX в 8 направлениях",
+      "Ключевое действие: Прицелиться в 8 сторон",
+      "Результат: Muzzle/tracer из дула, оружие в руках"
+    ],
+    "visual": "Крупные checkpoints каждого направления",
+    "risks": "Вспышка из груди",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-ANIMATION-004",
+    "title": "Стопы, gait и stationary follower",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Игрок и follow NPC",
+    "steps": [
+      "Стоять",
+      "идти",
+      "остановиться",
+      "strafe и reverse"
+    ],
+    "expected": "Ходьба только при перемещении, тело не вращается плоской карточкой",
+    "screenshotCheckpoints": [
+      "Начало: Стопы, gait и stationary follower",
+      "Ключевое действие: Стоять",
+      "Результат: Ходьба только при перемещении, тело не вращается плоской карточкой"
+    ],
+    "visual": "Ноги, руки и тень",
+    "risks": "Idle walk и skating",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-MUTANT-005",
+    "title": "Узнаваемость NPC и тип врага",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Известный NPC до превращения",
+    "steps": [
+      "Снять до/во время/после",
+      "сравнить экипировку"
+    ],
+    "expected": "Связь человека и мутанта понятна, угроза различима",
+    "screenshotCheckpoints": [
+      "Начало: Узнаваемость NPC и тип врага",
+      "Ключевое действие: Снять до/во время/после",
+      "Результат: Связь человека и мутанта понятна, угроза различима"
+    ],
+    "visual": "Одежда, head и размер",
+    "risks": "Все mutant одинаковы",
+    "status": "Not Run"
+  },
+  {
+    "id": "VISUAL-SCALE-006",
+    "title": "Человек, мебель и boss",
+    "area": "22 Visual 2.5D Quality",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Разные локации",
+    "steps": [
+      "Сравнить actors с дверями, столами, машинами",
+      "проверить boss collision"
+    ],
+    "expected": "Масштаб не обманывает относительно проходов и зон поражения",
+    "screenshotCheckpoints": [
+      "Начало: Человек, мебель и boss",
+      "Ключевое действие: Сравнить actors с дверями, столами, машинами",
+      "Результат: Масштаб не обманывает относительно проходов и зон поражения"
+    ],
+    "visual": "Ground footprint",
+    "risks": "Графика обещает несуществующий проход",
+    "status": "Not Run"
+  },
+  {
+    "id": "PERF-CROWD-001",
+    "title": "Реальная большая стая",
+    "area": "23 Performance During Real Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Factory yard или meeting",
+    "steps": [
+      "Играть при большой группе",
+      "записать frame times и реакцию input"
+    ],
+    "expected": "Нет заметных зависаний/input lag; метрики привязаны к конкретному устройству",
+    "screenshotCheckpoints": [
+      "Начало: Реальная большая стая",
+      "Ключевое действие: Играть при большой группе",
+      "Результат: Нет заметных зависаний/input lag; метрики привязаны к конкретному устройству"
+    ],
+    "visual": "Толпа и управление",
+    "risks": "SwiftShader выдан за hardware FPS",
+    "status": "Not Run"
+  },
+  {
+    "id": "PERF-FX-002",
+    "title": "Взрывы и огнемёт",
+    "area": "23 Performance During Real Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Группа и barrels",
+    "steps": [
+      "Взорвать цепь",
+      "использовать flame",
+      "повторить после очистки"
+    ],
+    "expected": "FX не вызывают существенного stall и input loss",
+    "screenshotCheckpoints": [
+      "Начало: Взрывы и огнемёт",
+      "Ключевое действие: Взорвать цепь",
+      "Результат: FX не вызывают существенного stall и input loss"
+    ],
+    "visual": "FX density и видимость угроз",
+    "risks": "Particle leak",
+    "status": "Not Run"
+  },
+  {
+    "id": "PERF-MOBILE-003",
+    "title": "Пятиминутный бой телефона",
+    "area": "23 Performance During Real Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Физический телефон",
+    "steps": [
+      "Играть 5 минут",
+      "сравнить начало/конец",
+      "переключить приложение"
+    ],
+    "expected": "Задержки/нагрев оценены на указанном устройстве",
+    "screenshotCheckpoints": [
+      "Начало: Пятиминутный бой телефона",
+      "Ключевое действие: Играть 5 минут",
+      "Результат: Задержки/нагрев оценены на указанном устройстве"
+    ],
+    "visual": "Controls response",
+    "risks": "CPU throttling, real-phone gap",
+    "status": "Not Run"
+  },
+  {
+    "id": "PERF-TRANSITION-004",
+    "title": "Spawn, intro и переход",
+    "area": "23 Performance During Real Gameplay",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Кампания через несколько уровней",
+    "steps": [
+      "Записать loading, первый spawn, boss intro и finale"
+    ],
+    "expected": "Нет freeze, мешающего реакции; первый load отделён от steady state",
+    "screenshotCheckpoints": [
+      "Начало: Spawn, intro и переход",
+      "Ключевое действие: Записать loading, первый spawn, boss intro и finale",
+      "Результат: Нет freeze, мешающего реакции; первый load отделён от steady state"
+    ],
+    "visual": "Первый кадр и input response",
+    "risks": "Shader compile stall",
+    "status": "Not Run"
+  },
+  {
+    "id": "PERF-NET-005",
+    "title": "Комната 4 игроков",
+    "area": "23 Performance During Real Gameplay",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "4 клиента и большая волна",
+    "steps": [
+      "Играть одновременно",
+      "наблюдать client frame и server update"
+    ],
+    "expected": "Нет постоянного задержанного input/snapshot drift",
+    "screenshotCheckpoints": [
+      "Начало: Комната 4 игроков",
+      "Ключевое действие: Играть одновременно",
+      "Результат: Нет постоянного задержанного input/snapshot drift"
+    ],
+    "visual": "Remote actors и HUD",
+    "risks": "Snapshot/backpressure, memory growth",
+    "status": "Not Run"
+  },
+  {
+    "id": "INCIDENT-ALARM-001",
+    "title": "Сигналка: обезвредить до/после выстрела",
+    "area": "10 Campaign / Optional incidents",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Office7/lab/factory с authored incident_alarm",
+    "steps": [
+      "Подойти к пульту",
+      "E до выстрела; в новом run выстрелить и E до 3 с",
+      "В третьем run дождаться конечной волны, зачистить, повторить E"
+    ],
+    "expected": "Отключение однократно; warning 3 с; конечные подкрепления и награда не блокируют основной objective",
+    "screenshotCheckpoints": [
+      "Ready пульт",
+      "Warning timer/active wave",
+      "Disabled либо done и reward"
+    ],
+    "visual": "Красный пульт, main objective и side progress",
+    "risks": "Бесконечная волна, двойные припасы",
+    "status": "Not Run"
+  },
+  {
+    "id": "INCIDENT-CACHE-002",
+    "title": "Тайник: уйти и вернуться",
+    "area": "10 Campaign / Optional incidents",
+    "priority": "High",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Ready cache terminal",
+    "steps": [
+      "E у терминала",
+      "Уйти за радиус/стену, вернуться",
+      "Остаться рядом 12 активных секунд, повторить E"
+    ],
+    "expected": "Timer paused вне 180 units/LOS, награда один раз, можно стрелять во время загрузки",
+    "screenshotCheckpoints": [
+      "Ready",
+      "Paused timer",
+      "Done/reward"
+    ],
+    "visual": "Подпись паузы и ammo/armor",
+    "risks": "Таймер идёт через стену, награда дважды",
+    "status": "Not Run"
+  },
+  {
+    "id": "INCIDENT-COFFEE-003",
+    "title": "Кофе: одноразовый ресурс команды",
+    "area": "10 Campaign / Optional incidents",
+    "priority": "Medium",
+    "modes": "Desktop / Mobile Portrait / Mobile Landscape / Multiplayer (2–4 отдельных identity)",
+    "preconditions": "Живые подключённые A/B ранены, ready coffee",
+    "steps": [
+      "A нажимает E",
+      "Проверить A/B HP и sprint",
+      "Повторить E; в новом run разрушить автомат и попытаться E"
+    ],
+    "expected": "Команде +15 HP до max и sprint 10 с однократно, разрушенный автомат disabled",
+    "screenshotCheckpoints": [
+      "Автомат",
+      "Team heal/sprint",
+      "Пустой/разрушенный"
+    ],
+    "visual": "Notice и состояние автомата",
+    "risks": "Бесконечное восстановление",
+    "status": "Not Run"
+  }
+]
