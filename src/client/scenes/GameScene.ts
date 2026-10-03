@@ -182,7 +182,7 @@ export class GameScene extends Phaser.Scene {
       } else if (o.type === 'frost') {
         // D73: a frosted-glass pane over a room (o = the rect it covers, props.door = the door that clears it)
         const g = this.add.graphics().setDepth(13.5);
-        g.fillStyle(0xdfe8ef, 0.74).fillRect(o.x, o.y, o.w, o.h);
+        g.fillStyle(0xdfe8ef, 0.97).fillRect(o.x, o.y, o.w, o.h);
         for (let i = -o.h; i < o.w; i += 26) { g.lineStyle(9, 0xffffff, 0.22).lineBetween(o.x + Math.max(0, i), o.y + Math.max(0, -i), o.x + Math.min(o.w, i + o.h), o.y + Math.min(o.h, o.w - i)); }
         g.lineStyle(4, 0x8a96a3, 0.9).strokeRect(o.x + 2, o.y + 2, o.w - 4, o.h - 4);
         g.lineStyle(2, 0xffffff, 0.5).strokeRect(o.x + 7, o.y + 7, o.w - 14, o.h - 14);
